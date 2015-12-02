@@ -3,10 +3,17 @@
 <package schemaVersion="1.3" xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocation="PACK.xsd">
   <vendor>Keil</vendor>
   <name>STM32F7xx_DFP</name>
-  <description>STMicroelectronics STM32F7 Series basic Device Support</description>
+  <description>STMicroelectronics STM32F7 Series Device Support, Drivers and Examples</description>
   <url>http://www.keil.com/pack</url>
 
   <releases>
+    <release version="2.1.0" date="2015-07-31">
+      Added CMSIS-Driver for I2C and SAI
+      Updated RTE_Device.h (Ver 1.1.0) adding the SAI driver configurations for SAI1 and SAI2
+      Extended File_Demo example (NOR flash drive F0 enabled)
+      Extended template file "main.c" with provisions for using CMSIS-RTOS RTX
+      Corrected CMSIS Driver USART: The driver incorrectly stopped receiving data when calling the USART_Receive function while the receiver is busy
+    </release>
     <release version="2.0.0" date="2015-07-16">
       This PACK requires Keil.MDK-Middleware.6.5.0.pack to be the latest version installed
       Integrates STMicroelectronics STM32CubeF7 Firmware Package V1.1.0
@@ -625,6 +632,15 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       <require Cclass="Device" Cgroup="STM32Cube HAL" Csub="GPIO"/>
       <require Cclass="Device" Cgroup="STM32Cube HAL" Csub="DMA"/>
     </condition>
+    <condition id="STM32F7 CMSIS_Driver SAI">
+      <description>Requirement for CMSIS SAI Driver</description>
+      <require condition="STM32F7"/>
+      <require Cclass="CMSIS"  Cgroup="CORE"/>
+      <require Cclass="Device" Cgroup="STM32Cube HAL" Csub="Common"/>
+      <require Cclass="Device" Cgroup="STM32Cube HAL" Csub="RCC"/>
+      <require Cclass="Device" Cgroup="STM32Cube HAL" Csub="GPIO"/>
+      <require Cclass="Device" Cgroup="STM32Cube HAL" Csub="DMA"/>
+    </condition>
     <condition id="STM32F7 CMSIS_Driver ETH_MAC">
       <description>Requirement for CMSIS EMAC Driver</description>
       <require condition="STM32F7"/>
@@ -934,7 +950,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
         #define RTE_DEVICE_FRAMEWORK_CLASSIC
       </RTE_Components_h>
       <files>
-        <file category="header"  name="CMSIS/Driver/Config/RTE_Device.h" attr="config" version="1.0.0"/>
+        <file category="header"  name="CMSIS/Driver/Config/RTE_Device.h" attr="config" version="1.1.0"/>
         <file category="header"  name="MDK/Templates/Inc/stm32f7xx_hal_conf.h" attr="config" version="1.0.1"/>
         <file category="source"  name="MDK/Templates/Src/stm32f7xx_hal_msp.c"  attr="template" select="MCU Specific HAL Initialization / De-Initialization"/>
         <file category="header"  name="MDK/Templates/Inc/stm32f7xx_it.h" attr="template" select="Exception Handlers and Peripheral IRQ"/>
@@ -1411,7 +1427,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </files>
     </component>
 
-    <component Cclass="CMSIS Driver" Cgroup="USART" Capiversion="2.2" Cversion="1.0" condition="STM32F7 CMSIS_Driver USART">
+    <component Cclass="CMSIS Driver" Cgroup="USART" Capiversion="2.2" Cversion="1.1" condition="STM32F7 CMSIS_Driver USART">
       <description>USART Driver for STM32F7 Series</description>
       <RTE_Components_h>
         #define RTE_Drivers_USART1              /* Driver USART1 */
@@ -1428,19 +1444,18 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </files>
     </component>
 
-    <!--
     <component Cclass="CMSIS Driver" Cgroup="I2C" Capiversion="2.2" Cversion="1.0" condition="STM32F7 CMSIS_Driver I2C">
       <description>I2C Driver for STM32F7 Series</description>
       <RTE_Components_h>
         #define RTE_Drivers_I2C1                /* Driver I2C1 */
         #define RTE_Drivers_I2C2                /* Driver I2C2 */
         #define RTE_Drivers_I2C3                /* Driver I2C3 */
+        #define RTE_Drivers_I2C4                /* Driver I2C4 */
       </RTE_Components_h>
       <files>
         <file category="source" name="CMSIS/Driver/I2C_STM32F7xx.c"/>
       </files>
     </component>
-    -->
 
     <component Cclass="CMSIS Driver" Cgroup="MCI" Capiversion="2.2" Cversion="1.0" condition="STM32F7 CMSIS_Driver MCI">
       <description>MCI Driver for STM32F7 Series</description>
@@ -1449,6 +1464,17 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </RTE_Components_h>
       <files>
         <file category="source" name="CMSIS/Driver/MCI_STM32F7xx.c"/>
+      </files>
+    </component>
+
+    <component Cclass="CMSIS Driver" Cgroup="SAI" Capiversion="1.0" Cversion="1.0" condition="STM32F7 CMSIS_Driver SAI">
+      <description>SAI Driver for STM32F7 Series</description>
+      <RTE_Components_h>
+        #define RTE_Drivers_SAI1                /* Driver SAI1 */
+        #define RTE_Drivers_SAI2                /* Driver SAI2 */
+      </RTE_Components_h>
+      <files>
+        <file category="source" name="CMSIS/Driver/SAI_STM32F7xx.c"/>
       </files>
     </component>
 

@@ -17,8 +17,8 @@
  *
  * 3. This notice may not be removed or altered from any source distribution.
  *
- * $Date:        30. June 2015
- * $Revision:    V1.0.0
+ * $Date:        30. July 2015
+ * $Revision:    V1.1.0
  *
  * Project:      RTE Device Configuration for ST STM32F7xx
  * -------------------------------------------------------------------------- */
@@ -1665,6 +1665,351 @@
 #define RTE_SPI6_TX_DMA_STREAM          5
 #define RTE_SPI6_TX_DMA_CHANNEL         1
 #define RTE_SPI6_TX_DMA_PRIORITY        0
+
+// </e>
+
+
+// <e> SAI1 (Serial Audio Interface 1) [Driver_SAI1]
+// <i> Configuration settings for Driver_SAI1 in component ::CMSIS Driver:SAI
+#define RTE_SAI1                        0
+
+//   <o> SAI1_SD_A Pin <0=>Not Used <1=>PB2 <2=>PC1 <3=>PD6 <4=>PE6
+#define RTE_SAI1_SD_A_PORT_ID           0
+#if    (RTE_SAI1_SD_A_PORT_ID == 0)
+#define RTE_SAI1_SD_A_PIN               0
+#elif  (RTE_SAI1_SD_A_PORT_ID == 1)
+#define RTE_SAI1_SD_A_PIN               1
+#define RTE_SAI1_SD_A_PORT              GPIOB
+#define RTE_SAI1_SD_A_BIT               2
+#elif  (RTE_SAI1_SD_A_PORT_ID == 2)
+#define RTE_SAI1_SD_A_PIN               1
+#define RTE_SAI1_SD_A_PORT              GPIOC
+#define RTE_SAI1_SD_A_BIT               1
+#elif  (RTE_SAI1_SD_A_PORT_ID == 3)
+#define RTE_SAI1_SD_A_PIN               1
+#define RTE_SAI1_SD_A_PORT              GPIOD
+#define RTE_SAI1_SD_A_BIT               6
+#elif  (RTE_SAI1_SD_A_PORT_ID == 4)
+#define RTE_SAI1_SD_A_PIN               1
+#define RTE_SAI1_SD_A_PORT              GPIOE
+#define RTE_SAI1_SD_A_BIT               6
+#else
+#error "Invalid SAI1_SD_A Pin Configuration!"
+#endif
+
+//   <o> SAI1_FS_A Pin <0=>Not Used <1=>PE4
+#define RTE_SAI1_FS_A_PORT_ID           0
+#if    (RTE_SAI1_FS_A_PORT_ID == 0)
+#define RTE_SAI1_FS_A_PIN               0
+#elif  (RTE_SAI1_FS_A_PORT_ID == 1)
+#define RTE_SAI1_FS_A_PIN               1
+#define RTE_SAI1_FS_A_PORT              GPIOE
+#define RTE_SAI1_FS_A_BIT               4
+#else
+#error "Invalid SAI1_FS_A Pin Configuration!"
+#endif
+
+//   <o> SAI1_SCK_A Pin <0=>Not Used <1=>PE5
+#define RTE_SAI1_SCK_A_PORT_ID          0
+#if    (RTE_SAI1_SCK_A_PORT_ID == 0)
+#define RTE_SAI1_SCK_A_PIN              0
+#elif  (RTE_SAI1_SCK_A_PORT_ID == 1)
+#define RTE_SAI1_SCK_A_PIN              1
+#define RTE_SAI1_SCK_A_PORT             GPIOE
+#define RTE_SAI1_SCK_A_BIT              5
+#else
+#error "Invalid SAI1_SCK_A Pin Configuration!"
+#endif
+
+//   <o> SAI1_MCLK_A Pin <0=>Not Used <1=>PE2
+#define RTE_SAI1_MCLK_A_PORT_ID         0
+#if    (RTE_SAI1_MCLK_A_PORT_ID == 0)
+#define RTE_SAI1_MCLK_A_PIN             0
+#elif  (RTE_SAI1_MCLK_A_PORT_ID == 1)
+#define RTE_SAI1_MCLK_A_PIN             1
+#define RTE_SAI1_MCLK_A_PORT            GPIOE
+#define RTE_SAI1_MCLK_A_BIT             2
+#else
+#error "Invalid SAI1_MCLK_A Pin Configuration!"
+#endif
+
+//   <o> SAI1_SD_B Pin <0=>Not Used <1=>PE3 <2=>PF6
+#define RTE_SAI1_SD_B_PORT_ID           0
+#if    (RTE_SAI1_SD_B_PORT_ID == 0)
+#define RTE_SAI1_SD_B_PIN               0
+#elif  (RTE_SAI1_SD_B_PORT_ID == 1)
+#define RTE_SAI1_SD_B_PIN               1
+#define RTE_SAI1_SD_B_PORT              GPIOE
+#define RTE_SAI1_SD_B_BIT               3
+#elif  (RTE_SAI1_SD_B_PORT_ID == 2)
+#define RTE_SAI1_SD_B_PIN               1
+#define RTE_SAI1_SD_B_PORT              GPIOF
+#define RTE_SAI1_SD_B_BIT               6
+#else
+#error "Invalid SAI1_SD_B Pin Configuration!"
+#endif
+
+//   <o> SAI1_FS_B Pin <0=>Not Used <1=>PF9
+#define RTE_SAI1_FS_B_PORT_ID           0
+#if    (RTE_SAI1_FS_B_PORT_ID == 0)
+#define RTE_SAI1_FS_B_PIN               0
+#elif  (RTE_SAI1_FS_B_PORT_ID == 1)
+#define RTE_SAI1_FS_B_PIN               1
+#define RTE_SAI1_FS_B_PORT              GPIOF
+#define RTE_SAI1_FS_B_BIT               9
+#else
+#error "Invalid SAI1_FS_B Pin Configuration!"
+#endif
+
+//   <o> SAI1_SCK_B Pin <0=>Not Used <1=>PF8
+#define RTE_SAI1_SCK_B_PORT_ID          0
+#if    (RTE_SAI1_SCK_B_PORT_ID == 0)
+#define RTE_SAI1_SCK_B_PIN              0
+#elif  (RTE_SAI1_SCK_B_PORT_ID == 1)
+#define RTE_SAI1_SCK_B_PIN              1
+#define RTE_SAI1_SCK_B_PORT             GPIOF
+#define RTE_SAI1_SCK_B_BIT              8
+#else
+#error "Invalid SAI1_SCK_B Pin Configuration!"
+#endif
+
+//   <o> SAI1_MCLK_B Pin <0=>Not Used <1=>PF7
+#define RTE_SAI1_MCLK_B_PORT_ID         0
+#if    (RTE_SAI1_MCLK_B_PORT_ID == 0)
+#define RTE_SAI1_MCLK_B_PIN             0
+#elif  (RTE_SAI1_MCLK_B_PORT_ID == 1)
+#define RTE_SAI1_MCLK_B_PIN             1
+#define RTE_SAI1_MCLK_B_PORT            GPIOF
+#define RTE_SAI1_MCLK_B_BIT             7
+#else
+#error "Invalid SAI1_MCLK_B Pin Configuration!"
+#endif
+
+//   <e> DMA SAI1_A
+//     <o1> Number <2=>2
+//     <i>  Selects DMA Number (only DMA2 can be used)
+//     <o2> Stream <1=>1 <3=>3
+//     <i>  Selects DMA Stream (only Stream 1 or 3 can be used)
+//     <o3> Channel <0=>0
+//     <i>  Selects DMA Channel (only Channel 0 can be used)
+//     <o4> Priority <0=>Low <1=>Medium <2=>High <3=>Very High
+//     <i>  Selects DMA Priority
+//   </e>
+#define RTE_SAI1_A_DMA                  0
+#define RTE_SAI1_A_DMA_NUMBER           2
+#define RTE_SAI1_A_DMA_STREAM           1
+#define RTE_SAI1_A_DMA_CHANNEL          0
+#define RTE_SAI1_A_DMA_PRIORITY         0
+
+//   <e> DMA SAI1_B
+//     <o1> Number <2=>2
+//     <i>  Selects DMA Number (only DMA2 can be used)
+//     <o2> Stream <4=>4 <5=>5 <7=>7
+//     <i>  Selects DMA Stream (only Stream 4, 5 or 7 can be used)
+//     <o3> Channel <0=>0 <1=>1
+//     <i>  Selects DMA Channel (only Channel 0 or 1 can be used)
+//     <o4> Priority <0=>Low <1=>Medium <2=>High <3=>Very High
+//     <i>  Selects DMA Priority
+//   </e>
+#define RTE_SAI1_B_DMA                  0
+#define RTE_SAI1_B_DMA_NUMBER           2
+#define RTE_SAI1_B_DMA_STREAM           5
+#define RTE_SAI1_B_DMA_CHANNEL          0
+#define RTE_SAI1_B_DMA_PRIORITY         0
+
+// </e>
+
+// <e> SAI2 (Serial Audio Interface 2) [Driver_SAI2]
+// <i> Configuration settings for Driver_SAI2 in component ::CMSIS Driver:SAI
+#define RTE_SAI2                        0
+
+//   <o> SAI2_SD_A Pin <0=>Not Used <1=>PD11 <2=>PI6
+#define RTE_SAI2_SD_A_PORT_ID           0
+#if    (RTE_SAI2_SD_A_PORT_ID == 0)
+#define RTE_SAI2_SD_A_PIN               0
+#elif  (RTE_SAI2_SD_A_PORT_ID == 1)
+#define RTE_SAI2_SD_A_PIN               1
+#define RTE_SAI2_SD_A_PORT              GPIOD
+#define RTE_SAI2_SD_A_BIT               11
+#elif  (RTE_SAI2_SD_A_PORT_ID == 2)
+#define RTE_SAI2_SD_A_PIN               1
+#define RTE_SAI2_SD_A_PORT              GPIOI
+#define RTE_SAI2_SD_A_BIT               6
+#else
+#error "Invalid SAI2_SD_A Pin Configuration!"
+#endif
+
+//   <o> SAI2_FS_A Pin <0=>Not Used <1=>PD12 <2=>PI7
+#define RTE_SAI2_FS_A_PORT_ID           0
+#if    (RTE_SAI2_FS_A_PORT_ID == 0)
+#define RTE_SAI2_FS_A_PIN               0
+#elif  (RTE_SAI2_FS_A_PORT_ID == 1)
+#define RTE_SAI2_FS_A_PIN               1
+#define RTE_SAI2_FS_A_PORT              GPIOD
+#define RTE_SAI2_FS_A_BIT               12
+#elif  (RTE_SAI2_FS_A_PORT_ID == 2)
+#define RTE_SAI2_FS_A_PIN               1
+#define RTE_SAI2_FS_A_PORT              GPIOI
+#define RTE_SAI2_FS_A_BIT               7
+#else
+#error "Invalid SAI2_FS_A Pin Configuration!"
+#endif
+
+//   <o> SAI2_SCK_A Pin <0=>Not Used <1=>PD13 <2=>PI5
+#define RTE_SAI2_SCK_A_PORT_ID          0
+#if    (RTE_SAI2_SCK_A_PORT_ID == 0)
+#define RTE_SAI2_SCK_A_PIN              0
+#elif  (RTE_SAI2_SCK_A_PORT_ID == 1)
+#define RTE_SAI2_SCK_A_PIN              1
+#define RTE_SAI2_SCK_A_PORT             GPIOD
+#define RTE_SAI2_SCK_A_BIT              13
+#elif  (RTE_SAI2_SCK_A_PORT_ID == 2)
+#define RTE_SAI2_SCK_A_PIN              1
+#define RTE_SAI2_SCK_A_PORT             GPIOI
+#define RTE_SAI2_SCK_A_BIT              5
+#else
+#error "Invalid SAI2_SCK_A Pin Configuration!"
+#endif
+
+//   <o> SAI2_MCLK_A Pin <0=>Not Used <1=>PE0 <2=>PI4
+#define RTE_SAI2_MCLK_A_PORT_ID         0
+#if    (RTE_SAI2_MCLK_A_PORT_ID == 0)
+#define RTE_SAI2_MCLK_A_PIN             0
+#elif  (RTE_SAI2_MCLK_A_PORT_ID == 1)
+#define RTE_SAI2_MCLK_A_PIN             1
+#define RTE_SAI2_MCLK_A_PORT            GPIOE
+#define RTE_SAI2_MCLK_A_BIT             0
+#elif  (RTE_SAI2_MCLK_A_PORT_ID == 2)
+#define RTE_SAI2_MCLK_A_PIN             1
+#define RTE_SAI2_MCLK_A_PORT            GPIOI
+#define RTE_SAI2_MCLK_A_BIT             4
+#else
+#error "Invalid SAI2_MCLK_A Pin Configuration!"
+#endif
+
+//   <o> SAI2_SD_B Pin <0=>Not Used <1=>PA0 <2=>PE11 <3=>PF11 <4=>PG10
+#define RTE_SAI2_SD_B_PORT_ID           0
+#if    (RTE_SAI2_SD_B_PORT_ID == 0)
+#define RTE_SAI2_SD_B_PIN               0
+#elif  (RTE_SAI2_SD_B_PORT_ID == 1)
+#define RTE_SAI2_SD_B_PIN               1
+#define RTE_SAI2_SD_B_PORT              GPIOA
+#define RTE_SAI2_SD_B_BIT               0
+#elif  (RTE_SAI2_SD_B_PORT_ID == 2)
+#define RTE_SAI2_SD_B_PIN               1
+#define RTE_SAI2_SD_B_PORT              GPIOE
+#define RTE_SAI2_SD_B_BIT               11
+#elif  (RTE_SAI2_SD_B_PORT_ID == 3)
+#define RTE_SAI2_SD_B_PIN               1
+#define RTE_SAI2_SD_B_PORT              GPIOF
+#define RTE_SAI2_SD_B_BIT               11
+#elif  (RTE_SAI2_SD_B_PORT_ID == 4)
+#define RTE_SAI2_SD_B_PIN               1
+#define RTE_SAI2_SD_B_PORT              GPIOG
+#define RTE_SAI2_SD_B_BIT               10
+#else
+#error "Invalid SAI2_SD_B Pin Configuration!"
+#endif
+
+//   <o> SAI2_FS_B Pin <0=>Not Used <1=>PA12 <2=>PC0 <3=>PE13 <4=>PG9
+#define RTE_SAI2_FS_B_PORT_ID           0
+#if    (RTE_SAI2_FS_B_PORT_ID == 0)
+#define RTE_SAI2_FS_B_PIN               0
+#elif  (RTE_SAI2_FS_B_PORT_ID == 1)
+#define RTE_SAI2_FS_B_PIN               1
+#define RTE_SAI2_FS_B_PORT              GPIOA
+#define RTE_SAI2_FS_B_BIT               12
+#elif  (RTE_SAI2_FS_B_PORT_ID == 2)
+#define RTE_SAI2_FS_B_PIN               1
+#define RTE_SAI2_FS_B_PORT              GPIOC
+#define RTE_SAI2_FS_B_BIT               0
+#elif  (RTE_SAI2_FS_B_PORT_ID == 3)
+#define RTE_SAI2_FS_B_PIN               1
+#define RTE_SAI2_FS_B_PORT              GPIOE
+#define RTE_SAI2_FS_B_BIT               13
+#elif  (RTE_SAI2_FS_B_PORT_ID == 4)
+#define RTE_SAI2_FS_B_PIN               1
+#define RTE_SAI2_FS_B_PORT              GPIOG
+#define RTE_SAI2_FS_B_BIT               9
+#else
+#error "Invalid SAI2_FS_B Pin Configuration!"
+#endif
+
+//   <o> SAI2_SCK_B Pin <0=>Not Used <1=>PA2 <2=>PE12 <3=>PH2
+#define RTE_SAI2_SCK_B_PORT_ID          0
+#if    (RTE_SAI2_SCK_B_PORT_ID == 0)
+#define RTE_SAI2_SCK_B_PIN              0
+#elif  (RTE_SAI2_SCK_B_PORT_ID == 1)
+#define RTE_SAI2_SCK_B_PIN              1
+#define RTE_SAI2_SCK_B_PORT             GPIOA
+#define RTE_SAI2_SCK_B_BIT              2
+#elif  (RTE_SAI2_SCK_B_PORT_ID == 2)
+#define RTE_SAI2_SCK_B_PIN              1
+#define RTE_SAI2_SCK_B_PORT             GPIOE
+#define RTE_SAI2_SCK_B_BIT              12
+#elif  (RTE_SAI2_SCK_B_PORT_ID == 3)
+#define RTE_SAI2_SCK_B_PIN              1
+#define RTE_SAI2_SCK_B_PORT             GPIOH
+#define RTE_SAI2_SCK_B_BIT              2
+#else
+#error "Invalid SAI2_SCK_B Pin Configuration!"
+#endif
+
+//   <o> SAI2_MCLK_B Pin <0=>Not Used <1=>PA1 <2=>PE6 <3=>PE14 <4=>PH3
+#define RTE_SAI2_MCLK_B_PORT_ID         0
+#if    (RTE_SAI2_MCLK_B_PORT_ID == 0)
+#define RTE_SAI2_MCLK_B_PIN             0
+#elif  (RTE_SAI2_MCLK_B_PORT_ID == 1)
+#define RTE_SAI2_MCLK_B_PIN             1
+#define RTE_SAI2_MCLK_B_PORT            GPIOA
+#define RTE_SAI2_MCLK_B_BIT             1
+#elif  (RTE_SAI2_MCLK_B_PORT_ID == 2)
+#define RTE_SAI2_MCLK_B_PIN             1
+#define RTE_SAI2_MCLK_B_PORT            GPIOE
+#define RTE_SAI2_MCLK_B_BIT             6
+#elif  (RTE_SAI2_MCLK_B_PORT_ID == 3)
+#define RTE_SAI2_MCLK_B_PIN             1
+#define RTE_SAI2_MCLK_B_PORT            GPIOE
+#define RTE_SAI2_MCLK_B_BIT             14
+#elif  (RTE_SAI2_MCLK_B_PORT_ID == 4)
+#define RTE_SAI2_MCLK_B_PIN             1
+#define RTE_SAI2_MCLK_B_PORT            GPIOH
+#define RTE_SAI2_MCLK_B_BIT             3
+#else
+#error "Invalid SAI2_MCLK_B Pin Configuration!"
+#endif
+
+//   <e> DMA SAI2_A
+//     <o1> Number <2=>2
+//     <i>  Selects DMA Number (only DMA2 can be used)
+//     <o2> Stream <4=>4
+//     <i>  Selects DMA Stream (only Stream 4 can be used)
+//     <o3> Channel <3=>3
+//     <i>  Selects DMA Channel (only Channel 3 can be used)
+//     <o4> Priority <0=>Low <1=>Medium <2=>High <3=>Very High
+//     <i>  Selects DMA Priority
+//   </e>
+#define RTE_SAI2_A_DMA                  0
+#define RTE_SAI2_A_DMA_NUMBER           2
+#define RTE_SAI2_A_DMA_STREAM           4
+#define RTE_SAI2_A_DMA_CHANNEL          3
+#define RTE_SAI2_A_DMA_PRIORITY         0
+
+//   <e> DMA SAI2_B
+//     <o1> Number <2=>2
+//     <i>  Selects DMA Number (only DMA2 can be used)
+//     <o2> Stream <6=>6 <7=>7
+//     <i>  Selects DMA Stream (only Stream 6 or 7 can be used)
+//     <o3> Channel <0=>0 <3=>3
+//     <i>  Selects DMA Channel (only Channel 0 or 3 can be used)
+//     <o4> Priority <0=>Low <1=>Medium <2=>High <3=>Very High
+//     <i>  Selects DMA Priority
+//   </e>
+#define RTE_SAI2_B_DMA                  0
+#define RTE_SAI2_B_DMA_NUMBER           2
+#define RTE_SAI2_B_DMA_STREAM           7
+#define RTE_SAI2_B_DMA_CHANNEL          0
+#define RTE_SAI2_B_DMA_PRIORITY         0
 
 // </e>
 
