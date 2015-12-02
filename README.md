@@ -1,2 +1,2 @@
-# stm32f7-cmsis
-CMSIS files for the STM32F7xx family
+This project does not use the `master` branch, please
+switch to the `xpack` branch to get the project files.
