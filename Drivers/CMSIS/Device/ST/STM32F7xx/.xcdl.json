@@ -1,0 +1,32 @@
+{
+	"$schema": "http://xcdl.github.io/schemas/xcdl-1-1.json",
+	"nodes": [
+		{
+			"name": "core",
+			"type": "component",
+			"description": "CMSIS CORE headers and vectors for STM32F7xx devices.",
+			"nodes": [
+				{
+					"name": "stm32f401",
+					"type": "component",
+					"description": "CMSIS headers and vectors for STM32F745xx devices.",
+					"activeIf": "cmsis.subFamily === 'STM32F745'"
+				},
+
+				{
+					"name": "stm32f405",
+					"type": "component",
+					"description": "CMSIS headers and vectors for STM32F746xx devices.",
+					"activeIf": "cmsis.subFamily === 'STM32F746'"
+				},
+
+				{
+					"name": "stm32f407",
+					"type": "component",
+					"description": "CMSIS headers and vectors for STM32F756xx devices.",
+					"activeIf": "cmsis.subFamily === 'STM32F756'"
+				}
+			]
+		}
+	]
+}

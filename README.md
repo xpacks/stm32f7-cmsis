@@ -41,3 +41,9 @@ To save space, the following folders/files were removed:
 * Utilities/
 * package.xml
 
+## Changes
+
+The actual files used by the package are in the `xpack` branch.
+
+Most of the files should be unchanged.
+
