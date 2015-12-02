@@ -19,7 +19,7 @@
  *
  *
  * $Date:        29. June 2015
- * $Revision:    V1.0
+ * $Revision:    V1.1
  *
  * Driver:       Driver_USART1, Driver_USART2, Driver_USART3, Driver_USART4,
  *               Driver_USART5, Driver_USART6, Driver_USART7, Driver_USART8,
@@ -42,6 +42,8 @@
  * -------------------------------------------------------------------------- */
 
 /* History:
+ *  Version 1.1
+ *    Corrected unwanted receive stop (Caused by calling USART_Receive function, while receiver is still busy.) 
  *  Version 1.0
  *    Initial release
  */
@@ -67,7 +69,7 @@
  
 #include "USART_STM32F7xx.h"
 
-#define ARM_USART_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,0)
+#define ARM_USART_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,1)
 
 // Driver Version
 static const ARM_DRIVER_VERSION usart_driver_version = { ARM_USART_API_VERSION, ARM_USART_DRV_VERSION };
@@ -2022,13 +2024,13 @@ static int32_t USART_Receive (      void            *data,
     return ARM_DRIVER_ERROR;
   }
 
-  // Disable RXNE Interrupt
-  usart->reg->CR1 &= ~USART_CR1_RXNEIE;
-
   // Check if receiver is busy
   if (usart->info->status.rx_busy == 1U) {
     return ARM_DRIVER_ERROR_BUSY;
   }
+
+  // Disable RXNE Interrupt
+  usart->reg->CR1 &= ~USART_CR1_RXNEIE;
 
   // Save number of data to be received
   usart->xfer->rx_num = num;
@@ -2041,7 +2043,7 @@ static int32_t USART_Receive (      void            *data,
 
   // Save receive buffer info
   usart->xfer->rx_buf = (uint8_t *)data;
-  usart->xfer->rx_cnt =            0U;
+  usart->xfer->rx_cnt =  0U;
 
   // Set RX busy flag
   usart->info->status.rx_busy = 1U;

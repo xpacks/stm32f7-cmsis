@@ -24,8 +24,8 @@
  * Project:      USART Driver definitions for ST STM32F7xx
  * -------------------------------------------------------------------------- */
 
-#ifndef __USART_STM32F4XX_H
-#define __USART_STM32F4XX_H
+#ifndef __USART_STM32F7XX_H
+#define __USART_STM32F7XX_H
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -946,4 +946,4 @@ typedef const struct {
   USART_TRANSFER_INFO     *xfer;               // USART transfer information
 } USART_RESOURCES;
 
-#endif /* __USART_STM32F4XX_H */
+#endif /* __USART_STM32F7XX_H */

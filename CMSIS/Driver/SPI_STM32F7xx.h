@@ -24,8 +24,8 @@
  * Project:      SPI Driver definitions for ST STM32F7xx
  * -------------------------------------------------------------------------- */
 
-#ifndef __SPI_STM32F4XX_H
-#define __SPI_STM32F4XX_H
+#ifndef __SPI_STM32F7XX_H
+#define __SPI_STM32F7XX_H
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -563,4 +563,4 @@ typedef const struct {
   SPI_TRANSFER_INFO    *xfer;                 // SPI transfer information
 } SPI_RESOURCES;
 
-#endif /* __SPI_STM32F4XX_H */
+#endif /* __SPI_STM32F7XX_H */
