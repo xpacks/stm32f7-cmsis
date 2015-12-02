@@ -1,0 +1,1139 @@
+{
+	"$schema": "http://xcdl.github.io/schemas/xpdsc-1-1.json",
+	"warning": "DO NOT EDIT! Automatically generated from Keil.STM32F7xx_DFP.pdsc",
+	"generators": [
+		"xcdl-js generate-xpdsc"
+	],
+	"vendorName": "Keil",
+	"name": "STM32F7xx_DFP",
+	"description": "STMicroelectronics STM32F7 Series basic Device Support",
+	"version": "2.0.0",
+	"date": "2015-07-16",
+	"devices": [
+		{
+			"name": "STM32F7 Series",
+			"type": "family",
+			"description": "The STM32F7 family incorporates high-speed embedded memories and an extensive range of enhanced I/Os and peripherals connected to two APB buses, three AHB buses and a 32-bit multi-AHB bus matrix.\n\n  - 64-Kbyte of CCM (core coupled memory) data RAM\n  - LCD parallel interface, 8080/6800 modes\n  - Timer with quadrature (incremental) encoder input\n  - 5 V-tolerant I/Os\n  - Parallel camera interface\n  - True random number generator\n  - RTC: subsecond accuracy, hardware calendar\n  - 96-bit unique ID",
+			"vendor": {
+				"name": "STMicroelectronics",
+				"id": 13
+			},
+			"processor": {
+				"core": "Cortex-M7",
+				"coreVersion": "r0p1",
+				"fpu": "SP_FPU",
+				"mpu": "MPU",
+				"endian": "Little-endian",
+				"clock": 216000000
+			},
+			"features": [
+				{
+					"name": "Timer",
+					"n": 2,
+					"m": 32
+				},
+				{
+					"name": "WDT",
+					"n": 2
+				},
+				{
+					"name": "RTC",
+					"type": "clock",
+					"n": 32768
+				},
+				{
+					"name": "I2S",
+					"type": "interface",
+					"n": 2
+				},
+				{
+					"name": "Temp",
+					"n": -40,
+					"m": 85
+				},
+				{
+					"name": "Temp",
+					"n": -40,
+					"m": 105
+				}
+			],
+			"debugOptions": [
+				{
+					"svd": "CMSIS/SVD/STM32F7x.svd"
+				}
+			],
+			"children": [
+				{
+					"name": "STM32F745",
+					"type": "subfamily",
+					"compile": {
+						"header": "Drivers/CMSIS/Device/ST/STM32F7xx/Include/stm32f7xx.h",
+						"define": "STM32F745xx"
+					},
+					"memorySections": [
+						{
+							"id": "IRAM1",
+							"start": "0x20010000",
+							"size": "0x40000",
+							"default": true
+						},
+						{
+							"id": "IRAM2",
+							"start": "0x20000000",
+							"size": "0x10000",
+							"default": true
+						}
+					],
+					"children": [
+						{
+							"name": "STM32F745ZG",
+							"type": "device",
+							"memorySections": [
+								{
+									"id": "IROM1",
+									"start": "0x08000000",
+									"size": "0x100000",
+									"startup": true,
+									"default": true
+								},
+								{
+									"id": "IROM2",
+									"start": "0x00200000",
+									"size": "0x100000"
+								}
+							],
+							"children": [
+								{
+									"name": "STM32F745ZGTx",
+									"type": "variant",
+									"features": [
+										{
+											"name": "QFP",
+											"type": "package",
+											"n": 144
+										}
+									]
+								}
+							]
+						},
+						{
+							"name": "STM32F745ZE",
+							"type": "device",
+							"memorySections": [
+								{
+									"id": "IROM1",
+									"start": "0x08000000",
+									"size": "0x80000",
+									"startup": true,
+									"default": true
+								},
+								{
+									"id": "IROM2",
+									"start": "0x00200000",
+									"size": "0x80000"
+								}
+							],
+							"children": [
+								{
+									"name": "STM32F745ZETx",
+									"type": "variant",
+									"features": [
+										{
+											"name": "QFP",
+											"type": "package",
+											"n": 144
+										}
+									]
+								}
+							]
+						},
+						{
+							"name": "STM32F745VG",
+							"type": "device",
+							"memorySections": [
+								{
+									"id": "IROM1",
+									"start": "0x08000000",
+									"size": "0x100000",
+									"startup": true,
+									"default": true
+								},
+								{
+									"id": "IROM2",
+									"start": "0x00200000",
+									"size": "0x100000"
+								}
+							],
+							"children": [
+								{
+									"name": "STM32F745VGTx",
+									"type": "variant",
+									"features": [
+										{
+											"name": "QFP",
+											"type": "package",
+											"n": 100
+										}
+									]
+								}
+							]
+						},
+						{
+							"name": "STM32F745VE",
+							"type": "device",
+							"memorySections": [
+								{
+									"id": "IROM1",
+									"start": "0x08000000",
+									"size": "0x80000",
+									"startup": true,
+									"default": true
+								},
+								{
+									"id": "IROM2",
+									"start": "0x00200000",
+									"size": "0x80000"
+								}
+							],
+							"children": [
+								{
+									"name": "STM32F745VETx",
+									"type": "variant",
+									"features": [
+										{
+											"name": "QFP",
+											"type": "package",
+											"n": 100
+										}
+									]
+								}
+							]
+						},
+						{
+							"name": "STM32F745IG",
+							"type": "device",
+							"memorySections": [
+								{
+									"id": "IROM1",
+									"start": "0x08000000",
+									"size": "0x100000",
+									"startup": true,
+									"default": true
+								},
+								{
+									"id": "IROM2",
+									"start": "0x00200000",
+									"size": "0x100000"
+								}
+							],
+							"children": [
+								{
+									"name": "STM32F745IGTx",
+									"type": "variant",
+									"features": [
+										{
+											"name": "QFP",
+											"type": "package",
+											"n": 176
+										}
+									]
+								},
+								{
+									"name": "STM32F745IGKx",
+									"type": "variant",
+									"features": [
+										{
+											"name": "BGA",
+											"type": "package",
+											"n": 176
+										}
+									]
+								}
+							]
+						},
+						{
+							"name": "STM32F745IE",
+							"type": "device",
+							"memorySections": [
+								{
+									"id": "IROM1",
+									"start": "0x08000000",
+									"size": "0x80000",
+									"startup": true,
+									"default": true
+								},
+								{
+									"id": "IROM2",
+									"start": "0x00200000",
+									"size": "0x80000"
+								}
+							],
+							"children": [
+								{
+									"name": "STM32F745IETx",
+									"type": "variant",
+									"features": [
+										{
+											"name": "QFP",
+											"type": "package",
+											"n": 176
+										}
+									]
+								},
+								{
+									"name": "STM32F745IEKx",
+									"type": "variant",
+									"features": [
+										{
+											"name": "BGA",
+											"type": "package",
+											"n": 176
+										}
+									]
+								}
+							]
+						}
+					]
+				},
+				{
+					"name": "STM32F746",
+					"type": "subfamily",
+					"compile": {
+						"header": "Drivers/CMSIS/Device/ST/STM32F7xx/Include/stm32f7xx.h",
+						"define": "STM32F746xx"
+					},
+					"memorySections": [
+						{
+							"id": "IRAM1",
+							"start": "0x20010000",
+							"size": "0x40000",
+							"default": true
+						},
+						{
+							"id": "IRAM2",
+							"start": "0x20000000",
+							"size": "0x10000",
+							"default": true
+						}
+					],
+					"children": [
+						{
+							"name": "STM32F746ZG",
+							"type": "device",
+							"memorySections": [
+								{
+									"id": "IROM1",
+									"start": "0x08000000",
+									"size": "0x100000",
+									"startup": true,
+									"default": true
+								},
+								{
+									"id": "IROM2",
+									"start": "0x00200000",
+									"size": "0x100000"
+								}
+							],
+							"children": [
+								{
+									"name": "STM32F746ZGYx",
+									"type": "variant",
+									"features": [
+										{
+											"name": "CSP",
+											"type": "package",
+											"n": 143
+										}
+									]
+								},
+								{
+									"name": "STM32F746ZGTx",
+									"type": "variant",
+									"features": [
+										{
+											"name": "QFP",
+											"type": "package",
+											"n": 144
+										}
+									]
+								}
+							]
+						},
+						{
+							"name": "STM32F746VG",
+							"type": "device",
+							"memorySections": [
+								{
+									"id": "IROM1",
+									"start": "0x08000000",
+									"size": "0x100000",
+									"startup": true,
+									"default": true
+								},
+								{
+									"id": "IROM2",
+									"start": "0x00200000",
+									"size": "0x100000"
+								}
+							],
+							"children": [
+								{
+									"name": "STM32F746VGTx",
+									"type": "variant",
+									"features": [
+										{
+											"name": "QFP",
+											"type": "package",
+											"n": 100
+										}
+									]
+								}
+							]
+						},
+						{
+							"name": "STM32F746IG",
+							"type": "device",
+							"memorySections": [
+								{
+									"id": "IROM1",
+									"start": "0x08000000",
+									"size": "0x100000",
+									"startup": true,
+									"default": true
+								},
+								{
+									"id": "IROM2",
+									"start": "0x00200000",
+									"size": "0x100000"
+								}
+							],
+							"children": [
+								{
+									"name": "STM32F746IGHx",
+									"type": "variant",
+									"features": [
+										{
+											"name": "BGA",
+											"type": "package",
+											"n": 176
+										}
+									]
+								},
+								{
+									"name": "STM32F746IGTx",
+									"type": "variant",
+									"features": [
+										{
+											"name": "QFP",
+											"type": "package",
+											"n": 176
+										}
+									]
+								}
+							]
+						},
+						{
+							"name": "STM32F746BG",
+							"type": "device",
+							"memorySections": [
+								{
+									"id": "IROM1",
+									"start": "0x08000000",
+									"size": "0x100000",
+									"startup": true,
+									"default": true
+								},
+								{
+									"id": "IROM2",
+									"start": "0x00200000",
+									"size": "0x100000"
+								}
+							],
+							"children": [
+								{
+									"name": "STM32F746BGTx",
+									"type": "variant",
+									"features": [
+										{
+											"name": "QFP",
+											"type": "package",
+											"n": 208
+										}
+									]
+								}
+							]
+						},
+						{
+							"name": "STM32F746NG",
+							"type": "device",
+							"memorySections": [
+								{
+									"id": "IROM1",
+									"start": "0x08000000",
+									"size": "0x100000",
+									"startup": true,
+									"default": true
+								},
+								{
+									"id": "IROM2",
+									"start": "0x00200000",
+									"size": "0x100000"
+								}
+							],
+							"children": [
+								{
+									"name": "STM32F746NGHx",
+									"type": "variant",
+									"features": [
+										{
+											"name": "BGA",
+											"type": "package",
+											"n": 216
+										}
+									]
+								}
+							]
+						},
+						{
+							"name": "STM32F746ZE",
+							"type": "device",
+							"memorySections": [
+								{
+									"id": "IROM1",
+									"start": "0x08000000",
+									"size": "0x80000",
+									"startup": true,
+									"default": true
+								},
+								{
+									"id": "IROM2",
+									"start": "0x00200000",
+									"size": "0x80000"
+								}
+							],
+							"children": [
+								{
+									"name": "STM32F746ZETx",
+									"type": "variant",
+									"features": [
+										{
+											"name": "QFP",
+											"type": "package",
+											"n": 144
+										}
+									]
+								},
+								{
+									"name": "STM32F746ZEYx",
+									"type": "variant",
+									"features": [
+										{
+											"name": "CSP",
+											"type": "package",
+											"n": 143
+										}
+									]
+								}
+							]
+						},
+						{
+							"name": "STM32F746VE",
+							"type": "device",
+							"memorySections": [
+								{
+									"id": "IROM1",
+									"start": "0x08000000",
+									"size": "0x80000",
+									"startup": true,
+									"default": true
+								},
+								{
+									"id": "IROM2",
+									"start": "0x00200000",
+									"size": "0x80000"
+								}
+							],
+							"children": [
+								{
+									"name": "STM32F746VETx",
+									"type": "variant",
+									"features": [
+										{
+											"name": "QFP",
+											"type": "package",
+											"n": 100
+										}
+									]
+								}
+							]
+						},
+						{
+							"name": "STM32F746IE",
+							"type": "device",
+							"memorySections": [
+								{
+									"id": "IROM1",
+									"start": "0x08000000",
+									"size": "0x80000",
+									"startup": true,
+									"default": true
+								},
+								{
+									"id": "IROM2",
+									"start": "0x00200000",
+									"size": "0x80000"
+								}
+							],
+							"children": [
+								{
+									"name": "STM32F746IETx",
+									"type": "variant",
+									"features": [
+										{
+											"name": "QFP",
+											"type": "package",
+											"n": 176
+										}
+									]
+								},
+								{
+									"name": "STM32F746IEKx",
+									"type": "variant",
+									"features": [
+										{
+											"name": "BGA",
+											"type": "package",
+											"n": 176
+										}
+									]
+								}
+							]
+						},
+						{
+							"name": "STM32F746BE",
+							"type": "device",
+							"memorySections": [
+								{
+									"id": "IROM1",
+									"start": "0x08000000",
+									"size": "0x80000",
+									"startup": true,
+									"default": true
+								},
+								{
+									"id": "IROM2",
+									"start": "0x00200000",
+									"size": "0x80000"
+								}
+							],
+							"children": [
+								{
+									"name": "STM32F746BETx",
+									"type": "variant",
+									"features": [
+										{
+											"name": "QFP",
+											"type": "package",
+											"n": 208
+										}
+									]
+								}
+							]
+						},
+						{
+							"name": "STM32F746NE",
+							"type": "device",
+							"memorySections": [
+								{
+									"id": "IROM1",
+									"start": "0x08000000",
+									"size": "0x80000",
+									"startup": true,
+									"default": true
+								},
+								{
+									"id": "IROM2",
+									"start": "0x00200000",
+									"size": "0x80000"
+								}
+							],
+							"children": [
+								{
+									"name": "STM32F746NEHx",
+									"type": "variant",
+									"features": [
+										{
+											"name": "BGA",
+											"type": "package",
+											"n": 216
+										}
+									]
+								}
+							]
+						}
+					]
+				},
+				{
+					"name": "STM32F756",
+					"type": "subfamily",
+					"compile": {
+						"header": "Drivers/CMSIS/Device/ST/STM32F7xx/Include/stm32f7xx.h",
+						"define": "STM32F756xx"
+					},
+					"memorySections": [
+						{
+							"id": "IROM1",
+							"start": "0x08000000",
+							"size": "0x100000",
+							"startup": true,
+							"default": true
+						},
+						{
+							"id": "IROM2",
+							"start": "0x00200000",
+							"size": "0x100000"
+						},
+						{
+							"id": "IRAM1",
+							"start": "0x20010000",
+							"size": "0x40000",
+							"default": true
+						},
+						{
+							"id": "IRAM2",
+							"start": "0x20000000",
+							"size": "0x10000",
+							"default": true
+						}
+					],
+					"children": [
+						{
+							"name": "STM32F756ZG",
+							"type": "device",
+							"children": [
+								{
+									"name": "STM32F756ZGYx",
+									"type": "variant",
+									"features": [
+										{
+											"name": "CSP",
+											"type": "package",
+											"n": 143
+										}
+									]
+								},
+								{
+									"name": "STM32F756ZGTx",
+									"type": "variant",
+									"features": [
+										{
+											"name": "QFP",
+											"type": "package",
+											"n": 144
+										}
+									]
+								}
+							]
+						},
+						{
+							"name": "STM32F756VG",
+							"type": "device",
+							"children": [
+								{
+									"name": "STM32F756VGTx",
+									"type": "variant",
+									"features": [
+										{
+											"name": "QFP",
+											"type": "package",
+											"n": 100
+										}
+									]
+								}
+							]
+						},
+						{
+							"name": "STM32F756IG",
+							"type": "device",
+							"children": [
+								{
+									"name": "STM32F756IGHx",
+									"type": "variant",
+									"features": [
+										{
+											"name": "BGA",
+											"type": "package",
+											"n": 176
+										}
+									]
+								},
+								{
+									"name": "STM32F756IGTx",
+									"type": "variant",
+									"features": [
+										{
+											"name": "QFP",
+											"type": "package",
+											"n": 176
+										}
+									]
+								}
+							]
+						},
+						{
+							"name": "STM32F756BG",
+							"type": "device",
+							"children": [
+								{
+									"name": "STM32F756BGTx",
+									"type": "variant",
+									"features": [
+										{
+											"name": "QFP",
+											"type": "package",
+											"n": 208
+										}
+									]
+								}
+							]
+						},
+						{
+							"name": "STM32F756NG",
+							"type": "device",
+							"children": [
+								{
+									"name": "STM32F756NGHx",
+									"type": "variant",
+									"features": [
+										{
+											"name": "BGA",
+											"type": "package",
+											"n": 216
+										}
+									]
+								}
+							]
+						}
+					]
+				}
+			]
+		}
+	],
+	"boards": [
+		{
+			"vendorName": "STMicroelectronics",
+			"name": "STM32F746G-Discovery",
+			"revision": "Rev.1",
+			"description": "STMicroelectronics STM32F746G-Discovery Board Support and Examples",
+			"mountedDevices": [
+				{
+					"deviceIndex": "0",
+					"vendor": {
+						"name": "STMicroelectronics",
+						"id": 13
+					},
+					"name": "STM32F746NGHx"
+				}
+			],
+			"compatibleDevices": [
+				{
+					"deviceIndex": "0",
+					"vendor": {
+						"name": "STMicroelectronics",
+						"id": 13
+					},
+					"subFamily": "STM32F746"
+				}
+			],
+			"debugInterfaces": [
+				{
+					"adapter": "ST-Link",
+					"connector": "Mini-USB"
+				}
+			],
+			"features": [
+				{
+					"name": "ODbg",
+					"description": "On-board ST-LINK/V2",
+					"n": 1
+				},
+				{
+					"name": "XTAL",
+					"n": 25000000
+				},
+				{
+					"name": "RAM",
+					"description": "128-Mbit SDRAM (64 Mbits accessible)",
+					"n": 1
+				},
+				{
+					"name": "ROM",
+					"description": "128-Mbit Quad-SPI Flash memory",
+					"n": 1
+				},
+				{
+					"name": "MemCard",
+					"description": "microSD card holder",
+					"n": 1
+				},
+				{
+					"name": "PWR",
+					"description": "USB Powered",
+					"n": 5
+				},
+				{
+					"name": "PWR",
+					"description": "External Supply",
+					"n": 3,
+					"m": 5
+				},
+				{
+					"name": "USB",
+					"description": "USB OTG HS and FS with micro-AB Connector",
+					"n": 2
+				},
+				{
+					"name": "ETH",
+					"description": "RJ54 Jack",
+					"n": 1,
+					"m": 100000000
+				},
+				{
+					"name": "I2C",
+					"description": "I2C extension connector",
+					"n": 1
+				},
+				{
+					"name": "Button",
+					"description": "Push-buttons: User and Reset",
+					"n": 2
+				},
+				{
+					"name": "LineIn",
+					"n": 1
+				},
+				{
+					"name": "LineOut",
+					"n": 1
+				},
+				{
+					"name": "MIC",
+					"description": "ST MEMS microphones",
+					"n": 2
+				},
+				{
+					"name": "ConnOther",
+					"description": "SPDIF RCA input connector",
+					"n": 1
+				},
+				{
+					"name": "Speaker",
+					"n": 2
+				},
+				{
+					"name": "GLCD",
+					"description": "Color TFT LCD with capacitive touch screen",
+					"n": 1,
+					"m": 480.272
+				},
+				{
+					"name": "CustomFF",
+					"description": "Discovery Board Formfactor",
+					"n": 80,
+					"m": 130
+				},
+				{
+					"name": "ArduinoFF",
+					"description": "Arduino Uno 3V connectors",
+					"n": 1
+				},
+				{
+					"name": "Camera",
+					"n": 1
+				}
+			]
+		},
+		{
+			"vendorName": "STMicroelectronics",
+			"name": "STM32756G-EVAL",
+			"revision": "Rev.B",
+			"description": "STMicroelectronics STM32756G-EVAL Evaluation Board Support and Examples",
+			"mountedDevices": [
+				{
+					"deviceIndex": "0",
+					"vendor": {
+						"name": "STMicroelectronics",
+						"id": 13
+					},
+					"name": "STM32F756NGHx"
+				}
+			],
+			"compatibleDevices": [
+				{
+					"deviceIndex": "0",
+					"vendor": {
+						"name": "STMicroelectronics",
+						"id": 13
+					},
+					"subFamily": "STM32F756"
+				},
+				{
+					"deviceIndex": "0",
+					"vendor": {
+						"name": "STMicroelectronics",
+						"id": 13
+					},
+					"subFamily": "STM32F746"
+				}
+			],
+			"debugInterfaces": [
+				{
+					"adapter": "ST-Link",
+					"connector": "Mini-USB"
+				},
+				{
+					"adapter": "JTAG/SW",
+					"connector": "20 pin JTAG (0.1 inch connector)"
+				},
+				{
+					"adapter": "JTAG/SW",
+					"connector": "20-pin Cortex debug + ETM Trace (0.05 inch connector)"
+				}
+			],
+			"features": [
+				{
+					"name": "ODbg",
+					"description": "On-board ST-LINK/V2",
+					"n": 1
+				},
+				{
+					"name": "RAM",
+					"description": "8M x 32-bit SDRAM",
+					"n": 1
+				},
+				{
+					"name": "RAM",
+					"description": "1M x 16-bit SRAM",
+					"n": 1
+				},
+				{
+					"name": "ROM",
+					"description": "8M x 16-bit Nor Flash",
+					"n": 1
+				},
+				{
+					"name": "USB",
+					"description": "High-Speed USB with micro-AB Connector",
+					"n": 1
+				},
+				{
+					"name": "USB",
+					"description": "Full-Speed USB with micro-AB Connector",
+					"n": 2
+				},
+				{
+					"name": "Joystick",
+					"description": "5-position Joystick",
+					"n": 1
+				},
+				{
+					"name": "Camera",
+					"n": 1
+				},
+				{
+					"name": "Button",
+					"description": "Push-Buttons for Reset, Wakeup, Tamper and User",
+					"n": 4
+				},
+				{
+					"name": "LED",
+					"description": "4 color LEDs directly connected to port pins",
+					"n": 4
+				},
+				{
+					"name": "GLCD",
+					"description": "5.7 inch Color TFT color LCD with capacitive touch panel",
+					"n": 1,
+					"m": 640.48
+				},
+				{
+					"name": "Poti",
+					"description": "Analog Voltage Control for ADC Input (potentiometer)",
+					"n": 1
+				},
+				{
+					"name": "LineIn",
+					"description": "Audio CODEC with Stereo Line-In/Out and Speaker/Microphone",
+					"n": 1
+				},
+				{
+					"name": "LineOut",
+					"description": "Audio CODEC with Stereo Line-In/Out and Speaker/Microphone",
+					"n": 1
+				},
+				{
+					"name": "MIC",
+					"description": "ST MEMS microphones",
+					"n": 2
+				},
+				{
+					"name": "Speaker",
+					"n": 2
+				},
+				{
+					"name": "Other",
+					"description": "Digital Steroe Microphone",
+					"n": 1
+				},
+				{
+					"name": "CAN",
+					"n": 1
+				},
+				{
+					"name": "RS232",
+					"n": 1
+				},
+				{
+					"name": "ETH",
+					"description": "10/100 Ethernet Port",
+					"n": 1
+				},
+				{
+					"name": "XTAL",
+					"n": 32000000
+				},
+				{
+					"name": "PWR",
+					"description": "USB Powered",
+					"n": 5
+				},
+				{
+					"name": "PWR",
+					"description": "External Supply",
+					"n": 3,
+					"m": 5
+				},
+				{
+					"name": "DIO",
+					"description": "Motor Control Connector",
+					"n": 34
+				},
+				{
+					"name": "DIO",
+					"description": "Daughterboard Extension header 1",
+					"n": 56
+				},
+				{
+					"name": "DIO",
+					"description": "Daughterboard Extension header 2",
+					"n": 60
+				},
+				{
+					"name": "ConnOther",
+					"description": "Motor control connector",
+					"n": 1
+				}
+			]
+		}
+	]
+}

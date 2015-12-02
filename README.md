@@ -47,3 +47,14 @@ The actual files used by the package are in the `xpack` branch.
 
 Most of the files should be unchanged.
 
+## Vectors
+
+The `vectors_*.c` files were created using the ARM assembly files.
+
+```
+$ bash scripts/generate-vectors.sh
+startup_stm32f745xx.s -> vectors_stm32f745xx.c
+startup_stm32f746xx.s -> vectors_stm32f746xx.c
+startup_stm32f756xx.s -> vectors_stm32f756xx.c
+```
+
