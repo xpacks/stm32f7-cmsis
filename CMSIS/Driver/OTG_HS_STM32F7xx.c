@@ -18,14 +18,16 @@
  * 3. This notice may not be removed or altered from any source distribution.
  *
  *
- * $Date:        3. July 2015
- * $Revision:    V1.0
+ * $Date:        24. August 2015
+ * $Revision:    V1.1
  *
  * Project:      OTG High-Speed Common Driver for ST STM32F7xx
  * Configured:   via RTE_Device.h configuration file
  * -------------------------------------------------------------------------- */
 
 /* History:
+ *  Version 1.1
+ *    STM32CubeMX generated code can also be used to configure the driver.
  *  Version 1.0
  *    Initial release
  */
@@ -39,8 +41,6 @@
 
 #include "Driver_USBH.h"
 #include "Driver_USBD.h"
-
-#include "RTE_Components.h"
 
 #include "OTG_HS_STM32F7xx.h"
 
@@ -57,6 +57,7 @@ uint8_t otg_hs_role = ARM_USB_ROLE_NONE;
   \fn          void Enable_GPIO_Clock (const GPIO_TypeDef *port)
   \brief       Enable GPIO clock
 */
+#ifdef RTE_DEVICE_FRAMEWORK_CLASSIC
 static void Enable_GPIO_Clock (const GPIO_TypeDef *GPIOx) {
   if      (GPIOx == GPIOA) { __GPIOA_CLK_ENABLE(); }
   else if (GPIOx == GPIOB) { __GPIOB_CLK_ENABLE(); }
@@ -82,6 +83,7 @@ static void Enable_GPIO_Clock (const GPIO_TypeDef *GPIOx) {
   else if (GPIOx == GPIOK) { __GPIOK_CLK_ENABLE(); }
 #endif
 }
+#endif
 
 
 // Common IRQ Routine **********************************************************
@@ -95,14 +97,14 @@ void OTG_HS_IRQHandler (void) {
 
   gintsts = USB_OTG_HS->GINTSTS & USB_OTG_HS->GINTMSK;
 
-#if (defined(RTE_Drivers_USBH1) && defined(RTE_Drivers_USBD1))
+#if (defined(MX_USB_OTG_HS_HOST) && defined(MX_USB_OTG_HS_DEVICE))
   switch (otg_hs_role) {
-#ifdef RTE_Drivers_USBH1
+#ifdef MX_USB_OTG_HS_HOST
     case ARM_USB_ROLE_HOST:
       USBH_HS_IRQ (gintsts);
       break;
 #endif
-#ifdef RTE_Drivers_USBD1
+#ifdef MX_USB_OTG_HS_DEVICE
     case ARM_USB_ROLE_DEVICE:
       USBD_HS_IRQ (gintsts);
       break;
@@ -111,7 +113,7 @@ void OTG_HS_IRQHandler (void) {
       break;
   }
 #else
-#ifdef RTE_Drivers_USBH1
+#ifdef MX_USB_OTG_HS_HOST
   USBH_HS_IRQ (gintsts);
 #else
   USBD_HS_IRQ (gintsts);
@@ -130,6 +132,7 @@ void OTG_HS_IRQHandler (void) {
                ARM_USB_PIN_OC, ARM_USB_PIN_ID)
 */
 void OTG_HS_PinsConfigure (uint8_t pins_mask) {
+#ifdef RTE_DEVICE_FRAMEWORK_CLASSIC
   GPIO_InitTypeDef GPIO_InitStruct;
 
   if ((pins_mask & (ARM_USB_PIN_DP | ARM_USB_PIN_DM)) != 0U) {
@@ -337,6 +340,34 @@ void OTG_HS_PinsConfigure (uint8_t pins_mask) {
 #endif
     }
   }
+#endif
+
+#ifdef RTE_DEVICE_FRAMEWORK_CUBE_MX
+#if (!defined MX_USB_OTG_HS_ULPI_D7_Pin && defined(USE_STM32756G_EVAL))         // Host VBUS power driving pin is on IO expander
+  if ((pins_mask & ARM_USB_PIN_VBUS) != 0U) {
+    if (otg_hs_role == ARM_USB_ROLE_HOST) {
+      BSP_IO_Init();
+      BSP_IO_ConfigPin(IO_PIN_9, IO_MODE_OUTPUT);
+
+      // Initial Host VBUS Power Off
+#if  (USB_OTG_HS_VBUS_Power_Pin_Active == 0)    // VBUS active low
+      BSP_IO_WritePin (IO_PIN_9, BSP_IO_PIN_SET);
+#else                                           // VBUS active high
+      BSP_IO_WritePin (IO_PIN_9, BSP_IO_PIN_RESET);
+#endif
+    }
+  }
+#endif
+
+#if (!defined MX_USB_OTG_HS_ULPI_D7_Pin && defined(USE_STM32756G_EVAL))         // Host overcurrent sensing pin is on IO expander
+  if ((pins_mask & ARM_USB_PIN_OC) != 0U) {
+    if (otg_hs_role == ARM_USB_ROLE_HOST) {
+      BSP_IO_Init();
+      BSP_IO_ConfigPin(IO_PIN_8, IO_MODE_INPUT);
+    }
+  }
+#endif
+#endif
 }
 
 /**
@@ -348,6 +379,7 @@ void OTG_HS_PinsConfigure (uint8_t pins_mask) {
 */
 void OTG_HS_PinsUnconfigure (uint8_t pins_mask) {
 
+#ifdef RTE_DEVICE_FRAMEWORK_CLASSIC
   if ((pins_mask & (ARM_USB_PIN_DP | ARM_USB_PIN_DM)) != 0U) {
     // External ULPI High-speed PHY pins
 #ifdef MX_USB_OTG_HS_ULPI_DIR_Pin
@@ -428,6 +460,25 @@ void OTG_HS_PinsUnconfigure (uint8_t pins_mask) {
 #endif
     }
   }
+#endif
+
+#ifdef RTE_DEVICE_FRAMEWORK_CUBE_MX
+#if (!defined MX_USB_OTG_HS_ULPI_D7_Pin && defined(USE_STM32756G_EVAL))         // Host VBUS power driving pin is on IO expander
+  if ((pins_mask & ARM_USB_PIN_VBUS) != 0U) {
+    if (otg_hs_role == ARM_USB_ROLE_HOST) {
+      BSP_IO_ConfigPin(IO_PIN_9, IO_MODE_OFF);
+    }
+  }
+#endif
+
+#if (!defined MX_USB_OTG_HS_ULPI_D7_Pin && defined(USE_STM32756G_EVAL))         // Host overcurrent sensing pin is on IO expander
+  if ((pins_mask & ARM_USB_PIN_OC) != 0U) {
+    if (otg_hs_role == ARM_USB_ROLE_HOST) {
+      BSP_IO_ConfigPin(IO_PIN_8, IO_MODE_OFF);
+    }
+  }
+#endif
+#endif
 }
 
 /**

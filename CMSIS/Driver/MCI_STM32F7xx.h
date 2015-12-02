@@ -18,8 +18,8 @@
  * 3. This notice may not be removed or altered from any source distribution.
  *
  *
- * $Date:        07. July 2015
- * $Revision:    V1.0
+ * $Date:        24. August 2015
+ * $Revision:    V1.1
  *
  * Project:      MCI Driver Definitions for ST STM32F7xx
  * -------------------------------------------------------------------------- */

@@ -18,8 +18,8 @@
  * 3. This notice may not be removed or altered from any source distribution.
  *
  *
- * $Date:        15. July 2015
- * $Revision:    V1.0
+ * $Date:        24. August 2015
+ * $Revision:    V1.1
  *
  * Driver:       Driver_I2C1, Driver_I2C2, Driver_I2C3, Driver_I2C4
  * Configured:   via RTE_Device.h configuration file
@@ -37,34 +37,81 @@
  * -------------------------------------------------------------------------- */
 
 /* History:
+ *  Version 1.1
+ *    Enhanced STM32CubeMx compatibility
  *  Version 1.0
  *    Initial release
  */
+ 
+ /*! \page stm32f7_i2c CMSIS-Driver I2C Setup 
 
-/* STM32CubeMX configuration:
- *
- * Pinout tab:
- *   - Select I2Cx peripheral and enable I2C mode
- * Clock Configuration tab:
- *   - Ensure that I2CCLK frequency meets the following condition: Fscl < 4/3Fi2cclk
- * Configuration tab:
- *   - Select I2Cx under Connectivity section which opens I2Cx Configuration window:
- *       - Parameter Settings tab: settings are unused by this driver
- *       - NVIC Settings: enable I2Cx event and error interrupt
- *       - GPIO Settings: configure as needed
- *       - DMA Settings:  to enable DMA transfers you need to
- *           - add I2Cx_RX and/or I2Cx_TX DMA Request
- *           - select Normal DMA mode (for RX and TX)
- *           - deselect Peripheral Increment Address (for RX and TX)
- *           - select Memory Increment Address (for RX and TX)
- *           - deselect Use Fifo option (for RX and TX)
- *           - select Byte Data Width (for RX and TX)
- *           - go to NVIC Settings tab and enable RX and TX stream global interrupt
- */
+The CMSIS-Driver I2C requires:
+  - Setup of I2Cx input clock
+  - Setup of I2Cx in I2C mode with optional DMA for Rx and Tx transfers
+ 
+The example below uses correct settings for STM32F746G-Discovery:
+  - I2C3 Mode: I2C
+
+For different boards, refer to the hardware schematics to reflect correct setup values.
+
+The STM32CubeMX configuration steps for Pinout, Clock, and System Configuration are 
+listed below. Enter the values that are marked \b bold.
+   
+Pinout tab
+----------
+  1. Configure mode
+    - Peripherals \b I2C3: Mode= \b I2C
+
+  2. Configure pin PH7 and pin PH8 as I2C3 peripheral alternative pins
+    - Click in chip diagram on pin \b PH7 and select \b I2C3_SCL
+    - Click in chip diagram on pin \b PH8 and select \b I2C3_SDA
+
+Clock Configuration tab
+-----------------------
+  1. Configure I2C3 Clock
+
+Configuration tab
+-----------------
+  1. Under Connectivity open \b I2C3 Configuration:
+     - \e optional <b>DMA Settings</b>: setup DMA transfers for Rx and Tx\n
+       \b Add - Select \b I2C3_RX: Stream=DMA1 Stream 1, Direction=Peripheral to Memory, Priority=Low
+          DMA Request Settings         | Label             | Peripheral | Memory
+          :----------------------------|:------------------|:-----------|:-------------
+          Mode: Normal                 | Increment Address | OFF        |\b ON
+          Use Fifo OFF Threshold: Full | Data Width        |\b Byte     | Byte
+          .                            | Burst Size        | Single     | Single
+       \b Add - Select \b I2C3_TX: Stream=DMA1 Stream 4, Direction=Memory to Peripheral, Priority=Low
+          DMA Request Settings         | Label             | Peripheral | Memory
+          :----------------------------|:------------------|:-----------|:-------------
+          Mode: Normal                 | Increment Address | OFF        |\b ON
+          Use Fifo OFF Threshold: Full | Data Width        |\b Byte     | Byte
+          .                            | Burst Size        | Single     | Single
+
+     - <b>GPIO Settings</b>: review settings, no changes required
+          Pin Name | Signal on Pin | GPIO mode | GPIO Pull-up/Pull..| Maximum out | User Label
+          :--------|:--------------|:----------|:-------------------|:------------|:----------
+          PH7      | I2C3_SCL      | Alternate | Pull-up            | High        |.
+          PH8      | I2C3_SDA      | Alternate | Pull-up            | High        |.
+
+     - <b>NVIC Settings</b>: enable interrupts
+          Interrupt Table                      | Enable | Preemption Priority | Sub Priority
+          :------------------------------------|:-------|:--------------------|:--------------
+          DMA1 stream1 global interrupt        |   ON   | 0                   | 0
+          DMA1 stream4 global interrupt        |   ON   | 0                   | 0
+          I2C3 event interrupt                 |\b ON   | 0                   | 0
+          I2C3 error interrupt                 |\b ON   | 0                   | 0
+
+     - Parameter Settings: not used
+     - User Constants: not used
+   
+     Click \b OK to close the I2C3 Configuration dialog
+*/
+
+/*! \cond */
 
 #include "I2C_STM32F7xx.h"
 
-#define ARM_I2C_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,0)    /* driver version */
+#define ARM_I2C_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,1)    /* driver version */
 
 
 #if defined(MX_I2C1_RX_DMA_Instance)
@@ -103,8 +150,8 @@ extern
 #endif
 DMA_HandleTypeDef hdma_i2c2_tx;
 
-void I2C2_RX_DMA_Complete(DMA_HandleTypeDef *hdma);
-void I2C2_RX_DMA_Error   (DMA_HandleTypeDef *hdma);
+void I2C2_TX_DMA_Complete(DMA_HandleTypeDef *hdma);
+void I2C2_TX_DMA_Error   (DMA_HandleTypeDef *hdma);
 #endif
 
 #if defined(MX_I2C3_RX_DMA_Instance)
@@ -654,23 +701,30 @@ static int32_t I2C_PowerControl (ARM_POWER_STATE state, I2C_RESOURCES *i2c) {
 
   switch (state) {
     case ARM_POWER_OFF:
+      /* Disable I2C peripheral */
+      i2c->reg->CR1 = 0;
+
       #if defined(RTE_DEVICE_FRAMEWORK_CLASSIC)
         /* Disable I2C IRQ */
         HAL_NVIC_DisableIRQ(i2c->ev_irq_num);
         HAL_NVIC_DisableIRQ(i2c->er_irq_num);
 
+        /* Abort DMA streams */
+        if (i2c->dma_rx != NULL) { HAL_DMA_Abort (i2c->dma_rx->h); }
+        if (i2c->dma_tx != NULL) { HAL_DMA_Abort (i2c->dma_tx->h); }
+
         /* Disable DMA stream IRQs in NVIC */
         if (i2c->dma_rx != NULL) { HAL_NVIC_DisableIRQ (i2c->dma_rx->irq_num); }
         if (i2c->dma_tx != NULL) { HAL_NVIC_DisableIRQ (i2c->dma_tx->irq_num); }
+
+        /* Disable peripheral clock */
+        if      (i2c->reg == I2C1) { __HAL_RCC_I2C1_CLK_DISABLE(); }
+        else if (i2c->reg == I2C2) { __HAL_RCC_I2C2_CLK_DISABLE(); }
+        else if (i2c->reg == I2C3) { __HAL_RCC_I2C3_CLK_DISABLE(); }
+        else /*(i2c->reg == I2C4)*/{ __HAL_RCC_I2C4_CLK_DISABLE(); }
       #else
         HAL_I2C_MspDeInit (i2c->h);
       #endif
-
-      /* Abort DMA streams */
-      if (i2c->dma_rx != NULL) { HAL_DMA_Abort (i2c->dma_rx->h); }
-      if (i2c->dma_tx != NULL) { HAL_DMA_Abort (i2c->dma_tx->h); }
-
-      i2c->info->flags = I2C_INIT;
 
       i2c->info->status.busy             = 0U;
       i2c->info->status.mode             = 0U;
@@ -679,33 +733,7 @@ static int32_t I2C_PowerControl (ARM_POWER_STATE state, I2C_RESOURCES *i2c) {
       i2c->info->status.arbitration_lost = 0U;
       i2c->info->status.bus_error        = 0U;
 
-      /* Disable I2C peripheral */
-      i2c->reg->CR1 &= ~I2C_CR1_PE;
-
-      #if defined(RTE_DEVICE_FRAMEWORK_CLASSIC)
-        /* Reset the peripheral and disable its clock */
-        if (i2c->reg == I2C1) {
-          __HAL_RCC_I2C1_FORCE_RESET();
-          __NOP(); __NOP(); __NOP(); __NOP(); 
-          __HAL_RCC_I2C1_RELEASE_RESET();
-
-          __HAL_RCC_I2C1_CLK_DISABLE();
-        }
-        else if (i2c->reg == I2C2) {
-          __HAL_RCC_I2C2_FORCE_RESET();
-          __NOP(); __NOP(); __NOP(); __NOP(); 
-          __HAL_RCC_I2C2_RELEASE_RESET();
-
-          __HAL_RCC_I2C2_CLK_DISABLE();
-        }
-        else {
-          __HAL_RCC_I2C3_FORCE_RESET();
-          __NOP(); __NOP(); __NOP(); __NOP(); 
-          __HAL_RCC_I2C3_RELEASE_RESET();
-
-          __HAL_RCC_I2C3_CLK_DISABLE();
-        }
-      #endif
+      i2c->info->flags = I2C_INIT;
       break;
 
     case ARM_POWER_LOW:
@@ -714,6 +742,12 @@ static int32_t I2C_PowerControl (ARM_POWER_STATE state, I2C_RESOURCES *i2c) {
     case ARM_POWER_FULL:
       if ((i2c->info->flags & I2C_POWER) == 0U) {
         #if defined(RTE_DEVICE_FRAMEWORK_CLASSIC)
+          /* Enable I2C clock */
+          if      (i2c->reg == I2C1) { __HAL_RCC_I2C1_CLK_ENABLE(); }
+          else if (i2c->reg == I2C2) { __HAL_RCC_I2C2_CLK_ENABLE(); }
+          else if (i2c->reg == I2C3) { __HAL_RCC_I2C3_CLK_ENABLE(); }
+          else /*(i2c->reg == I2C4)*/{ __HAL_RCC_I2C4_CLK_ENABLE(); }
+
           /* Enable DMA IRQs in NVIC */
           if (i2c->dma_rx != NULL) { HAL_NVIC_EnableIRQ (i2c->dma_rx->irq_num); }
           if (i2c->dma_tx != NULL) { HAL_NVIC_EnableIRQ (i2c->dma_tx->irq_num); }
@@ -727,30 +761,27 @@ static int32_t I2C_PowerControl (ARM_POWER_STATE state, I2C_RESOURCES *i2c) {
           HAL_I2C_MspInit (i2c->h);
         #endif
 
-        #if defined(RTE_DEVICE_FRAMEWORK_CLASSIC)
-          /* Enable I2C clock and reset the peripheral */
-          if (i2c->reg == I2C1) {
-            __HAL_RCC_I2C1_CLK_ENABLE();
-
-            __HAL_RCC_I2C1_FORCE_RESET();
-            __NOP(); __NOP(); __NOP(); __NOP(); 
-            __HAL_RCC_I2C1_RELEASE_RESET();
-          }
-          else if (i2c->reg == I2C2) {
-            __HAL_RCC_I2C2_CLK_ENABLE();
-
-            __HAL_RCC_I2C2_FORCE_RESET();
-            __NOP(); __NOP(); __NOP(); __NOP(); 
-            __HAL_RCC_I2C2_RELEASE_RESET();
-          }
-          else {
-            __HAL_RCC_I2C3_CLK_ENABLE();
-
-            __HAL_RCC_I2C3_FORCE_RESET();
-            __NOP(); __NOP(); __NOP(); __NOP(); 
-            __HAL_RCC_I2C3_RELEASE_RESET();
-          }
-        #endif
+        /* Reset the peripheral */
+        if (i2c->reg == I2C1) {
+          __HAL_RCC_I2C1_FORCE_RESET();
+          __NOP(); __NOP(); __NOP(); __NOP();
+          __HAL_RCC_I2C1_RELEASE_RESET();
+        }
+        else if (i2c->reg == I2C2) {
+          __HAL_RCC_I2C2_FORCE_RESET();
+          __NOP(); __NOP(); __NOP(); __NOP();
+          __HAL_RCC_I2C2_RELEASE_RESET();
+        }
+        else if (i2c->reg == I2C3) {
+          __HAL_RCC_I2C3_FORCE_RESET();
+          __NOP(); __NOP(); __NOP(); __NOP();
+          __HAL_RCC_I2C3_RELEASE_RESET();
+        }
+        else /*(i2c->reg == I2C4)*/ {
+          __HAL_RCC_I2C4_FORCE_RESET();
+          __NOP(); __NOP(); __NOP(); __NOP();
+          __HAL_RCC_I2C4_RELEASE_RESET();
+        }
 
         /* Initial peripheral setup */
         cr1 = I2C_CR1_SBC    | /* Slave byte control enabled          */
@@ -1886,3 +1917,5 @@ ARM_DRIVER_I2C Driver_I2C4 = {
   I2C4_GetStatus
 };
 #endif /* MX_I2C4 */
+
+/*! \endcond */

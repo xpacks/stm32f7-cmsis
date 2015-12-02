@@ -18,8 +18,8 @@
  * 3. This notice may not be removed or altered from any source distribution.
  *
  *
- * $Date:        01. July 2015
- * $Revision:    V1.0
+ * $Date:        21. August 2015
+ * $Revision:    V1.1
  *
  * Project:      Ethernet Media Access (MAC) Definitions for STM32F7xx
  * -------------------------------------------------------------------------- */
@@ -58,19 +58,25 @@
   #warning "Using EMAC_DMA_MEMORY_ADDRESS definition to override RTE_Device.h setting!"
   #else
   /* Use RTE_Device.h specified DMA memory address */
-  #define EMAC_DMA_MEMORY_ADDR     RTE_ETH_DMA_MEM_ADDR
+  #define EMAC_DMA_MEMORY_ADDR      RTE_ETH_DMA_MEM_ADDR
   #endif
 
-  #if (RTE_ETH_SMI_HW != 0)
-    #define MX_ETH_MDC_GPIOx        RTE_ETH_SMI_MDC_PORT
-    #define MX_ETH_MDC_GPIO_Pin     (1U << RTE_ETH_SMI_MDC_PIN)
-    #define MX_ETH_MDIO_GPIOx       RTE_ETH_SMI_MDIO_PORT
-    #define MX_ETH_MDIO_GPIO_Pin    (1U << RTE_ETH_SMI_MDIO_PIN)
+  #if (RTE_ETH_SMI_SW != 0)
+    /* Software controlled SMI */
+    #define ETH_SMI_SW              1
+    
+    #define MX_Ethernet_MDC_GPIOx     RTE_ETH_SMI_SW_MDC_PORT
+    #define MX_Ethernet_MDC_GPIO_Pin  (1U << RTE_ETH_SMI_SW_MDC_PIN)
+    #define MX_Ethernet_MDIO_GPIOx    RTE_ETH_SMI_SW_MDIO_PORT
+    #define MX_Ethernet_MDIO_GPIO_Pin (1U << RTE_ETH_SMI_SW_MDIO_PIN)
   #else
-    #define MX_ETH_MDC_GPIOx        RTE_ETH_SMI_SW_MDC_PORT
-    #define MX_ETH_MDC_GPIO_Pin     (1U << RTE_ETH_SMI_SW_MDC_PIN)
-    #define MX_ETH_MDIO_GPIOx       RTE_ETH_SMI_SW_MDIO_PORT
-    #define MX_ETH_MDIO_GPIO_Pin    (1U << RTE_ETH_SMI_SW_MDIO_PIN)
+    /* Hardware controlled SMI */
+    #define ETH_SMI_SW              0
+    
+    #define MX_Ethernet_MDC_GPIOx     RTE_ETH_SMI_MDC_PORT
+    #define MX_Ethernet_MDC_GPIO_Pin  (1U << RTE_ETH_SMI_MDC_PIN)
+    #define MX_Ethernet_MDIO_GPIOx    RTE_ETH_SMI_MDIO_PORT
+    #define MX_Ethernet_MDIO_GPIO_Pin (1U << RTE_ETH_SMI_MDIO_PIN)
   #endif
 
   #if (RTE_ETH_MII)
@@ -134,14 +140,38 @@
 #endif /* RTE_ETH_RMII */
 
 #else /* MX_Device.h */
+  #define EXPAND_SYMBOL(pin, ext)         MX_##pin##_##ext
+  #define MX_SYM(pin, ext)                EXPAND_SYMBOL(pin, ext)
+
+  /* Buffer descriptor default memory address */
+  #if !defined(EMAC_DMA_MEMORY_ADDRESS)
+    #define EMAC_DMA_MEMORY_ADDR    0x2000C000
+  #endif
+
   #if defined(MX_ETH_TXD2_Pin)   && defined(MX_ETH_TXD3_Pin)   && \
       defined(MX_ETH_RXD2_Pin)   && defined(MX_ETH_RXD3_Pin)   && \
-      defined(MX_ETH_TX_CLK_Pin) && defined(MX_ETH_RX_CLK_Pin) && \
-      defined(MX_ETH_CRS_Pin)    && defined(MX_ETH_COL_Pin)    && \
-      defined(MX_ETH_RX_DV_Pin)  && defined(MX_ETH_RX_ER_Pin)
+      defined(MX_ETH_TX_CLK_Pin) && defined(MX_ETH_RX_CLK_Pin)
     #define ETH_MII             1
   #else
     #define ETH_MII             0
+  #endif
+
+  #if defined(MX_Ethernet_MDIO) && defined(MX_Ethernet_MDC)
+    /* Software controlled SMI */
+    #define ETH_SMI_SW          1
+
+    #define MX_Ethernet_MDIO_GPIOx     MX_SYM(MX_Ethernet_MDIO, GPIOx)
+    #define MX_Ethernet_MDIO_GPIO_Pin  MX_SYM(MX_Ethernet_MDIO, GPIO_Pin)
+    #define MX_Ethernet_MDC_GPIOx      MX_SYM(MX_Ethernet_MDC, GPIOx)
+    #define MX_Ethernet_MDC_GPIO_Pin   MX_SYM(MX_Ethernet_MDC, GPIO_Pin)
+  #else
+    /* Hardware controlled SMI */
+    #define ETH_SMI_SW          0
+
+    #define MX_Ethernet_MDIO_GPIOx     MX_ETH_MDIO_GPIOx
+    #define MX_Ethernet_MDIO_GPIO_Pin  MX_ETH_MDIO_GPIO_Pin
+    #define MX_Ethernet_MDC_GPIOx      MX_ETH_MDC_GPIOx
+    #define MX_Ethernet_MDC_GPIO_Pin   MX_ETH_MDC_GPIO_Pin
   #endif
 #endif
 

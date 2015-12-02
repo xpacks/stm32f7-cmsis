@@ -18,8 +18,8 @@
  * 3. This notice may not be removed or altered from any source distribution.
  *
  *
- * $Date:        07. July 2015
- * $Revision:    V1.0
+ * $Date:        24. August 2015
+ * $Revision:    V1.1
  *
  * Driver:       Driver_MCI0
  * Configured:   via RTE_Device.h configuration file
@@ -34,42 +34,96 @@
  * -------------------------------------------------------------------------- */
 
 /* History:
+ *  Version 1.1
+ *    Enhanced STM32CubeMx compatibility
  *  Version 1.0
  *    Initial release
  */
 
-/* STM32CubeMX configuration:
- *
- * Pinout tab:
- *   - Select SDMMC1 peripheral and select mode
- *   - To configure Card Detect and Write Protect pins:
- *       - Select desired pins and select GPIO_Input mode
- * Clock Configuration tab:
- *   - Ensure that SDMMC input clock is at 48MHz
- * Configuration tab:
- *   - Select SDMMC1 under Connectivity section which opens SDMMC1 Configuration window:
- *       - Parameter Settings tab: settings are unused by this driver
- *       - NVIC Settings: enable SDMMC1 global interrupt
- *       - GPIO Settings: configure as needed
- *       - DMA Settings:  Rx and Tx DMA transfers are mandatory by this driver:
- *           - add SDMMC1_RX and SDMMC1_TX DMA Request
- *           - select Normal DMA mode (for RX and TX)
- *           - deselect Peripheral Increment Address (for RX and TX)
- *           - select Memory Increment Address (for RX and TX)
- *           - select Use Fifo option (for RX and TX)
- *           - select Full Threshold
- *           - select Word Data Width (for RX and TX)
- *           - select 4 Increment Burst Size (for RX and TX)
- *           - go to NVIC Settings tab and enable RX and TX stream global interrupt
- *
- *   - Select GPIO under System section to configure Card Detect and Write Protect pins:
- *       - Select pin used for Card Detect and add User Label: MemoryCard_CD
- *       - Select pin used for Write Protect and add User Label: MemoryCard_WP
- */
+/*! \page stm32f7_mci CMSIS-Driver MCI Setup 
+
+The CMSIS-Driver MCI requires:
+  - Setup of SDMMC1 with DMA for Rx and Tx DMA transfers.
+  - Optional Configuration for Card Detect Pin:
+    - Configure arbitrary pin in GPIO_Input mode and add User Label: MemoryCard_CD
+  - Optional Configuration for Write Protect Pin:
+    - Configure arbitrary pin in GPIO_Input mode and add User Label: MemoryCard_WP
+
+\note The User Label name is used to connect the CMSIS-Driver to the GPIO pin.
+
+The example below uses correct settings for STM32F746G-Discovery:  
+  - SDMMC1 Mode:             SD 4bits Wide bus 
+  - Card Detect Input pin:   PC13
+  - Write Protect Input pin: not available
+
+For different boards, refer to the hardware schematics to reflect correct setup values.
+
+The STM32CubeMX configuration steps for Pinout, Clock, and System Configuration are 
+listed below. Enter the values that are marked \b bold.
+   
+Pinout tab
+----------
+  1. Configure SDMMC1 mode
+     - Peripherals \b SDMMC1: Mode=<b>SD 4bits Wide bus</b>
+  2. Configure Card Detect pin:
+     - Click in chip diagram on pin \b PC13 and select \b GPIO_Input. 
+          
+Clock Configuration tab
+-----------------------
+  1. Configure SDMMC Clock: "To SDMMC (MHz)": 48
+  
+Configuration tab
+-----------------
+  1. Under Connectivity open \b SDMMC1 Configuration:
+     - <b>DMA Settings</b>: setup DMA transfers for Rx and Tx\n
+       \b Add - Select \b SDMMC1_RX: Stream=DMA2 Stream 3, Direction=Peripheral to Memory, Priority=Low
+          DMA Request Settings                  | Label             | Peripheral  | Memory
+          :-------------------------------------|:------------------|:------------|:-------------
+          Mode: <b>Peripheral Flow Control</b>  | Increment Address | off         |\b ON
+          Use Fifo \b ON  Threshold: Full       | Data Width        |\b WORD      |\b WORD
+          .                                     | Burst Size        |\b 4 Increm..|\b 4 Increm..
+       \b Add - Select \b SDMMC1_TX: Stream=DMA2 Stream 6, Direction=Memory to Peripheral, Priority=Low
+          DMA Request Settings                  | Label             | Peripheral  | Memory
+          :-------------------------------------|:------------------|:------------|:-------------
+          Mode: <b>Peripheral Flow Control</b>  | Increment Address | off         |\b ON
+          Use Fifo \b ON  Threshold: Full       | Data Width        |\b WORD      |\b WORD
+          .                                     | Burst Size        |\b 4 Increm..|\b 4 Increm..
+
+     - <b>GPIO Settings</b>: review settings, no changes required
+          Pin Name | Signal on Pin | GPIO mode | GPIO Pull-up/Pull..| Maximum out | User Label
+          :--------|:--------------|:----------|:-------------------|:------------|:----------
+          PC8      | SDMMC1_D0     | Alternate | No pull-up and no..| High        |.
+          PC9      | SDMMC1_D1     | Alternate | No pull-up and no..| High        |.
+          PC10     | SDMMC1_D2     | Alternate | No pull-up and no..| High        |.
+          PC11     | SDMMC1_D3     | Alternate | No pull-up and no..| High        |.
+          PC12     | SDMMC1_CK     | Alternate | No pull-up and no..| High        |.
+          PD2      | SDMMC1_CMD    | Alternate | No pull-up and no..| High        |.
+
+     - <b>NVIC Settings</b>: enable interrupts
+          Interrupt Table                      | Enable | Preemption Priority | Sub Priority
+          :------------------------------------|:-------|:--------------------|:--------------
+          SDMMC1 global interrupt              |\b ON   | 0                   | 0
+          DMA2 stream3 global interrupt        |   ON   | 0                   | 0
+          DMA2 stream6 global interrupt        |   ON   | 0                   | 0
+
+     - Parameter Settings: not used
+     - User Constants: not used
+
+     Click \b OK to close the SDMMC1 Configuration dialog
+  2. Under System open \b GPIO Pin Configuration
+     - Enter user label for Card Detect pin
+          Pin Name | Signal on Pin | GPIO mode | GPIO Pull-up/Pull..| Maximum out | User Label
+          :--------|:--------------|:----------|:-------------------|:------------|:----------
+          PC13     | n/a           | Input mode| No pull-up and no..| n/a         |\b MemoryCard_CD
+
+     Click \b OK to close the Pin Configuration dialog
+*/
+
+/*! \cond */
 
 #include "MCI_STM32F7xx.h"
 
-#define ARM_MCI_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,0)  /* driver version */
+#define ARM_MCI_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,1)  /* driver version */
 
 /* Define Card Detect pin active state */
 #if !defined(MemoryCard_CD_Pin_Active)
@@ -409,6 +463,11 @@ static int32_t PowerControl (ARM_POWER_STATE state) {
 
   switch (state) {
     case ARM_POWER_OFF:
+      /* Reset/Dereset SDMMC1 peripheral */
+      __HAL_RCC_SDMMC1_FORCE_RESET();
+      __NOP(); __NOP(); __NOP(); __NOP();
+      __HAL_RCC_SDMMC1_RELEASE_RESET();
+
       #if defined(RTE_DEVICE_FRAMEWORK_CLASSIC)
         /* Disable SDIO interrupts in NVIC */
         HAL_NVIC_DisableIRQ (SDMMC1_IRQn);
@@ -424,11 +483,12 @@ static int32_t PowerControl (ARM_POWER_STATE state) {
         if (HAL_DMA_DeInit (&hdma_sdmmc1_tx) != HAL_OK) {
           status = ARM_DRIVER_ERROR;
         }
+
+        /* SDMMC1 peripheral clock disable */
+        __HAL_RCC_SDMMC1_CLK_DISABLE();
       #else
         HAL_SD_MspDeInit (&hsd1);
       #endif
-
-      MCI.flags = MCI_INIT;
 
       /* Clear status */
       MCI.status.command_active   = 0U;
@@ -440,27 +500,21 @@ static int32_t PowerControl (ARM_POWER_STATE state) {
       MCI.status.sdio_interrupt   = 0U;
       MCI.status.ccs              = 0U;
 
-      /* Reset/Dereset SDMMC1 peripheral */
-      __HAL_RCC_SDMMC1_FORCE_RESET();
-      __NOP(); __NOP(); __NOP(); __NOP();
-      __HAL_RCC_SDMMC1_RELEASE_RESET();
-
-      /* SDMMC1 peripheral clock disable */
-      __HAL_RCC_SDMMC1_CLK_DISABLE();
+      MCI.flags = MCI_INIT;
       break;
 
     case ARM_POWER_FULL:
       if ((MCI.flags & MCI_POWER) == 0) {
         #if defined(RTE_DEVICE_FRAMEWORK_CUBE_MX)
           HAL_SD_MspInit (&hsd1);
+        #else
+        /* Enable SDMMC1 peripheral clock */
+        __HAL_RCC_SDMMC1_CLK_ENABLE();
         #endif
 
         /* Clear response and transfer variables */
         MCI.response = NULL;
         MCI.xfer.cnt = 0U;
-
-        /* Enable SDMMC1 peripheral clock */
-        __HAL_RCC_SDMMC1_CLK_ENABLE();
 
         /* Enable SDMMC1 peripheral interrupts */
         SDMMC1->MASK = SDMMC_MASK_DATAENDIE  |
@@ -481,10 +535,10 @@ static int32_t PowerControl (ARM_POWER_STATE state) {
           /* Enable DMA stream interrupts in NVIC */
           HAL_NVIC_EnableIRQ(SDMMC1_RX_DMA_IRQn);
           HAL_NVIC_EnableIRQ(SDMMC1_TX_DMA_IRQn);
-        #endif
 
-        HAL_NVIC_ClearPendingIRQ(SDMMC1_IRQn);
-        HAL_NVIC_EnableIRQ(SDMMC1_IRQn);
+          HAL_NVIC_ClearPendingIRQ(SDMMC1_IRQn);
+          HAL_NVIC_EnableIRQ(SDMMC1_IRQn);
+        #endif
 
         MCI.flags |= MCI_POWER;
       }
@@ -1136,3 +1190,5 @@ ARM_DRIVER_MCI Driver_MCI0 = {
   Control,
   GetStatus
 };
+
+/*! \endcond */

@@ -18,14 +18,16 @@
  * 3. This notice may not be removed or altered from any source distribution.
  *
  *
- * $Date:        3. July 2015
- * $Revision:    V1.0
+ * $Date:        24. August 2015
+ * $Revision:    V1.1
  *
  * Project:      OTG Full/Low-Speed Common Driver for ST STM32F7xx
  * Configured:   via RTE_Device.h configuration file
  * -------------------------------------------------------------------------- */
 
 /* History:
+ *  Version 1.1
+ *    STM32CubeMX generated code can also be used to configure the driver.
  *  Version 1.0
  *    Initial release
  */
@@ -39,8 +41,6 @@
 
 #include "Driver_USBH.h"
 #include "Driver_USBD.h"
-
-#include "RTE_Components.h"
 
 #include "OTG_FS_STM32F7xx.h"
 
@@ -57,6 +57,7 @@ uint8_t otg_fs_role = ARM_USB_ROLE_NONE;
   \fn          void Enable_GPIO_Clock (const GPIO_TypeDef *port)
   \brief       Enable GPIO clock
 */
+#ifdef RTE_DEVICE_FRAMEWORK_CLASSIC
 static void Enable_GPIO_Clock (const GPIO_TypeDef *GPIOx) {
   if      (GPIOx == GPIOA) { __GPIOA_CLK_ENABLE(); }
   else if (GPIOx == GPIOB) { __GPIOB_CLK_ENABLE(); }
@@ -82,6 +83,7 @@ static void Enable_GPIO_Clock (const GPIO_TypeDef *GPIOx) {
   else if (GPIOx == GPIOK) { __GPIOK_CLK_ENABLE(); }
 #endif
 }
+#endif
 
 
 // Common IRQ Routine **********************************************************
@@ -95,14 +97,14 @@ void OTG_FS_IRQHandler (void) {
 
   gintsts = USB_OTG_FS->GINTSTS & USB_OTG_FS->GINTMSK;
 
-#if (defined(RTE_Drivers_USBH0) && defined(RTE_Drivers_USBD0))
+#if (defined(MX_USB_OTG_FS_HOST) && defined(MX_USB_OTG_FS_DEVICE))
   switch (otg_fs_role) {
-#ifdef RTE_Drivers_USBH0
+#ifdef MX_USB_OTG_FS_HOST
     case ARM_USB_ROLE_HOST:
       USBH_FS_IRQ (gintsts);
       break;
 #endif
-#ifdef RTE_Drivers_USBD0
+#ifdef MX_USB_OTG_FS_DEVICE
     case ARM_USB_ROLE_DEVICE:
       USBD_FS_IRQ (gintsts);
       break;
@@ -111,7 +113,7 @@ void OTG_FS_IRQHandler (void) {
       break;
   }
 #else
-#ifdef RTE_Drivers_USBH0
+#ifdef MX_USB_OTG_FS_HOST
   USBH_FS_IRQ (gintsts);
 #else
   USBD_FS_IRQ (gintsts);
@@ -130,6 +132,7 @@ void OTG_FS_IRQHandler (void) {
                ARM_USB_PIN_OC, ARM_USB_PIN_ID)
 */
 void OTG_FS_PinsConfigure (uint8_t pins_mask) {
+#ifdef RTE_DEVICE_FRAMEWORK_CLASSIC
   GPIO_InitTypeDef GPIO_InitStruct;
 
   if ((pins_mask & ARM_USB_PIN_DP) != 0U) {
@@ -221,6 +224,31 @@ void OTG_FS_PinsConfigure (uint8_t pins_mask) {
 #endif
     }
   }
+#endif
+
+#ifdef RTE_DEVICE_FRAMEWORK_CUBE_MX
+#if  (defined(USE_STM32756G_EVAL))              // Host VBUS power driving pin is on IO expander
+  if ((pins_mask & ARM_USB_PIN_VBUS) != 0U) {
+    if (otg_fs_role == ARM_USB_ROLE_HOST) {
+      BSP_IO_Init();
+      BSP_IO_ConfigPin(IO_PIN_7, IO_MODE_OUTPUT);
+
+      // Initial Host VBUS Power Off
+#if  (USB_OTG_FS_VBUS_Power_Pin_Active == 0)    // VBUS active low
+      BSP_IO_WritePin (IO_PIN_7, BSP_IO_PIN_SET);
+#else                                           // VBUS active high
+      BSP_IO_WritePin (IO_PIN_7, BSP_IO_PIN_RESET);
+#endif
+    }
+  }
+  if ((pins_mask & ARM_USB_PIN_OC) != 0U) {
+    if (otg_fs_role == ARM_USB_ROLE_HOST) {
+      BSP_IO_Init();
+      BSP_IO_ConfigPin(IO_PIN_6, IO_MODE_INPUT);
+    }
+  }
+#endif
+#endif
 }
 
 /**
@@ -232,6 +260,7 @@ void OTG_FS_PinsConfigure (uint8_t pins_mask) {
 */
 void OTG_FS_PinsUnconfigure (uint8_t pins_mask) {
 
+#ifdef RTE_DEVICE_FRAMEWORK_CLASSIC
   if ((pins_mask & ARM_USB_PIN_DP) != 0U) {
     HAL_GPIO_DeInit (MX_USB_OTG_FS_DP_GPIOx, MX_USB_OTG_FS_DP_GPIO_Pin);
   }
@@ -268,6 +297,22 @@ void OTG_FS_PinsUnconfigure (uint8_t pins_mask) {
 #endif
     }
   }
+#endif
+
+#ifdef RTE_DEVICE_FRAMEWORK_CUBE_MX
+#if  (defined(USE_STM32756G_EVAL))              // Host VBUS power driving pin is on IO expander
+  if ((pins_mask & ARM_USB_PIN_VBUS) != 0U) {
+    if (otg_fs_role == ARM_USB_ROLE_HOST) {
+      BSP_IO_ConfigPin(IO_PIN_7, IO_MODE_OFF);
+    }
+  }
+  if ((pins_mask & ARM_USB_PIN_OC) != 0U) {
+    if (otg_fs_role == ARM_USB_ROLE_HOST) {
+      BSP_IO_ConfigPin(IO_PIN_6, IO_MODE_OFF);
+    }
+  }
+#endif
+#endif
 }
 
 /**

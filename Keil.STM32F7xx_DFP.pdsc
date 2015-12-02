@@ -7,6 +7,17 @@
   <url>http://www.keil.com/pack</url>
 
   <releases>
+    <release version="2.2.0" date="2015-09-04">
+      Introducing project creation with MDK and STM32Cube (STM32Cube HAL and STM32CubeMX):
+      - Added STM32CubeMxLauncher (uVision launcher for STM32CubeMX configuration utility)
+      - Added documentation for creating projects with MDK and STM32Cube
+      - Added project examples created with MDK and STM32Cube:
+      -- Blinky for ST Microelectronics STM32F746G-Discovery
+      -- emWin GUI_VNC for ST Microelectronics STM32F746G-Discovery
+      - Enhanced CMSIS drivers compatibility with STM32CubeMX
+      Updated CMSIS drivers:
+      - EMAC: Corrected lockup after long runtime
+    </release>
     <release version="2.1.0" date="2015-07-31">
       Added CMSIS-Driver for I2C and SAI
       Updated RTE_Device.h (Ver 1.1.0) adding the SAI driver configurations for SAI1 and SAI2
@@ -55,6 +66,7 @@
     <family Dfamily="STM32F7 Series" Dvendor="STMicroelectronics:13">
       <processor Dcore="Cortex-M7" DcoreVersion="r0p1" Dclock="216000000" Dfpu="SP_FPU" Dmpu="MPU" Dendian="Little-endian"/>
       <book name="Documentation/DM00189702.pdf" title="STM32F7xx HAL Drivers"/>
+      <book name="Documentation/DUI0646B_cortex_m7_dgug.pdf" title="Cortex-M7 Generic User Guide"/>
       <algorithm name="CMSIS/Flash/STM32F7xx_QSPI_Micron.flm" start="0x90000000" size="0x04000000" RAMstart="0x20010000" RAMsize="0x10000" default="0" />
       <algorithm name="CMSIS/Flash/STM32F7xx_OPT.FLM"         start="0x1FFF0000" size="0x08"       RAMstart="0x20010000" RAMsize="0x10000" default="0"/>
       <algorithm name="CMSIS/Flash/STM32F7xx_OTP.FLM"         start="0x1FF0F000" size="0x0410"     RAMstart="0x20010000" RAMsize="0x10000" default="0"/>
@@ -533,7 +545,13 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
 
     <condition id="STM32F7 Framework Classic">
       <description>STM32CubeF7 Classic Framework</description>
+      <require condition="STM32F7"/>
       <require condition="STM32F7 HAL Common"/>
+    </condition>
+
+    <condition id="STM32F7 Framework CubeMX">
+      <description>STM32CubeF7 Classic Framework</description>
+      <require condition="STM32F7"/>
     </condition>
 
     <condition id="STM32F7 HAL Common">
@@ -878,7 +896,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
     <!-- This generator is launched if any component referencing this generator by 'id' is selected and the specified <gpdsc> file does not exist -->
     <generator id="STM32CubeMX">
       <description>ST Microelectronics: STCubeMX Environment</description>
-      <command>MDK/CubeMX/CubeMXLauncher.bat</command> <!-- path is specified either absolute or relative to PDSC or GPDSC file -->
+      <command>MDK/CubeMX/STM32CubeMxLauncher.exe</command> <!-- path is specified either absolute or relative to PDSC or GPDSC file -->
       <workingDir>$PRTE/Device</workingDir> <!-- path is specified either absolute or relative to PDSC or GPDSC file. If not specified it is the project directory configured by the environment -->
       <arguments>
         <!-- D = Device (Dname/Dvariant as configured by environment) -->
@@ -898,12 +916,12 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
     <description Cclass="Graphics Display">Display Interface including configuration for emWIN</description>
     <description Cclass="Board Support" Cgroup="Drivers">ST BSP Drivers</description>
   </taxonomy>
-
+  
   <apis>
     <api Cclass="Device" Cgroup="STM32Cube Framework" exclusive="1">
       <description>STM32Cube Framework</description>
       <files>
-        <file category="doc" name="Documentation/STM32CubeFramework.htm"/>
+        <file category="doc" name="MDK/CubeMX/Documentation/index.html"/>
       </files>
     </api>
   </apis>
@@ -950,6 +968,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
         #define RTE_DEVICE_FRAMEWORK_CLASSIC
       </RTE_Components_h>
       <files>
+        <file category="doc"     name="MDK/CubeMX/Documentation/classic.html"/>
         <file category="header"  name="CMSIS/Driver/Config/RTE_Device.h" attr="config" version="1.1.0"/>
         <file category="header"  name="MDK/Templates/Inc/stm32f7xx_hal_conf.h" attr="config" version="1.0.1"/>
         <file category="source"  name="MDK/Templates/Src/stm32f7xx_hal_msp.c"  attr="template" select="MCU Specific HAL Initialization / De-Initialization"/>
@@ -960,19 +979,18 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </files>
     </component>
 
-    <!-- intentionally deactivated: requires STCubeMX 4.9 or higher not published yet.
-    <component generator="STM32CubeMX" Cclass="Device" Cgroup="STM32Cube Framework" Csub="STM32CubeMX" Cversion="1.0.0" condition="STM32F7">
+    <component generator="STM32CubeMX" Cclass="Device" Cgroup="STM32Cube Framework" Csub="STM32CubeMX" Cversion="1.0.0" condition="STM32F7 Framework CubeMX">
       <description>Configuration via STM32CubeMX</description>
       <RTE_Components_h>
         #define RTE_DEVICE_FRAMEWORK_CUBE_MX
       </RTE_Components_h>
       <files>
+        <file category="doc"     name="MDK/CubeMX/Documentation/cubemx.html"/>
         <file category="source"  name="MDK/CubeMX/run_STM32CubeMX.c" version="1.0"/>
         <file category="other"   name="MDK/CubeMX/FrameworkCubeMX_gpdsc.ftl" version="1.0"/>
         <file category="other"   name="MDK/CubeMX/MX_Device_h.ftl" version ="1.0"/>
       </files>
     </component>
-    -->
     
     <!-- START: STMicroelectronics STM32CubeF7 HAL -->
     <component Cclass="Device" Cgroup="STM32Cube HAL" Csub="Common" Cversion="1.0.1" condition="STM32F7 HAL Common">
@@ -1427,7 +1445,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </files>
     </component>
 
-    <component Cclass="CMSIS Driver" Cgroup="USART" Capiversion="2.2" Cversion="1.1" condition="STM32F7 CMSIS_Driver USART">
+    <component Cclass="CMSIS Driver" Cgroup="USART" Capiversion="2.2" Cversion="1.2" condition="STM32F7 CMSIS_Driver USART">
       <description>USART Driver for STM32F7 Series</description>
       <RTE_Components_h>
         #define RTE_Drivers_USART1              /* Driver USART1 */
@@ -1444,7 +1462,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </files>
     </component>
 
-    <component Cclass="CMSIS Driver" Cgroup="I2C" Capiversion="2.2" Cversion="1.0" condition="STM32F7 CMSIS_Driver I2C">
+    <component Cclass="CMSIS Driver" Cgroup="I2C" Capiversion="2.2" Cversion="1.1" condition="STM32F7 CMSIS_Driver I2C">
       <description>I2C Driver for STM32F7 Series</description>
       <RTE_Components_h>
         #define RTE_Drivers_I2C1                /* Driver I2C1 */
@@ -1457,7 +1475,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </files>
     </component>
 
-    <component Cclass="CMSIS Driver" Cgroup="MCI" Capiversion="2.2" Cversion="1.0" condition="STM32F7 CMSIS_Driver MCI">
+    <component Cclass="CMSIS Driver" Cgroup="MCI" Capiversion="2.2" Cversion="1.1" condition="STM32F7 CMSIS_Driver MCI">
       <description>MCI Driver for STM32F7 Series</description>
       <RTE_Components_h>
         #define RTE_Drivers_MCI0                /* Driver MCI0 */
@@ -1478,7 +1496,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </files>
     </component>
 
-    <component Cclass="CMSIS Driver" Cgroup="Ethernet MAC" Capiversion="2.1" Cversion="1.0" condition="STM32F7 CMSIS_Driver ETH_MAC">
+    <component Cclass="CMSIS Driver" Cgroup="Ethernet MAC" Capiversion="2.1" Cversion="1.1" condition="STM32F7 CMSIS_Driver ETH_MAC">
       <description>Ethernet MAC Driver for STM32F7 Series</description>
       <RTE_Components_h>
         #define RTE_Drivers_ETH_MAC0            /* Driver ETH_MAC0 */
@@ -1488,7 +1506,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </files>
     </component>
 
-    <component Cclass="CMSIS Driver" Cgroup="USB Device" Csub="Full-speed" Capiversion="2.1" Cversion="1.0" condition="STM32F7 CMSIS_Driver USB">
+    <component Cclass="CMSIS Driver" Cgroup="USB Device" Csub="Full-speed" Capiversion="2.1" Cversion="1.1" condition="STM32F7 CMSIS_Driver USB">
       <description>USB Device Full-Speed Driver for STM32F7 Series</description>
       <RTE_Components_h>
         #define RTE_Drivers_USBD0               /* Driver USBD0 */
@@ -1499,7 +1517,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </files>
     </component>
 
-    <component Cclass="CMSIS Driver" Cgroup="USB Device" Csub="High-speed" Capiversion="2.1" Cversion="1.0" condition="STM32F7 CMSIS_Driver USB">
+    <component Cclass="CMSIS Driver" Cgroup="USB Device" Csub="High-speed" Capiversion="2.1" Cversion="1.1" condition="STM32F7 CMSIS_Driver USB">
       <description>USB Device High-Speed Driver for STM32F7 Series</description>
       <RTE_Components_h>
         #define RTE_Drivers_USBD1               /* Driver USBD1 */
@@ -1510,7 +1528,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </files>
     </component>
 
-    <component Cclass="CMSIS Driver" Cgroup="USB Host" Csub="Full-speed" Capiversion="2.1" Cversion="1.0" condition="STM32F7 CMSIS_Driver USB">
+    <component Cclass="CMSIS Driver" Cgroup="USB Host" Csub="Full-speed" Capiversion="2.1" Cversion="1.1" condition="STM32F7 CMSIS_Driver USB">
       <description>USB Host Full-Speed Driver for STM32F7 Series</description>
       <RTE_Components_h>
         #define RTE_Drivers_USBH0               /* Driver USBH0 */
@@ -1521,7 +1539,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </files>
     </component>
 
-    <component Cclass="CMSIS Driver" Cgroup="USB Host" Csub="High-speed" Capiversion="2.1" Cversion="1.0" condition="STM32F7 CMSIS_Driver USB">
+    <component Cclass="CMSIS Driver" Cgroup="USB Host" Csub="High-speed" Capiversion="2.1" Cversion="1.1" condition="STM32F7 CMSIS_Driver USB">
       <description>USB Host High-Speed Driver for STM32F7 Series</description>
       <RTE_Components_h>
         #define RTE_Drivers_USBH1               /* Driver USBH1 */
@@ -1535,7 +1553,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
     <!-- STM32F746G-Discovery Board -->
     <bundle Cbundle="STM32F746G-Discovery" Cclass="Board Support" Cversion="1.0.0">
       <description>STMicroelectronics STM32F746G-Discovery Kit</description>
-      <doc>http://www.st.com/st-web-ui/static/active/en/resource/technical/document/data_brief/DM00179227.pdf</doc>
+
       <component Cgroup="Drivers" Csub="Basic I/O" condition="STM32F746G-Discovery BSP">
         <description>LEDs, push-buttons and COM ports for STMicroelectronics STM32F746G-Discovery Kit</description>
         <files>
@@ -1639,7 +1657,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
     <!-- STM32756G-EVAL Board -->
     <bundle Cbundle="STM32756G-EVAL" Cclass="Board Support" Cversion="1.0.0">
       <description>STMicroelectronics STM32756G-EVAL Board</description>
-      <doc>http://www.st.com/st-web-ui/static/active/en/resource/technical/document/data_brief/DM00172858.pdf</doc>
+
       <component Cgroup="Drivers" Csub="Basic I/O" condition="STM32756G-EVAL BSP">
         <description>LEDs, push-buttons and COM ports for STMicroelectronics STM32756G-EVAL Board</description>
         <files>
@@ -1894,6 +1912,21 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </attributes>
     </example>
 
+    <example name="CMSIS-RTOS Blinky with STM32CubeMX" doc="Abstract.txt" folder="MDK\Boards\ST\STM32F746G_Discovery\CubeMX\Blinky">
+      <description>CMSIS-RTOS based Blinky example configured with STM32CubeMX</description>
+      <board name="STM32F746G-Discovery" vendor="STMicroelectronics"/>
+      <project>
+        <environment name="uv" load="Blinky.uvprojx"/>
+      </project>
+      <attributes>
+        <component Cclass="CMSIS" Cgroup="CORE"/>
+        <component Cclass="Device" Cgroup="Startup"/>
+        <component Cclass="CMSIS" Cgroup="RTOS"/>
+        <category>Getting Started</category>
+        <category>CMSIS-RTX</category>
+      </attributes>
+    </example>
+
     <example name="emWin Example" doc="Abstract.txt" folder="MDK\Boards\ST\STM32F746G_Discovery\emWin\Example">
       <description>emWin Graphics simple example</description>
       <board name="STM32F746G-Discovery" vendor="STMicroelectronics"/>
@@ -1913,6 +1946,20 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       <board name="STM32F746G-Discovery" vendor="STMicroelectronics"/>
       <project>
         <environment name="uv" load="GUIDemo.uvprojx"/>
+      </project>
+      <attributes>
+        <component Cclass="Graphics" Cgroup="CORE"/>
+        <category>Middleware</category>
+        <category>Graphics</category>
+        <keyword>emWin</keyword>
+      </attributes>
+    </example>
+
+    <example name="emWin VNC Server with STM32CubeMX" doc="Abstract.txt" folder="MDK\Boards\ST\STM32F746G_Discovery\CubeMX\emWin\GUI_VNC">
+      <description>emWin VNC Server example configured with STM32CubeMX</description>
+      <board name="STM32F746G-Discovery" vendor="STMicroelectronics"/>
+      <project>
+        <environment name="uv" load="GUI_VNC.uvprojx"/>
       </project>
       <attributes>
         <component Cclass="Graphics" Cgroup="CORE"/>
