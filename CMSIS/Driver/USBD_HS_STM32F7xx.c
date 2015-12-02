@@ -18,8 +18,8 @@
  * 3. This notice may not be removed or altered from any source distribution.
  *
  *
- * $Date:        24. August 2015
- * $Revision:    V1.1
+ * $Date:        22. October 2015
+ * $Revision:    V1.2
  *
  * Driver:       Driver_USBD1
  * Configured:   via RTE_Device.h configuration file
@@ -45,6 +45,11 @@
  * -------------------------------------------------------------------------- */
 
 /* History:
+ *  Version 1.2
+ *    Corrected PowerControl function for:
+ *      - Unconditional Power Off
+ *      - Conditional Power full (driver must be initialized)
+ *    Updated IN Endpoint FIFO flush procedure
  *  Version 1.1
  *    STM32CubeMX generated code can also be used to configure the driver.
  *  Version 1.0
@@ -137,7 +142,7 @@ extern PCD_HandleTypeDef hpcd_USB_OTG_HS;
 
 // USBD Driver *****************************************************************
 
-#define ARM_USBD_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,1)
+#define ARM_USBD_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,2)
 
 // Driver Version
 static const ARM_DRIVER_VERSION usbd_driver_version = { ARM_USBD_API_VERSION, ARM_USBD_DRV_VERSION };
@@ -195,12 +200,14 @@ typedef struct {                        // Endpoint structure definition
   uint8_t   packet_count;
   uint8_t   in_nak;
   uint8_t   in_zlp;
+  uint8_t   in_flush;
 } ENDPOINT_t;
 
 static ARM_USBD_SignalDeviceEvent_t   SignalDeviceEvent;
 static ARM_USBD_SignalEndpointEvent_t SignalEndpointEvent;
 
-static bool                hw_powered = false;
+static bool                hw_powered     = false;
+static bool                hw_initialized = false;
 static ARM_USBD_STATE      usbd_state;
 static uint32_t            setup_packet[2];     // Setup packet data
 static volatile uint8_t    setup_received;      // Setup packet received
@@ -215,16 +222,19 @@ static uint16_t USBD_GetFrameNumber (void);
 // Auxiliary functions
 
 /**
-  \fn          void USBD_FlushInEpFifo (uint8_t ep_addr)
+  \fn          void USBD_FlushInEpFifo (uint8_t FIFO_num)
   \brief       Flush IN Endpoint FIFO
-  \param[in]   ep_addr  Endpoint Address
-                - ep_addr.0..3: Address
-                - ep_addr.7:    Direction
+  \param[in]   FIFO_num  IN Endpoint FIFO number
+                - FIFO_num.0..3: IN Endpoint FIFO to Flush
+                - FIFO_num.4:    All IN Endpoint FIFOs to Flush
 */
-static void USBD_FlushInEpFifo (uint8_t ep_addr) {
-  OTG->GRSTCTL = (OTG->GRSTCTL & ~OTG_HS_GRSTCTL_TXFNUM_MSK)                              |
-                  OTG_HS_GRSTCTL_TXFNUM((uint32_t)ep_addr & ARM_USB_ENDPOINT_NUMBER_MASK) |
-                  OTG_HS_GRSTCTL_TXFFLSH                                                  ;
+static void USBD_FlushInEpFifo (uint8_t FIFO_num) {
+
+  while ((OTG->GRSTCTL & OTG_HS_GRSTCTL_TXFFLSH) != 0U);
+  OTG->GRSTCTL  = (OTG->GRSTCTL & ~OTG_HS_GRSTCTL_TXFNUM_MSK) | OTG_HS_GRSTCTL_TXFNUM(FIFO_num);
+  OTG->GRSTCTL |= OTG_HS_GRSTCTL_TXFFLSH;
+  while ((OTG->GRSTCTL & OTG_HS_GRSTCTL_TXFFLSH) != 0U);
+
 }
 
 /**
@@ -233,6 +243,7 @@ static void USBD_FlushInEpFifo (uint8_t ep_addr) {
 */
 static void USBD_Reset (void) {
   uint8_t i;
+  uint32_t epctl;
 
   // Reset global variables
   setup_packet[0] = 0U;
@@ -246,15 +257,21 @@ static void USBD_Reset (void) {
   OTG->DIEPMSK = 0U;
 
   for (i = 1U; i <= USBD_MAX_ENDPOINT_NUM; i++) {
+    // Endpoint set NAK
+    epctl = OTG_HS_DOEPCTLx_SNAK;
     if ((OTG_DOEPCTL(i) & OTG_HS_DOEPCTLx_EPENA) != 0U) {
-      OTG_DOEPCTL(i)   = OTG_HS_DOEPCTLx_EPDIS |        // Endpoint disable
-                         OTG_HS_DOEPCTLx_SNAK  ;        // Endpoint set NAK
+      // Disable enabled Endpoint
+      epctl |= OTG_HS_DOEPCTLx_EPDIS;
     }
+    OTG_DOEPCTL(i) = epctl;
+
+    // Endpoint set NAK
+    epctl = OTG_HS_DIEPCTLx_SNAK;
     if ((OTG_DIEPCTL(i) & OTG_HS_DIEPCTLx_EPENA) != 0U) {
-      OTG_DIEPCTL(i)   = OTG_HS_DIEPCTLx_EPDIS |        // Endpoint disable
-                         OTG_HS_DIEPCTLx_SNAK  ;        // Endpoint set NAK
+      // Disable enabled Endpoint
+      epctl |= OTG_HS_DIEPCTLx_EPDIS;
     }
-    USBD_FlushInEpFifo(i);
+    OTG_DIEPCTL(i) = epctl;
 
     // Clear IN Endpoint interrupts
     OTG_DIEPINT(i) = OTG_HS_DIEPINTx_XFCR    |
@@ -271,6 +288,9 @@ static void USBD_Reset (void) {
                      OTG_HS_DOEPINTx_OTEPDIS |
                      OTG_HS_DOEPINTx_B2BSTUP ;
   }
+
+  // Flush all IN Endpoint FIFOs
+  USBD_FlushInEpFifo (0x10U);
 
   // Set device address to 0
   OTG->DCFG       = (OTG->DCFG & ~OTG_HS_DCFG_DAD_MSK);
@@ -510,6 +530,10 @@ static ARM_USBD_CAPABILITIES USBD_GetCapabilities (void) { return usbd_driver_ca
 static int32_t USBD_Initialize (ARM_USBD_SignalDeviceEvent_t   cb_device_event,
                                 ARM_USBD_SignalEndpointEvent_t cb_endpoint_event) {
 
+  if (hw_initialized == true) {
+    return ARM_DRIVER_OK;
+  }
+
   SignalDeviceEvent   = cb_device_event;
   SignalEndpointEvent = cb_endpoint_event;
 
@@ -527,6 +551,8 @@ static int32_t USBD_Initialize (ARM_USBD_SignalDeviceEvent_t   cb_device_event,
   hpcd_USB_OTG_HS.Instance = USB_OTG_HS;
 #endif
 
+  hw_initialized = true;
+
   return ARM_DRIVER_OK;
 }
 
@@ -543,9 +569,13 @@ static int32_t USBD_Uninitialize (void) {
                         | ARM_USB_PIN_VBUS
 #endif
                          );
+#else
+  hpcd_USB_OTG_HS.Instance = NULL;
 #endif
 
   otg_hs_role = ARM_USB_ROLE_NONE;
+
+  hw_initialized = false;
 
   return ARM_DRIVER_OK;
 }
@@ -560,6 +590,7 @@ static int32_t USBD_PowerControl (ARM_POWER_STATE state) {
 
   switch (state) {
     case ARM_POWER_OFF:
+      __USB_OTG_HS_ULPI_CLK_ENABLE();
 #ifdef RTE_DEVICE_FRAMEWORK_CLASSIC
       NVIC_DisableIRQ      (OTG_HS_IRQn);               // Disable interrupt
       NVIC_ClearPendingIRQ (OTG_HS_IRQn);               // Clear pending interrupt
@@ -584,12 +615,19 @@ static int32_t USBD_PowerControl (ARM_POWER_STATE state) {
       RCC->AHB1ENR  &= ~RCC_AHB1ENR_OTGHSEN;            // Disable OTG HS clock
 
 #else
-      HAL_PCD_MspDeInit(&hpcd_USB_OTG_HS);
+      if (hpcd_USB_OTG_HS.Instance != NULL) {
+        HAL_PCD_MspDeInit(&hpcd_USB_OTG_HS);
+      }
 #endif
       break;
 
     case ARM_POWER_FULL:
-      if (hw_powered == true) { return ARM_DRIVER_OK; }
+      if (hw_initialized == false) {
+        return ARM_DRIVER_ERROR;
+      }
+      if (hw_powered     == true) {
+        return ARM_DRIVER_OK;
+      }
 #ifdef RTE_DEVICE_FRAMEWORK_CLASSIC
 #ifdef MX_USB_OTG_HS_ULPI_D7_Pin                        // External ULPI High-speed PHY
       __USB_OTG_HS_ULPI_CLK_ENABLE();
@@ -837,8 +875,6 @@ static int32_t USBD_EndpointConfigure (uint8_t  ep_addr,
       OTG_DIEPCTL(ep_num) |= OTG_HS_DIEPCTLx_EPDIS;     // Disable Endpoint
     }
 
-    USBD_FlushInEpFifo (ep_addr);
-
     // Isochronous IN Endpoint Configuration
     if (OTG_EP_IN_TYPE(ep_num) == ARM_USB_ENDPOINT_ISOCHRONOUS) {
       OTG->GINTMSK |= OTG_HS_GINTMSK_IISOIXFRM;         // Enable IISOIXFR
@@ -992,12 +1028,13 @@ static int32_t USBD_EndpointStall (uint8_t ep_addr, bool stall) {
   if (stall != 0U) {                                    // Activate STALL
     if (ep_dir != 0U) {                                 // IN Endpoint
       if ((OTG_DIEPCTL(ep_num) & OTG_HS_DIEPCTLx_EPENA) != 0U) {
+        // Set flush flag to Flush IN FIFO in Endpoint disabled interrupt
+        ptr_ep->in_flush = 1U;
         OTG_DIEPCTL(ep_num)  |= OTG_HS_DIEPCTLx_STALL | OTG_HS_DIEPCTLx_EPDIS;
       } else {
         OTG_DIEPCTL(ep_num)  |= OTG_HS_DIEPCTLx_STALL;
+        USBD_FlushInEpFifo (ep_num);
       }
-
-      USBD_FlushInEpFifo (ep_addr);
     } else {                                            // OUT Endpoint
       OTG->DCTL |= OTG_HS_DCTL_SGONAK;                  // Set Global OUT NAK
       while ((OTG->GINTSTS & OTG_HS_GINTSTS_GONAKEFF) == 0U);
@@ -1018,8 +1055,6 @@ static int32_t USBD_EndpointStall (uint8_t ep_addr, bool stall) {
       if ((OTG_DIEPCTL(ep_num) & OTG_HS_DIEPCTLx_EPENA) != 0U) {  // If Endpoint enabled
         OTG_DIEPCTL(ep_num)   |= OTG_HS_DIEPCTLx_EPDIS; // Disable Endpoint
       }
-
-      USBD_FlushInEpFifo (ep_addr);
 
       // Set DATA0 PID for Interrupt and Bulk Endpoint
       if (((OTG_DIEPCTL(ep_num) & OTG_HS_DIEPCTLx_EPTYP_MSK) >> OTG_HS_DIEPCTLx_EPTYP_POS) > 1U) {
@@ -1123,19 +1158,28 @@ static int32_t USBD_EndpointTransferAbort (uint8_t ep_addr) {
   ptr_ep->in_zlp = 0U;
 
   if ((ep_addr & ARM_USB_ENDPOINT_DIRECTION_MASK) != 0U) {
-    if ((OTG_DIEPCTL(ep_num) & OTG_HS_DIEPCTLx_EPENA) != 0U) {  // If Endpoint enabled
-      OTG_DIEPCTL(ep_num)   |= OTG_HS_DIEPCTLx_EPDIS;   // Disable Endpoint
+    if ((OTG_DIEPCTL(ep_num) & OTG_HS_DIEPCTLx_EPENA) != 0U) {
+      // Set flush flag to Flush IN FIFO in Endpoint disabled interrupt
+      ptr_ep->in_flush = 1U;
+
+      // Disable enabled Endpoint and set NAK
+      OTG_DIEPCTL(ep_num) |= OTG_HS_DIEPCTLx_EPDIS | OTG_HS_DIEPCTLx_SNAK;
+    } else {
+      // Endpoint is already disabled. Set NAK
+      OTG_DIEPCTL(ep_num) |= OTG_HS_DIEPCTLx_SNAK;
+
+      // Flush IN EP FIFO
+      USBD_FlushInEpFifo (ep_num);
     }
 
-    OTG_DIEPCTL(ep_num)     |= OTG_HS_DIEPCTLx_SNAK;    // Set NAK
-
-    USBD_FlushInEpFifo (ep_addr);
   } else {
-    if ((OTG_DOEPCTL(ep_num) & OTG_HS_DOEPCTLx_EPENA) != 0U) {  // If Endpoint enabled
-      OTG_DOEPCTL(ep_num)   |= OTG_HS_DOEPCTLx_EPDIS;   // Disable Endpoint
+    if ((OTG_DOEPCTL(ep_num) & OTG_HS_DOEPCTLx_EPENA) != 0U) {
+      // Disable enabled Endpoint and set NAK
+      OTG_DOEPCTL(ep_num) |= OTG_HS_DOEPCTLx_EPDIS | OTG_HS_DOEPCTLx_SNAK;
+    } else {
+      // Endpoint is already disabled. Set NAK
+      OTG_DOEPCTL(ep_num) |= OTG_HS_DOEPCTLx_SNAK;
     }
-
-    OTG_DOEPCTL(ep_num)     |= OTG_HS_DOEPCTLx_SNAK;    // Set NAK
   }
 
   ptr_ep->active = 0U;
@@ -1294,9 +1338,17 @@ void USBD_HS_IRQ (uint32_t gintsts) {
           if (OTG_EP_IN_TYPE(ep_num) == ARM_USB_ENDPOINT_ISOCHRONOUS) {
             if ((IsoInIncomplete & (1U << ep_num)) != 0U) {
               // Flush IN Endpoint FIFO and write new data if available
-              USBD_FlushInEpFifo(ep_num | ARM_USB_ENDPOINT_DIRECTION_MASK);
+              USBD_FlushInEpFifo(ep_num);
               if (ptr_ep->num != 0U) { USBD_WriteToFifo(ep_num | ARM_USB_ENDPOINT_DIRECTION_MASK); }
               IsoInIncomplete &= ~(1U << ep_num);
+            }
+          } else {
+            if (ptr_ep->in_flush == 1U) {
+              // Clear flush flag
+              ptr_ep->in_flush = 0U;
+
+              // Flush IN Endpoint FIFO
+              USBD_FlushInEpFifo(ep_num);
             }
           }
         }

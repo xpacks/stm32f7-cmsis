@@ -18,8 +18,8 @@
  * 3. This notice may not be removed or altered from any source distribution.
  *
  *
- * $Date:        29. June 2015
- * $Revision:    V1.0
+ * $Date:        15. October 2015
+ * $Revision:    V1.1
  *
  * Driver:       Driver_SPI1, Driver_SPI2, Driver_SPI3,
  *               Driver_SPI4, Driver_SPI5, Driver_SPI6
@@ -40,6 +40,13 @@
  * -------------------------------------------------------------------------- */
 
 /* History:
+ *  Version 1.1
+ *    Corrected PowerControl function for:
+ *      - Unconditional Power Off
+ *      - Conditional Power full (driver must be initialized)
+ *    Corrected pin configuration (for RTE_SPI2_NSS_PIN and MX_SPI3_MOSI_Pin) in SPI_STM32F7xx.h
+ *    Corrected 8bit/16bit Data register access, regarding the Data frame size
+ *    Corrected Bus Speed configuration
  *  Version 1.0
  *    Initial release
  */
@@ -57,11 +64,11 @@ For different boards, refer to the hardware schematics to reflect correct setup 
 
 The STM32CubeMX configuration steps for Pinout, Clock, and System Configuration are 
 listed below. Enter the values that are marked \b bold.
-   
+
 Pinout tab
 ----------
   1. Configure mode
-    - Peripherals \b SPI2: Mode= \b Full-Duplex Master , Hardware NSS Signal= \b ON
+    - Peripherals \b SPI2: Mode=<b>Full-Duplex Master</b>, Hardware NSS Signal=<b>ON</b>
 
   2. Configure pin PB14, PB15, PI1 and pin PI0 as SPI2 peripheral alternative pins
     - Click in chip diagram on pin \b PB14 and select \b SPI2_MISO
@@ -108,7 +115,7 @@ Configuration tab
 
 #include "SPI_STM32F7xx.h"
 
-#define ARM_SPI_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,0)
+#define ARM_SPI_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,1)
 
 // Driver Version
 static const ARM_DRIVER_VERSION DriverVersion = { ARM_SPI_API_VERSION, ARM_SPI_DRV_VERSION };
@@ -129,8 +136,8 @@ extern SPI_HandleTypeDef hspi1;
 #endif
 
 // SPI1 Run-Time Information
-static SPI_INFO          SPI1_Info = {0};
-static SPI_TRANSFER_INFO SPI1_TransferInfo = {0};
+static SPI_INFO          SPI1_Info         = { 0U };
+static SPI_TRANSFER_INFO SPI1_TransferInfo = { 0U };
 
 
 #ifdef MX_SPI1_MOSI_Pin
@@ -150,11 +157,10 @@ static SPI_TRANSFER_INFO SPI1_TransferInfo = {0};
   void SPI1_RX_DMA_Complete (DMA_HandleTypeDef *hdma);
 
 #ifdef RTE_DEVICE_FRAMEWORK_CLASSIC
-  static
+  static DMA_HandleTypeDef  hdma_spi1_rx = { 0U };
 #else
-  extern
+  extern DMA_HandleTypeDef  hdma_spi1_rx;
 #endif
-  DMA_HandleTypeDef  hdma_spi1_rx;
   static SPI_DMA SPI1_DMA_Rx = {
     &hdma_spi1_rx,
     SPI1_RX_DMA_Complete,
@@ -170,11 +176,10 @@ static SPI_TRANSFER_INFO SPI1_TransferInfo = {0};
   void SPI1_TX_DMA_Complete (DMA_HandleTypeDef *hdma);
 
 #ifdef RTE_DEVICE_FRAMEWORK_CLASSIC
-  static
+  static DMA_HandleTypeDef hdma_spi1_tx = { 0U };
 #else
-  extern
+  extern DMA_HandleTypeDef hdma_spi1_tx;
 #endif
-  DMA_HandleTypeDef hdma_spi1_tx;
   static SPI_DMA SPI1_DMA_Tx = {
     &hdma_spi1_tx,
     SPI1_TX_DMA_Complete,
@@ -245,8 +250,8 @@ extern SPI_HandleTypeDef hspi2;
 #endif
 
 // SPI2 Run-Time Information
-static SPI_INFO          SPI2_Info = {0};
-static SPI_TRANSFER_INFO SPI2_TransferInfo = {0};
+static SPI_INFO          SPI2_Info         = { 0U };
+static SPI_TRANSFER_INFO SPI2_TransferInfo = { 0U };
 
 
 #ifdef MX_SPI2_MOSI_Pin
@@ -266,11 +271,10 @@ static SPI_TRANSFER_INFO SPI2_TransferInfo = {0};
   void SPI2_RX_DMA_Complete (DMA_HandleTypeDef *hdma);
 
 #ifdef RTE_DEVICE_FRAMEWORK_CLASSIC
-  static
+  static DMA_HandleTypeDef hdma_spi2_rx = { 0U };
 #else
-  extern
+  extern DMA_HandleTypeDef hdma_spi2_rx;
 #endif
-  DMA_HandleTypeDef hdma_spi2_rx;
   static SPI_DMA SPI2_DMA_Rx = {
     &hdma_spi2_rx,
     SPI2_RX_DMA_Complete,
@@ -286,11 +290,10 @@ static SPI_TRANSFER_INFO SPI2_TransferInfo = {0};
   void SPI2_TX_DMA_Complete (DMA_HandleTypeDef *hdma);
 
 #ifdef RTE_DEVICE_FRAMEWORK_CLASSIC
-  static
+  static DMA_HandleTypeDef hdma_spi2_tx = { 0U };
 #else
-  extern
+  extern DMA_HandleTypeDef hdma_spi2_tx;
 #endif
-  DMA_HandleTypeDef hdma_spi2_tx;
   static SPI_DMA SPI2_DMA_Tx = {
     &hdma_spi2_tx,
     SPI2_TX_DMA_Complete,
@@ -309,7 +312,7 @@ static const SPI_RESOURCES SPI2_Resources = {
   &hspi2,
 #endif
   SPI2,
-  HAL_RCC_GetPCLK2Freq,
+  HAL_RCC_GetPCLK1Freq,
 
   // PINS
   {
@@ -361,8 +364,8 @@ extern SPI_HandleTypeDef hspi3;
 #endif
 
 // SPI3 Run-Time Information
-static SPI_INFO          SPI3_Info = {0};
-static SPI_TRANSFER_INFO SPI3_TransferInfo = {0};
+static SPI_INFO          SPI3_Info         = { 0U };
+static SPI_TRANSFER_INFO SPI3_TransferInfo = { 0U };
 
 
 #ifdef MX_SPI3_MOSI_Pin
@@ -382,11 +385,10 @@ static SPI_TRANSFER_INFO SPI3_TransferInfo = {0};
   void SPI3_RX_DMA_Complete (DMA_HandleTypeDef *hdma);
 
 #ifdef RTE_DEVICE_FRAMEWORK_CLASSIC
-  static
+  static DMA_HandleTypeDef hdma_spi3_rx = { 0U };
 #else
-  extern
+  extern DMA_HandleTypeDef hdma_spi3_rx;
 #endif
-  DMA_HandleTypeDef hdma_spi3_rx;
   static SPI_DMA SPI3_DMA_Rx = {
     &hdma_spi3_rx,
     SPI3_RX_DMA_Complete,
@@ -402,11 +404,10 @@ static SPI_TRANSFER_INFO SPI3_TransferInfo = {0};
   void SPI3_TX_DMA_Complete (DMA_HandleTypeDef *hdma);
 
 #ifdef RTE_DEVICE_FRAMEWORK_CLASSIC
-  static
+  static DMA_HandleTypeDef hdma_spi3_tx = { 0U };
 #else
-  extern
+  extern DMA_HandleTypeDef hdma_spi3_tx;
 #endif
-  DMA_HandleTypeDef hdma_spi3_tx;
   static SPI_DMA SPI3_DMA_Tx = {
     &hdma_spi3_tx,
     SPI3_TX_DMA_Complete,
@@ -425,7 +426,7 @@ static const SPI_RESOURCES SPI3_Resources = {
   &hspi3,
 #endif
   SPI3,
-  HAL_RCC_GetPCLK2Freq,
+  HAL_RCC_GetPCLK1Freq,
 
   // PINS
   {
@@ -477,8 +478,8 @@ extern SPI_HandleTypeDef hspi4;
 #endif
 
 // SPI4 Run-Time Information
-static SPI_INFO          SPI4_Info = {0};
-static SPI_TRANSFER_INFO SPI4_TransferInfo = {0};
+static SPI_INFO          SPI4_Info         = { 0U };
+static SPI_TRANSFER_INFO SPI4_TransferInfo = { 0U };
 
 
 #ifdef MX_SPI4_MOSI_Pin
@@ -498,11 +499,10 @@ static SPI_TRANSFER_INFO SPI4_TransferInfo = {0};
   void SPI4_RX_DMA_Complete (DMA_HandleTypeDef *hdma);
 
 #ifdef RTE_DEVICE_FRAMEWORK_CLASSIC
-  static
+  static DMA_HandleTypeDef hdma_spi4_rx = { 0U };
 #else
-  extern
+  extern DMA_HandleTypeDef hdma_spi4_rx;
 #endif
-  DMA_HandleTypeDef hdma_spi4_rx;
   static SPI_DMA SPI4_DMA_Rx = {
     &hdma_spi4_rx,
     SPI4_RX_DMA_Complete,
@@ -518,11 +518,10 @@ static SPI_TRANSFER_INFO SPI4_TransferInfo = {0};
   void SPI4_TX_DMA_Complete (DMA_HandleTypeDef *hdma);
 
 #ifdef RTE_DEVICE_FRAMEWORK_CLASSIC
-  static
+  static DMA_HandleTypeDef hdma_spi4_tx = { 0U };
 #else
-  extern
+  extern DMA_HandleTypeDef hdma_spi4_tx;
 #endif
-  DMA_HandleTypeDef hdma_spi4_tx;
   static SPI_DMA SPI4_DMA_Tx = {
     &hdma_spi4_tx,
     SPI4_TX_DMA_Complete,
@@ -593,8 +592,8 @@ extern SPI_HandleTypeDef hspi5;
 #endif
 
 // SPI5 Run-Time Information
-static SPI_INFO          SPI5_Info = {0};
-static SPI_TRANSFER_INFO SPI5_TransferInfo = {0};
+static SPI_INFO          SPI5_Info         = { 0U };
+static SPI_TRANSFER_INFO SPI5_TransferInfo = { 0U };
 
 
 #ifdef MX_SPI5_MOSI_Pin
@@ -614,11 +613,10 @@ static SPI_TRANSFER_INFO SPI5_TransferInfo = {0};
   void SPI5_RX_DMA_Complete (DMA_HandleTypeDef *hdma);
 
 #ifdef RTE_DEVICE_FRAMEWORK_CLASSIC
-  static
+  static DMA_HandleTypeDef hdma_spi5_rx = { 0U };
 #else
-  extern
+  extern DMA_HandleTypeDef hdma_spi5_rx;
 #endif
-  DMA_HandleTypeDef hdma_spi5_rx;
   static SPI_DMA SPI5_DMA_Rx = {
     &hdma_spi5_rx,
     SPI5_RX_DMA_Complete,
@@ -634,11 +632,10 @@ static SPI_TRANSFER_INFO SPI5_TransferInfo = {0};
   void SPI5_TX_DMA_Complete (DMA_HandleTypeDef *hdma);
 
 #ifdef RTE_DEVICE_FRAMEWORK_CLASSIC
-  static
+  static DMA_HandleTypeDef hdma_spi5_tx = { 0U };
 #else
-  extern
+  extern DMA_HandleTypeDef hdma_spi5_tx;
 #endif
-  DMA_HandleTypeDef hdma_spi5_tx;
   static SPI_DMA SPI5_DMA_Tx = {
     &hdma_spi5_tx,
     SPI5_TX_DMA_Complete,
@@ -709,8 +706,8 @@ extern SPI_HandleTypeDef hspi6;
 #endif
 
 // SPI6 Run-Time Information
-static SPI_INFO          SPI6_Info = {0};
-static SPI_TRANSFER_INFO SPI6_TransferInfo = {0};
+static SPI_INFO          SPI6_Info         = { 0U };
+static SPI_TRANSFER_INFO SPI6_TransferInfo = { 0U };
 
 
 #ifdef MX_SPI6_MOSI_Pin
@@ -730,11 +727,10 @@ static SPI_TRANSFER_INFO SPI6_TransferInfo = {0};
   void SPI6_RX_DMA_Complete (DMA_HandleTypeDef *hdma);
 
 #ifdef RTE_DEVICE_FRAMEWORK_CLASSIC
-  static
+  static DMA_HandleTypeDef hdma_spi6_rx = { 0U };
 #else
-  extern
+  extern DMA_HandleTypeDef hdma_spi6_rx;
 #endif
-  DMA_HandleTypeDef hdma_spi6_rx;
   static SPI_DMA SPI6_DMA_Rx = {
     &hdma_spi6_rx,
     SPI6_RX_DMA_Complete,
@@ -750,11 +746,10 @@ static SPI_TRANSFER_INFO SPI6_TransferInfo = {0};
   void SPI6_TX_DMA_Complete (DMA_HandleTypeDef *hdma);
 
 #ifdef RTE_DEVICE_FRAMEWORK_CLASSIC
-  static
+  static DMA_HandleTypeDef hdma_spi6_tx = { 0U };
 #else
-  extern
+  extern DMA_HandleTypeDef hdma_spi6_tx;
 #endif
-  DMA_HandleTypeDef hdma_spi6_tx;
   static SPI_DMA SPI6_DMA_Tx = {
     &hdma_spi6_tx,
     SPI6_TX_DMA_Complete,
@@ -1034,8 +1029,13 @@ static int32_t SPI_Uninitialize (const SPI_RESOURCES *spi) {
   // Unconfigure SPI pins
   if (spi->io.mosi != NULL) { HAL_GPIO_DeInit(spi->io.mosi->port, spi->io.mosi->pin); }
   if (spi->io.miso != NULL) { HAL_GPIO_DeInit(spi->io.miso->port, spi->io.miso->pin); }
-  if (spi->io.sck  != NULL) { HAL_GPIO_DeInit(spi->io.sck->port,  spi->io.sck->pin); }
-  if (spi->io.nss  != NULL) { HAL_GPIO_DeInit(spi->io.nss->port,  spi->io.nss->pin); }
+  if (spi->io.sck  != NULL) { HAL_GPIO_DeInit(spi->io.sck->port,  spi->io.sck->pin);  }
+  if (spi->io.nss  != NULL) { HAL_GPIO_DeInit(spi->io.nss->port,  spi->io.nss->pin);  }
+
+  if (spi->rx_dma != NULL)  { spi->rx_dma->hdma->Instance = NULL; }
+  if (spi->tx_dma != NULL)  { spi->tx_dma->hdma->Instance = NULL; }
+#else
+  spi->h->Instance = NULL;
 #endif
 
   // Clear SPI state
@@ -1061,15 +1061,17 @@ static int32_t SPI_PowerControl (ARM_POWER_STATE state, const SPI_RESOURCES *spi
 #ifdef RTE_DEVICE_FRAMEWORK_CLASSIC
       HAL_NVIC_DisableIRQ (spi->irq_num);
 #ifdef __SPI_DMA
-      if ((spi->rx_dma != NULL) || (spi->tx_dma != NULL)) {
-        if (spi->rx_dma != NULL) {
+      if (spi->rx_dma != NULL) {
+        if (spi->rx_dma->hdma->Instance != NULL) {
           // Disable DMA IRQ in NVIC
           HAL_NVIC_DisableIRQ (spi->rx_dma->irq_num);
           // Deinitialize DMA
           HAL_DMA_DeInit (spi->rx_dma->hdma);
         }
+      }
 
-        if (spi->tx_dma != NULL) {
+      if (spi->tx_dma != NULL) {
+        if (spi->tx_dma->hdma->Instance != NULL) {
           // Disable DMA IRQ in NVIC
           HAL_NVIC_DisableIRQ (spi->tx_dma->irq_num);
           // Deinitialize DMA
@@ -1078,7 +1080,9 @@ static int32_t SPI_PowerControl (ARM_POWER_STATE state, const SPI_RESOURCES *spi
       }
 #endif
 #else
-      HAL_SPI_MspDeInit (spi->h);
+      if (spi->h->Instance != NULL) {
+        HAL_SPI_MspDeInit (spi->h);
+      }
 #endif
 
 #ifdef RTE_DEVICE_FRAMEWORK_CLASSIC
@@ -1097,12 +1101,16 @@ static int32_t SPI_PowerControl (ARM_POWER_STATE state, const SPI_RESOURCES *spi
       spi->info->status.mode_fault = 0U;
 
       // Clear powered flag
-      spi->info->state = SPI_INITIALIZED;
+      spi->info->state &= ~SPI_POWERED;
       break;
 
     case ARM_POWER_FULL:
-      // Check if SPI already powered
-      if (spi->info->state & SPI_POWERED) { return ARM_DRIVER_OK; }
+      if ((spi->info->state & SPI_INITIALIZED) == 0U) {
+        return ARM_DRIVER_ERROR;
+      }
+      if ((spi->info->state & SPI_POWERED)     != 0U) {
+        return ARM_DRIVER_OK;
+      }
 
       // Clear status flags
       spi->info->status.busy       = 0U;
@@ -1546,12 +1554,16 @@ static int32_t SPI_Control (uint32_t control, uint32_t arg, const SPI_RESOURCES 
     case ARM_SPI_SET_BUS_SPEED:
       // Set SPI Bus Speed 
       pclk = spi->periph_clock();
-      for (val = 1U; val < 8U; val++) {
-        if (arg >= (pclk >> val)) { break; }
+      for (val = 0U; val < 8U; val++) {
+        if (arg >= (pclk >> (val + 1U))) { break; }
+      }
+      if ((val == 8U) || (arg < (pclk >> (val + 1U)))) {
+        // Requested Bus Speed can not be configured
+        return ARM_DRIVER_ERROR;
       }
       // Disable SPI, update prescaler and enable SPI
       spi->reg->CR1 &= ~SPI_CR1_SPE;
-      spi->reg->CR1  =  (spi->reg->CR1 & ~SPI_CR1_BR) | ((val - 1U) << 3U);
+      spi->reg->CR1  =  (spi->reg->CR1 & ~SPI_CR1_BR) | (val << 3U);
       spi->reg->CR1 |=  SPI_CR1_SPE;
       return ARM_DRIVER_OK;
 
@@ -1746,11 +1758,15 @@ static int32_t SPI_Control (uint32_t control, uint32_t arg, const SPI_RESOURCES 
 
   // Set SPI Bus Speed 
   pclk = spi->periph_clock();
-  for (val = 1U; val < 8U; val++) {
-    if (arg >= (pclk >> val)) break;
+  for (val = 0U; val < 8U; val++) {
+    if (arg >= (pclk >> (val + 1U))) break;
+  }
+  if ((val == 8U) || (arg < (pclk >> (val + 1U)))) {
+    // Requested Bus Speed can not be configured
+    return ARM_DRIVER_ERROR;
   }
   // Save prescaler value
-  cr1 |= (val - 1U) << 3U;
+  cr1 |= (val << 3U);
 
   spi->info->mode = mode;
 
@@ -1789,7 +1805,8 @@ static ARM_SPI_STATUS SPI_GetStatus (const SPI_RESOURCES *spi) {
 
 /*SPI IRQ Handler */
 void SPI_IRQHandler (const SPI_RESOURCES *spi) {
-  uint16_t data, sr;
+  uint8_t  data_8bit;
+  uint16_t data_16bit, sr;
   uint32_t event;
 
   // Save status register
@@ -1798,7 +1815,28 @@ void SPI_IRQHandler (const SPI_RESOURCES *spi) {
   event = 0U;
 
   if ((sr & SPI_SR_OVR) != 0U) {
-    // Overrrun flag is set
+    // Clear Overrun flag by reading data and status register
+    if ((((spi->reg->CR2 & SPI_CR2_DS) >> 8) + 1U) <= 8U) {
+      // 8-bit data frame
+      data_8bit = *(volatile uint8_t *)(&spi->reg->DR);
+      if (spi->xfer->rx_cnt < spi->xfer->num) {
+        if (spi->xfer->rx_buf != NULL) {
+          *(spi->xfer->rx_buf++) = data_8bit;
+        }
+      }
+    } else {
+      // 16-bit data frame
+      data_16bit = *(volatile uint16_t *)(&spi->reg->DR);
+      if (spi->xfer->rx_cnt < spi->xfer->num) {
+        if (spi->xfer->rx_buf != NULL) {
+          *(spi->xfer->rx_buf++) = (uint8_t) data_16bit;
+          *(spi->xfer->rx_buf++) = (uint8_t)(data_16bit >> 8U);
+        }
+      }
+    }
+    spi->xfer->rx_cnt++;
+    sr = spi->reg->SR;
+
     spi->info->status.data_lost = 1U;
     event |=ARM_SPI_EVENT_DATA_LOST;
   }
@@ -1810,21 +1848,31 @@ void SPI_IRQHandler (const SPI_RESOURCES *spi) {
   if ((sr & SPI_SR_MODF) != 0U) {
     // Mode fault flag is set
     spi->info->status.mode_fault = 1U;
+
+    // Write CR1 register to clear MODF flag
+    spi->reg->CR1 = spi->reg->CR1;
     event |= ARM_SPI_EVENT_MODE_FAULT;
   }
 
   if (((sr & SPI_SR_RXNE) != 0U) && ((spi->reg->CR2 & SPI_CR2_RXNEIE) != 0U)) {
     // Receive Buffer Not Empty
-    data = spi->reg->DR;
 
-    if (spi->xfer->num != 0U) {
-      if ((spi->xfer->rx_buf) != NULL) {
-        // Put data into buffer
-        *(spi->xfer->rx_buf++) = (uint8_t)data;
-        if ((((spi->reg->CR2 & SPI_CR2_DS) >> 8) + 1U) > 8U) {
-          *(spi->xfer->rx_buf++) = (uint8_t)(data >> 8U);
+    if (spi->xfer->rx_cnt < spi->xfer->num) {
+      if ((((spi->reg->CR2 & SPI_CR2_DS) >> 8) + 1U) <= 8U) {
+        // 8-bit data frame
+        data_8bit = *(volatile uint8_t *)(&spi->reg->DR);
+        if (spi->xfer->rx_buf != NULL) {
+          *(spi->xfer->rx_buf++) = data_8bit;
+        }
+      } else {
+        // 16-bit data frame
+        data_16bit = *(volatile uint16_t *)(&spi->reg->DR);
+        if (spi->xfer->rx_buf != NULL) {
+          *(spi->xfer->rx_buf++) = (uint8_t) data_16bit;
+          *(spi->xfer->rx_buf++) = (uint8_t)(data_16bit >> 8U);
         }
       }
+
       spi->xfer->rx_cnt++;
 
       if (spi->xfer->rx_cnt == spi->xfer->num) {
@@ -1832,7 +1880,6 @@ void SPI_IRQHandler (const SPI_RESOURCES *spi) {
         // Disable RX Buffer Not Empty Interrupt
         spi->reg->CR2 &= ~SPI_CR2_RXNEIE;
 
-        spi->xfer->num = 0U;
         // Clear busy flag
         spi->info->status.busy = 0U;
 
@@ -1847,21 +1894,25 @@ void SPI_IRQHandler (const SPI_RESOURCES *spi) {
   }
 
   if (((sr & SPI_SR_TXE) != 0U) && ((spi->reg->CR2 & SPI_CR2_TXEIE) != 0U)) {
-    if (spi->xfer->num) {
-      if (spi->xfer->tx_buf != NULL) {
-        // Send buffered data
-        data = *(spi->xfer->tx_buf++);
-        if ((((spi->reg->CR2 & SPI_CR2_DS) >> 8) + 1U) > 8U) {
-          // 16-bit data frame format
-          data |= *(spi->xfer->tx_buf++) << 8U;
+    if (spi->xfer->tx_cnt < spi->xfer->num) {
+      if ((((spi->reg->CR2 & SPI_CR2_DS) >> 8) + 1U) <= 8U) {
+        if (spi->xfer->tx_buf != NULL) {
+          data_8bit = *(spi->xfer->tx_buf++);
+        } else {
+          data_8bit = (uint8_t)spi->xfer->def_val;
         }
+        // Write data to data register
+        *(volatile uint8_t *)(&spi->reg->DR) = data_8bit;
       } else {
-        // Send default transfer value
-        data = spi->xfer->def_val;
+        if (spi->xfer->tx_buf != NULL) {
+          data_16bit  = *(spi->xfer->tx_buf++);
+          data_16bit |= *(spi->xfer->tx_buf++) << 8U;
+        } else {
+          data_16bit  = (uint16_t)spi->xfer->def_val;
+        }
+        // Write data to data register
+        *(volatile uint16_t *)(&spi->reg->DR) = data_16bit;
       }
-
-      // Send data
-      spi->reg->DR = data;
 
       spi->xfer->tx_cnt++;
 

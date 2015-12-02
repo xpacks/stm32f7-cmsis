@@ -18,8 +18,8 @@
  * 3. This notice may not be removed or altered from any source distribution.
  *
  *
- * $Date:        24. August 2015
- * $Revision:    V1.1
+ * $Date:        15. October 2015
+ * $Revision:    V1.3
  *
  * Driver:       Driver_I2C1, Driver_I2C2, Driver_I2C3, Driver_I2C4
  * Configured:   via RTE_Device.h configuration file
@@ -37,6 +37,12 @@
  * -------------------------------------------------------------------------- */
 
 /* History:
+ *  Version 1.3
+ *    Corrected PowerControl function for:
+ *      - Unconditional Power Off
+ *      - Conditional Power full (driver must be initialized)
+ *  Version 1.2
+ *    Own address setting corrected
  *  Version 1.1
  *    Enhanced STM32CubeMx compatibility
  *  Version 1.0
@@ -60,7 +66,7 @@ listed below. Enter the values that are marked \b bold.
 Pinout tab
 ----------
   1. Configure mode
-    - Peripherals \b I2C3: Mode= \b I2C
+    - Peripherals \b I2C3: Mode=<b>I2C</b>
 
   2. Configure pin PH7 and pin PH8 as I2C3 peripheral alternative pins
     - Click in chip diagram on pin \b PH7 and select \b I2C3_SCL
@@ -111,84 +117,92 @@ Configuration tab
 
 #include "I2C_STM32F7xx.h"
 
-#define ARM_I2C_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,1)    /* driver version */
+#define ARM_I2C_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,3)    /* driver version */
 
 
 #if defined(MX_I2C1_RX_DMA_Instance)
-#if defined(RTE_DEVICE_FRAMEWORK_CUBE_MX)
-extern
+#if defined(RTE_DEVICE_FRAMEWORK_CLASSIC)
+static DMA_HandleTypeDef hdma_i2c1_rx = { 0U };
+#else
+extern DMA_HandleTypeDef hdma_i2c1_rx;
 #endif
-DMA_HandleTypeDef hdma_i2c1_rx;
 
 void I2C1_RX_DMA_Complete(DMA_HandleTypeDef *hdma);
 void I2C1_RX_DMA_Error   (DMA_HandleTypeDef *hdma);
 #endif
 
 #if defined(MX_I2C1_TX_DMA_Instance)
-#if defined(RTE_DEVICE_FRAMEWORK_CUBE_MX)
-extern
+#if defined(RTE_DEVICE_FRAMEWORK_CLASSIC)
+static DMA_HandleTypeDef hdma_i2c1_tx = { 0U };
+#else
+extern DMA_HandleTypeDef hdma_i2c1_tx;
 #endif
-DMA_HandleTypeDef hdma_i2c1_tx;
 
 void I2C1_TX_DMA_Complete(DMA_HandleTypeDef *hdma);
 void I2C1_TX_DMA_Error   (DMA_HandleTypeDef *hdma);
 #endif
 
 #if defined(MX_I2C2_RX_DMA_Instance)
-#if defined(RTE_DEVICE_FRAMEWORK_CUBE_MX)
-extern
+#if defined(RTE_DEVICE_FRAMEWORK_CLASSIC)
+static DMA_HandleTypeDef hdma_i2c2_rx = { 0U };
+#else
+extern DMA_HandleTypeDef hdma_i2c2_rx;
 #endif
-DMA_HandleTypeDef hdma_i2c2_rx;
 
 void I2C2_RX_DMA_Complete(DMA_HandleTypeDef *hdma);
 void I2C2_RX_DMA_Error   (DMA_HandleTypeDef *hdma);
 #endif
 
 #if defined(MX_I2C2_TX_DMA_Instance)
-#if defined(RTE_DEVICE_FRAMEWORK_CUBE_MX)
-extern
+#if defined(RTE_DEVICE_FRAMEWORK_CLASSIC)
+static DMA_HandleTypeDef hdma_i2c2_tx = { 0U };
+#else
+extern DMA_HandleTypeDef hdma_i2c2_tx;
 #endif
-DMA_HandleTypeDef hdma_i2c2_tx;
 
 void I2C2_TX_DMA_Complete(DMA_HandleTypeDef *hdma);
 void I2C2_TX_DMA_Error   (DMA_HandleTypeDef *hdma);
 #endif
 
 #if defined(MX_I2C3_RX_DMA_Instance)
-#if defined(RTE_DEVICE_FRAMEWORK_CUBE_MX)
-extern
+#if defined(RTE_DEVICE_FRAMEWORK_CLASSIC)
+static DMA_HandleTypeDef hdma_i2c3_rx = { 0U };
+#else
+extern DMA_HandleTypeDef hdma_i2c3_rx;
 #endif
-DMA_HandleTypeDef hdma_i2c3_rx;
 
 void I2C3_RX_DMA_Complete(DMA_HandleTypeDef *hdma);
 void I2C3_RX_DMA_Error   (DMA_HandleTypeDef *hdma);
 #endif
 
 #if defined(MX_I2C3_TX_DMA_Instance)
-#if defined(RTE_DEVICE_FRAMEWORK_CUBE_MX)
-extern
+#if defined(RTE_DEVICE_FRAMEWORK_CLASSIC)
+static DMA_HandleTypeDef hdma_i2c3_tx = { 0U };
+#else
+extern DMA_HandleTypeDef hdma_i2c3_tx;
 #endif
-DMA_HandleTypeDef hdma_i2c3_tx;
 
 void I2C3_TX_DMA_Complete(DMA_HandleTypeDef *hdma);
 void I2C3_TX_DMA_Error   (DMA_HandleTypeDef *hdma);
 #endif
 
 #if defined(MX_I2C4_RX_DMA_Instance)
-#if defined(RTE_DEVICE_FRAMEWORK_CUBE_MX)
-extern
+#if defined(RTE_DEVICE_FRAMEWORK_CLASSIC)
+static DMA_HandleTypeDef hdma_i2c4_rx = { 0U };
+#else
+extern DMA_HandleTypeDef hdma_i2c4_rx;
 #endif
-DMA_HandleTypeDef hdma_i2c4_rx;
 
 void I2C4_RX_DMA_Complete(DMA_HandleTypeDef *hdma);
 void I2C4_RX_DMA_Error   (DMA_HandleTypeDef *hdma);
 #endif
 
 #if defined(MX_I2C4_TX_DMA_Instance)
-#if defined(RTE_DEVICE_FRAMEWORK_CUBE_MX)
-extern
+#if defined(RTE_DEVICE_FRAMEWORK_CLASSIC)
+static DMA_HandleTypeDef hdma_i2c4_tx = { 0U };
+#else
+extern DMA_HandleTypeDef hdma_i2c4_tx;
 #endif
-DMA_HandleTypeDef hdma_i2c4_tx;
 
 void I2C4_TX_DMA_Complete(DMA_HandleTypeDef *hdma);
 void I2C4_TX_DMA_Error   (DMA_HandleTypeDef *hdma);
@@ -681,6 +695,11 @@ static int32_t I2C_Uninitialize (I2C_RESOURCES *i2c) {
     /* Unconfigure SCL and SDA Pins */
     HAL_GPIO_DeInit(i2c->io.scl_port, i2c->io.scl_pin);
     HAL_GPIO_DeInit(i2c->io.sda_port, i2c->io.sda_pin);
+
+    if (i2c->dma_rx != NULL) { i2c->dma_rx->h->Instance = NULL; }
+    if (i2c->dma_tx != NULL) { i2c->dma_tx->h->Instance = NULL; }
+  #else
+    i2c->h->Instance = NULL;
   #endif
 
   i2c->info->flags = 0U;
@@ -701,6 +720,12 @@ static int32_t I2C_PowerControl (ARM_POWER_STATE state, I2C_RESOURCES *i2c) {
 
   switch (state) {
     case ARM_POWER_OFF:
+      /* Enable I2C clock */
+      if      (i2c->reg == I2C1) { __HAL_RCC_I2C1_CLK_ENABLE(); }
+      else if (i2c->reg == I2C2) { __HAL_RCC_I2C2_CLK_ENABLE(); }
+      else if (i2c->reg == I2C3) { __HAL_RCC_I2C3_CLK_ENABLE(); }
+      else /*(i2c->reg == I2C4)*/{ __HAL_RCC_I2C4_CLK_ENABLE(); }
+
       /* Disable I2C peripheral */
       i2c->reg->CR1 = 0;
 
@@ -710,12 +735,28 @@ static int32_t I2C_PowerControl (ARM_POWER_STATE state, I2C_RESOURCES *i2c) {
         HAL_NVIC_DisableIRQ(i2c->er_irq_num);
 
         /* Abort DMA streams */
-        if (i2c->dma_rx != NULL) { HAL_DMA_Abort (i2c->dma_rx->h); }
-        if (i2c->dma_tx != NULL) { HAL_DMA_Abort (i2c->dma_tx->h); }
+        if (i2c->dma_rx != NULL) {
+          if (i2c->dma_rx->h->Instance != NULL) {
+            HAL_DMA_Abort (i2c->dma_rx->h);
+          }
+        }
+        if (i2c->dma_tx != NULL) {
+          if (i2c->dma_tx->h->Instance != NULL) {
+            HAL_DMA_Abort (i2c->dma_tx->h);
+          }
+        }
 
         /* Disable DMA stream IRQs in NVIC */
-        if (i2c->dma_rx != NULL) { HAL_NVIC_DisableIRQ (i2c->dma_rx->irq_num); }
-        if (i2c->dma_tx != NULL) { HAL_NVIC_DisableIRQ (i2c->dma_tx->irq_num); }
+        if (i2c->dma_rx != NULL) {
+          if (i2c->dma_rx->h->Instance != NULL) {
+            HAL_NVIC_DisableIRQ (i2c->dma_rx->irq_num);
+          }
+        }
+        if (i2c->dma_tx != NULL) {
+          if (i2c->dma_tx->h->Instance != NULL) {
+            HAL_NVIC_DisableIRQ (i2c->dma_tx->irq_num);
+          }
+        }
 
         /* Disable peripheral clock */
         if      (i2c->reg == I2C1) { __HAL_RCC_I2C1_CLK_DISABLE(); }
@@ -723,7 +764,7 @@ static int32_t I2C_PowerControl (ARM_POWER_STATE state, I2C_RESOURCES *i2c) {
         else if (i2c->reg == I2C3) { __HAL_RCC_I2C3_CLK_DISABLE(); }
         else /*(i2c->reg == I2C4)*/{ __HAL_RCC_I2C4_CLK_DISABLE(); }
       #else
-        HAL_I2C_MspDeInit (i2c->h);
+        if (i2c->h->Instance != NULL) { HAL_I2C_MspDeInit (i2c->h);}
       #endif
 
       i2c->info->status.busy             = 0U;
@@ -733,76 +774,81 @@ static int32_t I2C_PowerControl (ARM_POWER_STATE state, I2C_RESOURCES *i2c) {
       i2c->info->status.arbitration_lost = 0U;
       i2c->info->status.bus_error        = 0U;
 
-      i2c->info->flags = I2C_INIT;
+      i2c->info->flags &= ~I2C_POWER;
       break;
 
     case ARM_POWER_LOW:
       return ARM_DRIVER_ERROR_UNSUPPORTED;
 
     case ARM_POWER_FULL:
-      if ((i2c->info->flags & I2C_POWER) == 0U) {
-        #if defined(RTE_DEVICE_FRAMEWORK_CLASSIC)
-          /* Enable I2C clock */
-          if      (i2c->reg == I2C1) { __HAL_RCC_I2C1_CLK_ENABLE(); }
-          else if (i2c->reg == I2C2) { __HAL_RCC_I2C2_CLK_ENABLE(); }
-          else if (i2c->reg == I2C3) { __HAL_RCC_I2C3_CLK_ENABLE(); }
-          else /*(i2c->reg == I2C4)*/{ __HAL_RCC_I2C4_CLK_ENABLE(); }
-
-          /* Enable DMA IRQs in NVIC */
-          if (i2c->dma_rx != NULL) { HAL_NVIC_EnableIRQ (i2c->dma_rx->irq_num); }
-          if (i2c->dma_tx != NULL) { HAL_NVIC_EnableIRQ (i2c->dma_tx->irq_num); }
-
-          /* Clear and Enable I2C IRQ */
-          HAL_NVIC_ClearPendingIRQ(i2c->ev_irq_num);
-          HAL_NVIC_ClearPendingIRQ(i2c->er_irq_num);
-          HAL_NVIC_EnableIRQ(i2c->ev_irq_num);
-          HAL_NVIC_EnableIRQ(i2c->er_irq_num);
-        #else
-          HAL_I2C_MspInit (i2c->h);
-        #endif
-
-        /* Reset the peripheral */
-        if (i2c->reg == I2C1) {
-          __HAL_RCC_I2C1_FORCE_RESET();
-          __NOP(); __NOP(); __NOP(); __NOP();
-          __HAL_RCC_I2C1_RELEASE_RESET();
-        }
-        else if (i2c->reg == I2C2) {
-          __HAL_RCC_I2C2_FORCE_RESET();
-          __NOP(); __NOP(); __NOP(); __NOP();
-          __HAL_RCC_I2C2_RELEASE_RESET();
-        }
-        else if (i2c->reg == I2C3) {
-          __HAL_RCC_I2C3_FORCE_RESET();
-          __NOP(); __NOP(); __NOP(); __NOP();
-          __HAL_RCC_I2C3_RELEASE_RESET();
-        }
-        else /*(i2c->reg == I2C4)*/ {
-          __HAL_RCC_I2C4_FORCE_RESET();
-          __NOP(); __NOP(); __NOP(); __NOP();
-          __HAL_RCC_I2C4_RELEASE_RESET();
-        }
-
-        /* Initial peripheral setup */
-        cr1 = I2C_CR1_SBC    | /* Slave byte control enabled          */
-              I2C_CR1_ERRIE  | /* Error interrupts enabled            */
-              I2C_CR1_TCIE   | /* Transfer complete interrupt enabled */
-              I2C_CR1_STOPIE | /* STOP detection interrupt enabled    */
-              I2C_CR1_NACKIE | /* NACK interrupt enabled              */
-              I2C_CR1_ADDRIE ; /* Address match interrupt enabled     */
-
-        /* Enable IRQ/DMA rx/tx requests */
-        if (i2c->dma_rx == NULL) {cr1 |= I2C_CR1_RXIE;    }
-        else                     {cr1 |= I2C_CR1_RXDMAEN; }
-        if (i2c->dma_tx == NULL) {cr1 |= I2C_CR1_TXIE;    }
-        else                     {cr1 |= I2C_CR1_TXDMAEN; }
-
-        /* Apply setup and enable peripheral */
-        i2c->reg->CR1 = cr1 | I2C_CR1_PE;
-
-        /* Ready for operation */
-        i2c->info->flags |= I2C_POWER;
+      if ((i2c->info->flags & I2C_INIT)  == 0U) {
+        return ARM_DRIVER_ERROR;
       }
+      if ((i2c->info->flags & I2C_POWER) != 0U) {
+        return ARM_DRIVER_OK;
+      }
+
+      #if defined(RTE_DEVICE_FRAMEWORK_CLASSIC)
+        /* Enable I2C clock */
+        if      (i2c->reg == I2C1) { __HAL_RCC_I2C1_CLK_ENABLE(); }
+        else if (i2c->reg == I2C2) { __HAL_RCC_I2C2_CLK_ENABLE(); }
+        else if (i2c->reg == I2C3) { __HAL_RCC_I2C3_CLK_ENABLE(); }
+        else /*(i2c->reg == I2C4)*/{ __HAL_RCC_I2C4_CLK_ENABLE(); }
+
+        /* Enable DMA IRQs in NVIC */
+        if (i2c->dma_rx != NULL) { HAL_NVIC_EnableIRQ (i2c->dma_rx->irq_num); }
+        if (i2c->dma_tx != NULL) { HAL_NVIC_EnableIRQ (i2c->dma_tx->irq_num); }
+
+        /* Clear and Enable I2C IRQ */
+        HAL_NVIC_ClearPendingIRQ(i2c->ev_irq_num);
+        HAL_NVIC_ClearPendingIRQ(i2c->er_irq_num);
+        HAL_NVIC_EnableIRQ(i2c->ev_irq_num);
+        HAL_NVIC_EnableIRQ(i2c->er_irq_num);
+      #else
+        HAL_I2C_MspInit (i2c->h);
+      #endif
+
+      /* Reset the peripheral */
+      if (i2c->reg == I2C1) {
+        __HAL_RCC_I2C1_FORCE_RESET();
+        __NOP(); __NOP(); __NOP(); __NOP();
+        __HAL_RCC_I2C1_RELEASE_RESET();
+      }
+      else if (i2c->reg == I2C2) {
+        __HAL_RCC_I2C2_FORCE_RESET();
+        __NOP(); __NOP(); __NOP(); __NOP();
+        __HAL_RCC_I2C2_RELEASE_RESET();
+      }
+      else if (i2c->reg == I2C3) {
+        __HAL_RCC_I2C3_FORCE_RESET();
+        __NOP(); __NOP(); __NOP(); __NOP();
+        __HAL_RCC_I2C3_RELEASE_RESET();
+      }
+      else /*(i2c->reg == I2C4)*/ {
+        __HAL_RCC_I2C4_FORCE_RESET();
+        __NOP(); __NOP(); __NOP(); __NOP();
+        __HAL_RCC_I2C4_RELEASE_RESET();
+      }
+
+      /* Initial peripheral setup */
+      cr1 = I2C_CR1_SBC    | /* Slave byte control enabled          */
+            I2C_CR1_ERRIE  | /* Error interrupts enabled            */
+            I2C_CR1_TCIE   | /* Transfer complete interrupt enabled */
+            I2C_CR1_STOPIE | /* STOP detection interrupt enabled    */
+            I2C_CR1_NACKIE | /* NACK interrupt enabled              */
+            I2C_CR1_ADDRIE ; /* Address match interrupt enabled     */
+
+      /* Enable IRQ/DMA rx/tx requests */
+      if (i2c->dma_rx == NULL) {cr1 |= I2C_CR1_RXIE;    }
+      else                     {cr1 |= I2C_CR1_RXDMAEN; }
+      if (i2c->dma_tx == NULL) {cr1 |= I2C_CR1_TXIE;    }
+      else                     {cr1 |= I2C_CR1_TXDMAEN; }
+
+      /* Apply setup and enable peripheral */
+      i2c->reg->CR1 = cr1 | I2C_CR1_PE;
+
+      /* Ready for operation */
+      i2c->info->flags |= I2C_POWER;
       break;
   }
 
@@ -1138,21 +1184,27 @@ static int32_t I2C_Control (uint32_t control, uint32_t arg, I2C_RESOURCES *i2c) 
 
   switch (control) {
     case ARM_I2C_OWN_ADDRESS:
-      if ((arg & ARM_I2C_ADDRESS_GC) != 0) {
-        /* Enable general call */
-        i2c->reg->CR1 |=  I2C_CR1_GCEN;
-      } else {
-        /* Disable general call */
-        i2c->reg->CR1 &= ~I2C_CR1_GCEN;
+      if (arg == 0) {
+        /* Disable slave */
+        i2c->reg->OAR1 = 0;
       }
+      else {
+        if ((arg & ARM_I2C_ADDRESS_GC) != 0) {
+          /* Enable general call */
+          i2c->reg->CR1 |=  I2C_CR1_GCEN;
+        } else {
+          /* Disable general call */
+          i2c->reg->CR1 &= ~I2C_CR1_GCEN;
+        }
 
-      if ((arg & ARM_I2C_ADDRESS_10BIT) != 0) {
-        val = (arg & 0x3FF ) | I2C_OAR1_OA1MODE;
-      } else {
-        val = (arg & 0x7F) << 1;
+        if ((arg & ARM_I2C_ADDRESS_10BIT) != 0) {
+          val = (arg & 0x3FF ) | I2C_OAR1_OA1MODE;
+        } else {
+          val = (arg & 0x7F) << 1;
+        }
+
+        i2c->reg->OAR1 = val | I2C_OAR1_OA1EN;
       }
-
-      i2c->reg->OAR1 = val | I2C_OAR1_OA1EN;
       break;
 
     case ARM_I2C_BUS_SPEED:

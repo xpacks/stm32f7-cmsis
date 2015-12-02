@@ -18,8 +18,8 @@
  * 3. This notice may not be removed or altered from any source distribution.
  *
  *
- * $Date:        24. August 2015
- * $Revision:    V1.1
+ * $Date:        15. October 2015
+ * $Revision:    V1.3
  *
  * Driver:       Driver_MCI0
  * Configured:   via RTE_Device.h configuration file
@@ -34,6 +34,12 @@
  * -------------------------------------------------------------------------- */
 
 /* History:
+ *  Version 1.3
+ *    Corrected PowerControl function for:
+ *      - Unconditional Power Off
+ *      - Conditional Power full (driver must be initialized)
+ *  Version 1.2
+ *    Clock power save bit handling removed from ARM_MCI_BUS_SPEED control
  *  Version 1.1
  *    Enhanced STM32CubeMx compatibility
  *  Version 1.0
@@ -64,7 +70,7 @@ listed below. Enter the values that are marked \b bold.
 Pinout tab
 ----------
   1. Configure SDMMC1 mode
-     - Peripherals \b SDMMC1: Mode=<b>SD 4bits Wide bus</b>
+     - Peripherals \b SDMMC1: Mode=<b>SD 4 bits Wide bus</b>
   2. Configure Card Detect pin:
      - Click in chip diagram on pin \b PC13 and select \b GPIO_Input. 
           
@@ -123,7 +129,7 @@ Configuration tab
 
 #include "MCI_STM32F7xx.h"
 
-#define ARM_MCI_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,1)  /* driver version */
+#define ARM_MCI_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,3)  /* driver version */
 
 /* Define Card Detect pin active state */
 #if !defined(MemoryCard_CD_Pin_Active)
@@ -146,15 +152,13 @@ Configuration tab
 extern SD_HandleTypeDef hsd1;
 #endif
 
-#if defined(RTE_DEVICE_FRAMEWORK_CUBE_MX)
-extern
+#if defined(RTE_DEVICE_FRAMEWORK_CLASSIC)
+static DMA_HandleTypeDef hdma_sdmmc1_rx = { 0U };
+static DMA_HandleTypeDef hdma_sdmmc1_tx = { 0U };
+#else
+extern DMA_HandleTypeDef hdma_sdmmc1_rx;
+extern DMA_HandleTypeDef hdma_sdmmc1_tx;
 #endif
-DMA_HandleTypeDef hdma_sdmmc1_rx;
-
-#if defined(RTE_DEVICE_FRAMEWORK_CUBE_MX)
-extern
-#endif
-DMA_HandleTypeDef hdma_sdmmc1_tx;
 
 static MCI_INFO MCI;
 
@@ -415,6 +419,10 @@ static int32_t Uninitialize (void) {
 
   MCI.flags = 0U;
 
+  #if defined(RTE_DEVICE_FRAMEWORK_CUBE_MX)
+    hsd1.Instance = NULL;
+  #endif
+
   #if defined(RTE_DEVICE_FRAMEWORK_CLASSIC)
     /* SDMMC1_CMD, SDMMC1_CK and SDMMC1_D0 pins */
     HAL_GPIO_DeInit(GPIOD, GPIO_PIN_2);
@@ -473,21 +481,31 @@ static int32_t PowerControl (ARM_POWER_STATE state) {
         HAL_NVIC_DisableIRQ (SDMMC1_IRQn);
 
         /* Disable DMA stream interrupts in NVIC */
-        HAL_NVIC_DisableIRQ (SDMMC1_RX_DMA_IRQn);
-        HAL_NVIC_DisableIRQ (SDMMC1_TX_DMA_IRQn);
+        if (hdma_sdmmc1_rx.Instance != NULL) {
+          HAL_NVIC_DisableIRQ (SDMMC1_RX_DMA_IRQn);
+        }
+        if (hdma_sdmmc1_tx.Instance != NULL) {
+          HAL_NVIC_DisableIRQ (SDMMC1_TX_DMA_IRQn);
+        }
 
         /* Disable DMA stream */
-        if (HAL_DMA_DeInit (&hdma_sdmmc1_rx) != HAL_OK) {
-          status = ARM_DRIVER_ERROR;
+        if (hdma_sdmmc1_rx.Instance != NULL) {
+          if (HAL_DMA_DeInit (&hdma_sdmmc1_rx) != HAL_OK) {
+            status = ARM_DRIVER_ERROR;
+          }
         }
-        if (HAL_DMA_DeInit (&hdma_sdmmc1_tx) != HAL_OK) {
-          status = ARM_DRIVER_ERROR;
+        if (hdma_sdmmc1_tx.Instance != NULL) {
+          if (HAL_DMA_DeInit (&hdma_sdmmc1_tx) != HAL_OK) {
+            status = ARM_DRIVER_ERROR;
+          }
         }
 
         /* SDMMC1 peripheral clock disable */
         __HAL_RCC_SDMMC1_CLK_DISABLE();
       #else
-        HAL_SD_MspDeInit (&hsd1);
+        if (hsd1.Instance != NULL) {
+          HAL_SD_MspDeInit (&hsd1);
+        }
       #endif
 
       /* Clear status */
@@ -500,48 +518,52 @@ static int32_t PowerControl (ARM_POWER_STATE state) {
       MCI.status.sdio_interrupt   = 0U;
       MCI.status.ccs              = 0U;
 
-      MCI.flags = MCI_INIT;
+      MCI.flags &= ~MCI_POWER;
       break;
 
     case ARM_POWER_FULL:
-      if ((MCI.flags & MCI_POWER) == 0) {
-        #if defined(RTE_DEVICE_FRAMEWORK_CUBE_MX)
-          HAL_SD_MspInit (&hsd1);
-        #else
-        /* Enable SDMMC1 peripheral clock */
-        __HAL_RCC_SDMMC1_CLK_ENABLE();
-        #endif
-
-        /* Clear response and transfer variables */
-        MCI.response = NULL;
-        MCI.xfer.cnt = 0U;
-
-        /* Enable SDMMC1 peripheral interrupts */
-        SDMMC1->MASK = SDMMC_MASK_DATAENDIE  |
-                       SDMMC_MASK_CMDSENTIE  |
-                       SDMMC_MASK_CMDRENDIE  |
-                       SDMMC_MASK_DTIMEOUTIE |
-                       SDMMC_MASK_CTIMEOUTIE |
-                       SDMMC_MASK_DCRCFAILIE |
-                       SDMMC_MASK_CCRCFAILIE ;
-
-        /* Set max data timeout */
-        SDMMC1->DTIMER = 0xFFFFFFFF;
-
-        /* Enable clock to the card (SDIO_CK) */
-        SDMMC1->POWER = SDMMC_POWER_PWRCTRL_1 | SDMMC_POWER_PWRCTRL_0;
-
-        #if defined(RTE_DEVICE_FRAMEWORK_CLASSIC)
-          /* Enable DMA stream interrupts in NVIC */
-          HAL_NVIC_EnableIRQ(SDMMC1_RX_DMA_IRQn);
-          HAL_NVIC_EnableIRQ(SDMMC1_TX_DMA_IRQn);
-
-          HAL_NVIC_ClearPendingIRQ(SDMMC1_IRQn);
-          HAL_NVIC_EnableIRQ(SDMMC1_IRQn);
-        #endif
-
-        MCI.flags |= MCI_POWER;
+      if ((MCI.flags & MCI_INIT)  == 0U) {
+        return ARM_DRIVER_ERROR;
       }
+      if ((MCI.flags & MCI_POWER) != 0U) {
+        return ARM_DRIVER_OK;
+      }
+      #if defined(RTE_DEVICE_FRAMEWORK_CUBE_MX)
+        HAL_SD_MspInit (&hsd1);
+      #else
+      /* Enable SDMMC1 peripheral clock */
+      __HAL_RCC_SDMMC1_CLK_ENABLE();
+      #endif
+
+      /* Clear response and transfer variables */
+      MCI.response = NULL;
+      MCI.xfer.cnt = 0U;
+
+      /* Enable SDMMC1 peripheral interrupts */
+      SDMMC1->MASK = SDMMC_MASK_DATAENDIE  |
+                     SDMMC_MASK_CMDSENTIE  |
+                     SDMMC_MASK_CMDRENDIE  |
+                     SDMMC_MASK_DTIMEOUTIE |
+                     SDMMC_MASK_CTIMEOUTIE |
+                     SDMMC_MASK_DCRCFAILIE |
+                     SDMMC_MASK_CCRCFAILIE ;
+
+      /* Set max data timeout */
+      SDMMC1->DTIMER = 0xFFFFFFFF;
+
+      /* Enable clock to the card (SDIO_CK) */
+      SDMMC1->POWER = SDMMC_POWER_PWRCTRL_1 | SDMMC_POWER_PWRCTRL_0;
+
+      #if defined(RTE_DEVICE_FRAMEWORK_CLASSIC)
+        /* Enable DMA stream interrupts in NVIC */
+        HAL_NVIC_EnableIRQ(SDMMC1_RX_DMA_IRQn);
+        HAL_NVIC_EnableIRQ(SDMMC1_TX_DMA_IRQn);
+
+        HAL_NVIC_ClearPendingIRQ(SDMMC1_IRQn);
+        HAL_NVIC_EnableIRQ(SDMMC1_IRQn);
+      #endif
+
+      MCI.flags |= MCI_POWER;
       break;
 
     case ARM_POWER_LOW:
@@ -864,7 +886,7 @@ static int32_t Control (uint32_t control, uint32_t arg) {
         }
 
         SDMMC1->CLKCR = (SDMMC1->CLKCR & ~(SDMMC_CLKCR_CLKDIV | SDMMC_CLKCR_BYPASS)) |
-                         SDMMC_CLKCR_PWRSAV | SDMMC_CLKCR_CLKEN | clkdiv;
+                         SDMMC_CLKCR_CLKEN | clkdiv;
         bps = SDMMCCLK / (clkdiv + 2U);
       }
       else {

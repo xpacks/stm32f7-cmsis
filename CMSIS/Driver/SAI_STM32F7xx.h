@@ -18,8 +18,8 @@
  * 3. This notice may not be removed or altered from any source distribution.
  *
  *
- * $Date:        20. July 2015
- * $Revision:    V1.0
+ * $Date:        15. October 2015
+ * $Revision:    V1.1
  *
  * Project:      SAI Driver definitions for ST STM32F7xx
  * -------------------------------------------------------------------------- */
@@ -35,14 +35,21 @@
 #include "stm32f7xx_hal.h"
 
 #include "RTE_Components.h"
-
-#ifndef   RTE_DEVICE_FRAMEWORK_CLASSIC
-#include "MX_Device.h"
-
-// MX macros
-
-#else
+#if   defined(RTE_DEVICE_FRAMEWORK_CLASSIC)
 #include "RTE_Device.h"
+#elif defined(RTE_DEVICE_FRAMEWORK_CUBE_MX)
+#include "MX_Device.h"
+#else
+#error "::Device:STM32Cube Framework: not selected in RTE"
+#endif
+
+#ifdef RTE_DEVICE_FRAMEWORK_CLASSIC
+  #if ((defined(RTE_Drivers_SAI1) || \
+        defined(RTE_Drivers_SAI2))   \
+       && (RTE_SAI1 == 0)            \
+       && (RTE_SAI2 == 0))
+    #error "SAI not configured in RTE_Device.h!"
+  #endif
 
 // RTE macros
 #define _DMA_CHANNEL_x(x)               DMA_CHANNEL_##x
@@ -259,7 +266,18 @@
     #define MX_SAI2_MCLK_B_GPIO_AF      GPIO_AF10_SAI2
   #endif 
 #endif
-#endif
+
+#endif /* RTE_DEVICE_FRAMEWORK_CLASSIC */
+
+#if defined(RTE_DEVICE_FRAMEWORK_CUBE_MX)
+  #if ((defined(RTE_Drivers_SAI1) || \
+        defined(RTE_Drivers_SAI2))   \
+        && (!defined (MX_SAI1))      \
+        && (!defined (MX_SAI2)))
+    #error "SAI not configured in STM32CubeMX!"
+  #endif
+
+#endif /* RTE_DEVICE_FRAMEWORK_CUBE_MX */
 
 #if ((defined(MX_SAI1) && defined(MX_SAI1_A_DMA_Instance)) || \
      (defined(MX_SAI1) && defined(MX_SAI1_B_DMA_Instance)) || \

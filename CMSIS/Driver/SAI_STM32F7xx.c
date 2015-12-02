@@ -18,8 +18,8 @@
  * 3. This notice may not be removed or altered from any source distribution.
  *
  *
- * $Date:        21. July 2015
- * $Revision:    V1.0
+ * $Date:        15. October 2015
+ * $Revision:    V1.1
  *
  * Driver:       Driver_SAI1, Driver_SAI2
  * Configured:   via RTE_Device.h configuration file
@@ -35,6 +35,10 @@
  * -------------------------------------------------------------------------- */
 
 /* History:
+ *  Version 1.1
+ *    Corrected PowerControl function for:
+ *      - Unconditional Power Off
+ *      - Conditional Power full (driver must be initialized)
  *  Version 1.0
  *    - Initial release
  */
@@ -46,7 +50,7 @@
 
 #include "SAI_STM32F7xx.h"
 
-#define ARM_SAI_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,0)
+#define ARM_SAI_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,1)
 // Driver Version
 static const ARM_DRIVER_VERSION DriverVersion = { ARM_SAI_API_VERSION, ARM_SAI_DRV_VERSION };
 
@@ -116,9 +120,9 @@ SAI_HandleTypeDef hsai_BlockB1;
 #endif
 
 // SAI1 Run-Time Information
-static SAI_INFO        SAI1_Info = {0};
-static SAI_STREAM_INFO SAI1_Stream_Info_A = {0};
-static SAI_STREAM_INFO SAI1_Stream_Info_B = {0};
+static SAI_INFO        SAI1_Info = { 0U };
+static SAI_STREAM_INFO SAI1_Stream_Info_A = { 0U };
+static SAI_STREAM_INFO SAI1_Stream_Info_B = { 0U };
 
 #ifdef MX_SAI1_SD_A_Pin
   static const SAI_PIN SAI1_sd_a   = {MX_SAI1_SD_A_GPIOx,   MX_SAI1_SD_A_GPIO_Pin,   MX_SAI1_SD_A_GPIO_AF};
@@ -150,11 +154,10 @@ static SAI_STREAM_INFO SAI1_Stream_Info_B = {0};
   void SAI1_A_DMA_Complete (DMA_HandleTypeDef *hdma);
 
 #ifdef RTE_DEVICE_FRAMEWORK_CLASSIC
-  static
+  static DMA_HandleTypeDef hdma_sai1_a = { 0U };
 #else
-  extern
+  extern DMA_HandleTypeDef hdma_sai1_a;
 #endif
-  DMA_HandleTypeDef  hdma_sai1_a;
   static SAI_DMA SAI1_A_DMA = {
     &hdma_sai1_a,
     SAI1_A_DMA_Complete,
@@ -172,11 +175,10 @@ static SAI_STREAM_INFO SAI1_Stream_Info_B = {0};
   void SAI1_B_DMA_Complete (DMA_HandleTypeDef *hdma);
 
 #ifdef RTE_DEVICE_FRAMEWORK_CLASSIC
-  static
+  static DMA_HandleTypeDef hdma_sai1_b = { 0U };
 #else
-  extern
+  extern DMA_HandleTypeDef hdma_sai1_b;
 #endif
-  DMA_HandleTypeDef hdma_sai1_b;
   static SAI_DMA SAI1_B_DMA = {
     &hdma_sai1_b,
     SAI1_B_DMA_Complete,
@@ -311,9 +313,9 @@ SAI_HandleTypeDef hsai_BlockB2;
 #endif
 
 // SAI2 Run-Time Information
-static SAI_INFO        SAI2_Info = {0};
-static SAI_STREAM_INFO SAI2_Stream_Info_A = {0};
-static SAI_STREAM_INFO SAI2_Stream_Info_B = {0};
+static SAI_INFO        SAI2_Info = { 0U };
+static SAI_STREAM_INFO SAI2_Stream_Info_A = { 0U };
+static SAI_STREAM_INFO SAI2_Stream_Info_B = { 0U };
 
 #ifdef MX_SAI2_SD_A_Pin
   static const SAI_PIN SAI2_sd_a   = {MX_SAI2_SD_A_GPIOx,   MX_SAI2_SD_A_GPIO_Pin,   MX_SAI2_SD_A_GPIO_AF};
@@ -345,11 +347,10 @@ static SAI_STREAM_INFO SAI2_Stream_Info_B = {0};
   void SAI2_A_DMA_Complete (DMA_HandleTypeDef *hdma);
 
 #ifdef RTE_DEVICE_FRAMEWORK_CLASSIC
-  static
+  static DMA_HandleTypeDef hdma_sai2_a = { 0U };
 #else
-  extern
+  extern DMA_HandleTypeDef hdma_sai2_a;
 #endif
-  DMA_HandleTypeDef  hdma_sai2_a;
   static SAI_DMA SAI2_A_DMA = {
     &hdma_sai2_a,
     SAI2_A_DMA_Complete,
@@ -367,11 +368,10 @@ static SAI_STREAM_INFO SAI2_Stream_Info_B = {0};
   void SAI2_B_DMA_Complete (DMA_HandleTypeDef *hdma);
 
 #ifdef RTE_DEVICE_FRAMEWORK_CLASSIC
-  static
+  static DMA_HandleTypeDef hdma_sai2_b = { 0U };
 #else
-  extern
+  extern DMA_HandleTypeDef hdma_sai2_b;
 #endif
-  DMA_HandleTypeDef hdma_sai2_b;
   static SAI_DMA SAI2_B_DMA = {
     &hdma_sai2_b,
     SAI2_B_DMA_Complete,
@@ -756,6 +756,12 @@ static int32_t SAI_Uninitialize (SAI_RESOURCES *sai) {
   if (sai->tx->io.fs   != NULL) { HAL_GPIO_DeInit(sai->tx->io.fs->port,   sai->tx->io.fs->pin);   }
   if (sai->tx->io.sck  != NULL) { HAL_GPIO_DeInit(sai->tx->io.sck->port,  sai->tx->io.sck->pin);  }
   if (sai->tx->io.mclk != NULL) { HAL_GPIO_DeInit(sai->tx->io.mclk->port, sai->tx->io.mclk->pin); }
+
+  if (sai->rx->dma     != NULL) { sai->rx->dma->hdma->Instance = NULL; }
+  if (sai->tx->dma     != NULL) { sai->tx->dma->hdma->Instance = NULL; }
+#else
+  sai->rx->h->Instance  = NULL;
+  sai->tx->h->Instance  = NULL;
 #endif
 
   // Clear SAI flags
@@ -789,22 +795,26 @@ static int32_t SAI_PowerControl (ARM_POWER_STATE  state,
       HAL_NVIC_DisableIRQ (sai->irq_num);
 #ifdef __SAI_DMA
       if (sai->rx->dma != NULL) {
-        // Disable DMA IRQ in NVIC
-        HAL_NVIC_DisableIRQ (sai->rx->dma->irq_num);
-        // Deinitialize DMA
-        HAL_DMA_DeInit (sai->rx->dma->hdma);
+        if (sai->rx->dma->hdma->Instance != NULL) {
+          // Disable DMA IRQ in NVIC
+          HAL_NVIC_DisableIRQ (sai->rx->dma->irq_num);
+          // Deinitialize DMA
+          HAL_DMA_DeInit (sai->rx->dma->hdma);
+        }
       }
 
       if (sai->tx->dma != NULL) {
-        // Disable DMA IRQ in NVIC
-        HAL_NVIC_DisableIRQ (sai->tx->dma->irq_num);
-        // Deinitialize DMA
-        HAL_DMA_DeInit (sai->tx->dma->hdma);
+        if (sai->tx->dma->hdma->Instance != NULL) {
+          // Disable DMA IRQ in NVIC
+          HAL_NVIC_DisableIRQ (sai->tx->dma->irq_num);
+          // Deinitialize DMA
+          HAL_DMA_DeInit (sai->tx->dma->hdma);
+        }
       }
 #endif
 #else
-      HAL_SAI_MspDeInit (sai->rx->h);
-      HAL_SAI_MspDeInit (sai->tx->h);
+      if (sai->rx->h->Instance != NULL) { HAL_SAI_MspDeInit (sai->rx->h); }
+      if (sai->tx->h->Instance != NULL) { HAL_SAI_MspDeInit (sai->tx->h); }
 #endif
 
 #ifdef RTE_DEVICE_FRAMEWORK_CLASSIC

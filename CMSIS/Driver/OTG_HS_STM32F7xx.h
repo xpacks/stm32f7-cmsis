@@ -719,7 +719,7 @@ typedef struct
 #define OTG_HS_DFIFO14        (((uint32_t *) OTG_HS_DFIFO14_BASE))
 #define OTG_HS_DFIFO15        (((uint32_t *) OTG_HS_DFIFO15_BASE))
 
-// OTG_FS Host Channel
+// OTG_HS Host Channel
 typedef __packed struct {               // Host Channel typedef (HC)
   __packed union {
     uint32_t HCCHAR;                    // Channel Characteristics
