@@ -18,8 +18,8 @@
  * 3. This notice may not be removed or altered from any source distribution.
  *
  *
- * $Date:        30. June 2015
- * $Revision:    V1.0
+ * $Date:        15. October 2015
+ * $Revision:    V1.2
  *
  * Project:      SPI Driver definitions for ST STM32F7xx
  * -------------------------------------------------------------------------- */
@@ -35,14 +35,29 @@
 #include "stm32f7xx_hal.h"
 
 #include "RTE_Components.h"
-
-#ifndef   RTE_DEVICE_FRAMEWORK_CLASSIC
-#include "MX_Device.h"
-
-// MX macros
-
-#else
+#if   defined(RTE_DEVICE_FRAMEWORK_CLASSIC)
 #include "RTE_Device.h"
+#elif defined(RTE_DEVICE_FRAMEWORK_CUBE_MX)
+#include "MX_Device.h"
+#else
+#error "::Device:STM32Cube Framework: not selected in RTE"
+#endif
+
+#ifdef RTE_DEVICE_FRAMEWORK_CLASSIC
+  #if ((defined(RTE_Drivers_SPI1) || \
+        defined(RTE_Drivers_SPI2) || \
+        defined(RTE_Drivers_SPI3) || \
+        defined(RTE_Drivers_SPI4) || \
+        defined(RTE_Drivers_SPI5) || \
+        defined(RTE_Drivers_SPI6))   \
+       && (RTE_SPI1 == 0)            \
+       && (RTE_SPI2 == 0)            \
+       && (RTE_SPI3 == 0)            \
+       && (RTE_SPI4 == 0)            \
+       && (RTE_SPI5 == 0)            \
+       && (RTE_SPI6 == 0))
+    #error "SPI not configured in RTE_Device.h!"
+  #endif
 
 // RTE macros
 #define _DMA_CHANNEL_x(x)               DMA_CHANNEL_##x
@@ -152,7 +167,7 @@
     #define MX_SPI2_NSS_Pin           1U
     #define MX_SPI2_NSS_GPIOx         RTE_SPI2_NSS_PORT
     #define MX_SPI2_NSS_GPIO_Pin     (1U << RTE_SPI2_NSS_BIT)
-    #if ((RTE_SPI2_NSS_PORT == GPIOB) && (RTE_SPI2_NSS_BIT == 4))
+    #if (RTE_SPI2_NSS_PORT_ID == 1)
       #define MX_SPI2_NSS_GPIO_AF     GPIO_AF7_SPI2
     #else
       #define MX_SPI2_NSS_GPIO_AF     GPIO_AF5_SPI2
@@ -191,9 +206,9 @@
   #define MX_SPI3_MOSI_GPIOx          RTE_SPI3_MOSI_PORT
   #define MX_SPI3_MOSI_GPIO_Pin      (1U << RTE_SPI3_MOSI_BIT)
   #define MX_SPI3_MOSI_GPIO_PuPd      GPIO_NOPULL
-  #if   ((RTE_SPI3_MOSI_PORT == GPIOB) && (RTE_SPI3_MOSI_BIT == 2))
+  #if (RTE_SPI3_MOSI_PORT_ID == 0)
     #define MX_SPI3_MOSI_GPIO_AF      GPIO_AF7_SPI3
-  #elif ((RTE_SPI3_MOSI_PORT == GPIOD) && (RTE_SPI3_MOSI_BIT == 6))
+  #elif (RTE_SPI3_MOSI_PORT_ID == 3)
     #define MX_SPI3_MOSI_GPIO_AF      GPIO_AF5_SPI3
   #else
     #define MX_SPI3_MOSI_GPIO_AF      GPIO_AF6_SPI3
@@ -392,7 +407,26 @@
     #define MX_SPI6_NSS_GPIO_AF       GPIO_AF5_SPI6
   #endif
 #endif
-#endif
+
+#endif /* RTE_DEVICE_FRAMEWORK_CLASSIC */
+
+#if defined(RTE_DEVICE_FRAMEWORK_CUBE_MX)
+  #if ((defined(RTE_Drivers_SPI1) || \
+        defined(RTE_Drivers_SPI2) || \
+        defined(RTE_Drivers_SPI3) || \
+        defined(RTE_Drivers_SPI4) || \
+        defined(RTE_Drivers_SPI5) || \
+        defined(RTE_Drivers_SPI6))   \
+        && (!defined (MX_SPI1))      \
+        && (!defined (MX_SPI2))      \
+        && (!defined (MX_SPI3))      \
+        && (!defined (MX_SPI4))      \
+        && (!defined (MX_SPI5))      \
+        && (!defined (MX_SPI6)))
+    #error "SPI not configured in STM32CubeMX!"
+  #endif
+
+#endif /* RTE_DEVICE_FRAMEWORK_CUBE_MX */
 
 
 #ifdef MX_SPI1

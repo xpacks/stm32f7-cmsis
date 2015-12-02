@@ -18,8 +18,8 @@
  * 3. This notice may not be removed or altered from any source distribution.
  *
  *
- * $Date:        21. August 2015
- * $Revision:    V1.1
+ * $Date:        15. October 2015
+ * $Revision:    V1.2
  *
  * Driver:       Driver_ETH_MAC0
  * Configured:   via RTE_Device.h configuration file
@@ -34,6 +34,11 @@
  * -------------------------------------------------------------------------- */
 
 /* History:
+ *  Version 1.2
+ *    Corrected PowerControl function for:
+ *      - Unconditional Power Off
+ *      - Conditional Power full (driver must be initialized)
+ *    Corrected return value of the ReadFrame function
  *  Version 1.1
  *    Corrected lockup after long runtime (unhandled MMC interrupts)
  *    Enhanced STM32CubeMx compatibility
@@ -60,11 +65,11 @@ For different boards, refer to the hardware schematics to reflect correct setup 
 
 The STM32CubeMX configuration steps for Pinout, Clock, and System Configuration are 
 listed below. Enter the values that are marked \b bold.
-   
+
 Pinout tab
 ----------
   1. Configure ETH mode
-     - Peripherals \b ETH: Mode= \b RMII
+     - Peripherals \b ETH: Mode=<b>RMII</b>
 
 Clock Configuration tab
 -----------------------
@@ -116,7 +121,7 @@ Configuration tab
 
 #include "EMAC_STM32F7xx.h"
 
-#define ARM_ETH_MAC_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,1) /* driver version */
+#define ARM_ETH_MAC_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,2) /* driver version */
 
 /* Timeouts */
 #define PHY_TIMEOUT         2U          /* PHY Register access timeout in ms  */
@@ -484,8 +489,10 @@ static int32_t Uninitialize (void) {
   for (io = eth_pins; io != &eth_pins[sizeof(eth_pins)/sizeof(ETH_PIN)]; io++) {
     HAL_GPIO_DeInit(io->port, io->pin);
   }
+#else
+  heth.Instance = NULL;
 #endif
-  Emac.flags = 0U;
+  Emac.flags &= ~EMAC_FLAG_INIT;
 
   return ARM_DRIVER_OK;
 }
@@ -501,13 +508,23 @@ static int32_t PowerControl (ARM_POWER_STATE state) {
 
   switch (state) {
     case ARM_POWER_OFF:
+      /* Enable Ethernet clocks */
+      __HAL_RCC_ETHMAC_CLK_ENABLE();
+      __HAL_RCC_ETHMACTX_CLK_ENABLE();
+      __HAL_RCC_ETHMACRX_CLK_ENABLE();
+      #if (EMAC_TIME_STAMP)
+      __HAL_RCC_ETHMACPTP_CLK_ENABLE();
+      #endif
+
       /* Reset Ethernet MAC peripheral */
       __HAL_RCC_ETHMAC_FORCE_RESET();
       __NOP(); __NOP(); __NOP(); __NOP();
       __HAL_RCC_ETHMAC_RELEASE_RESET();
 
       #if defined(RTE_DEVICE_FRAMEWORK_CUBE_MX)
-        HAL_ETH_MspDeInit (&heth);
+        if (heth.Instance != NULL) {
+          HAL_ETH_MspDeInit (&heth);
+        }
       #else
       /* Disable ethernet interrupts */
       NVIC_DisableIRQ(ETH_IRQn);
@@ -523,14 +540,18 @@ static int32_t PowerControl (ARM_POWER_STATE state) {
       #endif
       #endif
 
-      Emac.flags = EMAC_FLAG_INIT;
+      Emac.flags &= ~EMAC_FLAG_POWER;
       break;
 
     case ARM_POWER_LOW:
       return ARM_DRIVER_ERROR_UNSUPPORTED;
 
     case ARM_POWER_FULL:
-      if (Emac.flags & EMAC_FLAG_POWER) {
+      if ((Emac.flags & EMAC_FLAG_INIT)  == 0U) {
+        /* Driver not initialized */
+        return ARM_DRIVER_ERROR;
+      }
+      if ((Emac.flags & EMAC_FLAG_POWER) != 0U) {
         /* Driver already powered */
         break;
       }
@@ -552,6 +573,11 @@ static int32_t PowerControl (ARM_POWER_STATE state) {
         ; /* Wait until software reset completed */
       }
 
+      #if ((EMAC_CHECKSUM_OFFLOAD != 0) || (EMAC_TIME_STAMP != 0))
+      /* Enhanced descriptor enable */
+      ETH->DMABMR |= ETH_DMABMR_EDE;
+      #endif
+
       /* MDC clock range selection */
       hclk = HAL_RCC_GetHCLKFreq();
 
@@ -570,11 +596,6 @@ static int32_t PowerControl (ARM_POWER_STATE state) {
         return (ARM_DRIVER_ERROR);
       }
       ETH->MACMIIAR = clkdiv;
-
-      #if ((EMAC_CHECKSUM_OFFLOAD != 0) || (EMAC_TIME_STAMP != 0))
-      /* Enhanced descriptor enable */
-      ETH->DMABMR |= ETH_DMABMR_EDE;
-      #endif
 
       /* Initialize MAC configuration */
       ETH->MACCR   = ETH_MACCR_ROD | 0x00008000U;
@@ -637,6 +658,10 @@ static int32_t GetMacAddress (ARM_ETH_MAC_ADDR *ptr_addr) {
     return ARM_DRIVER_ERROR_PARAMETER;
   }
 
+  if ((Emac.flags & EMAC_FLAG_POWER) == 0U) {
+    return ARM_DRIVER_ERROR;
+  }
+
   val = ETH->MACA0HR;
   ptr_addr->b[5] = (uint8_t)(val >>  8);
   ptr_addr->b[4] = (uint8_t)(val);
@@ -661,6 +686,10 @@ static int32_t SetMacAddress (const ARM_ETH_MAC_ADDR *ptr_addr) {
     return ARM_DRIVER_ERROR_PARAMETER;
   }
 
+  if ((Emac.flags & EMAC_FLAG_POWER) == 0U) {
+    return ARM_DRIVER_ERROR;
+  }
+
   /* Set Ethernet MAC Address registers */
   ETH->MACA0HR = ((uint32_t)ptr_addr->b[5] <<  8) |  (uint32_t)ptr_addr->b[4];
   ETH->MACA0LR = ((uint32_t)ptr_addr->b[3] << 24) | ((uint32_t)ptr_addr->b[2] << 16) |
@@ -682,6 +711,10 @@ static int32_t SetAddressFilter (const ARM_ETH_MAC_ADDR *ptr_addr, uint32_t num_
 
   if ((ptr_addr == NULL) && (num_addr != 0)) {
     return ARM_DRIVER_ERROR_PARAMETER;
+  }
+
+  if ((Emac.flags & EMAC_FLAG_POWER) == 0U) {
+    return ARM_DRIVER_ERROR;
   }
 
   /* Use unicast address filtering for first 3 MAC addresses */
@@ -757,6 +790,10 @@ static int32_t SendFrame (const uint8_t *frame, uint32_t len, uint32_t flags) {
     return ARM_DRIVER_ERROR_PARAMETER;
   }
 
+  if ((Emac.flags & EMAC_FLAG_POWER) == 0U) {
+    return ARM_DRIVER_ERROR;
+  }
+
   if (dst == NULL) {
     /* Start of a new transmit frame */
     if (Desc.tx[Emac.tx_index].CtrlStat & DMA_TX_OWN) {
@@ -822,6 +859,15 @@ static int32_t SendFrame (const uint8_t *frame, uint32_t len, uint32_t flags) {
 */
 static int32_t ReadFrame (uint8_t *frame, uint32_t len) {
   uint8_t const *src = Desc.rx[Emac.rx_index].Addr;
+  int32_t cnt        = (int32_t)len;
+
+  if ((frame == NULL) && (len != 0U)) {
+    return ARM_DRIVER_ERROR_PARAMETER;
+  }
+
+  if ((Emac.flags & EMAC_FLAG_POWER) == 0U) {
+    return ARM_DRIVER_ERROR;
+  }
 
   /* Fast-copy data to frame buffer */
   for ( ; len > 7U; frame += 8, src += 8, len -= 8U) {
@@ -845,7 +891,7 @@ static int32_t ReadFrame (uint8_t *frame, uint32_t len) {
     ETH->DMASR   = ETH_DMASR_RBUS;
     ETH->DMARPDR = 0;
   }
-  return ((int32_t)len);
+  return (cnt);
 }
 
 /**
@@ -855,6 +901,10 @@ static int32_t ReadFrame (uint8_t *frame, uint32_t len) {
 */
 static uint32_t GetRxFrameSize (void) {
   uint32_t stat = Desc.rx[Emac.rx_index].Stat;
+
+  if ((Emac.flags & EMAC_FLAG_POWER) == 0U) {
+    return (0U);
+  }
 
   if (stat & DMA_RX_OWN) {
     /* Owned by DMA */
@@ -879,6 +929,10 @@ static int32_t GetRxFrameTime (ARM_ETH_MAC_TIME *time) {
 #if (EMAC_TIME_STAMP)
   RX_Desc *rxd = &rx_desc[Emac.rx_index];
 
+  if ((Emac.flags & EMAC_FLAG_POWER) == 0U) {
+    return ARM_DRIVER_ERROR;
+  }
+
   if (rxd->Stat & DMA_RX_OWN) {
     /* Owned by DMA */
     return ARM_DRIVER_ERROR_BUSY;
@@ -901,6 +955,10 @@ static int32_t GetRxFrameTime (ARM_ETH_MAC_TIME *time) {
 static int32_t GetTxFrameTime (ARM_ETH_MAC_TIME *time) {
 #if (EMAC_TIME_STAMP)
   TX_Desc *txd = &tx_desc[Emac.tx_ts_index];
+
+  if ((Emac.flags & EMAC_FLAG_POWER) == 0U) {
+    return ARM_DRIVER_ERROR;
+  }
 
   if (txd->CtrlStat & DMA_RX_OWN) {
     /* Owned by DMA */
@@ -927,6 +985,10 @@ static int32_t GetTxFrameTime (ARM_ETH_MAC_TIME *time) {
 */
 static int32_t ControlTimer (uint32_t control, ARM_ETH_MAC_TIME *time) {
 #if (EMAC_TIME_STAMP != 0)
+  if ((Emac.flags & EMAC_FLAG_POWER) == 0U) {
+    return ARM_DRIVER_ERROR;
+  }
+
   switch (control) {
     case ARM_ETH_MAC_TIMER_GET_TIME:
       /* Get current time */
@@ -984,7 +1046,6 @@ static int32_t ControlTimer (uint32_t control, ARM_ETH_MAC_TIME *time) {
 #endif
 }
 
-
 /**
   \fn          int32_t Control (uint32_t control, uint32_t arg)
   \brief       Control Ethernet Interface.
@@ -996,6 +1057,10 @@ static int32_t Control (uint32_t control, uint32_t arg) {
   uint32_t maccr;
   uint32_t dmaomr;
   uint32_t macffr;
+
+  if ((Emac.flags & EMAC_FLAG_POWER) == 0U) {
+    return ARM_DRIVER_ERROR;
+  }
 
   switch (control) {
     case ARM_ETH_MAC_CONFIGURE:
@@ -1134,6 +1199,10 @@ static int32_t PHY_Read (uint8_t phy_addr, uint8_t reg_addr, uint16_t *data) {
 #if (ETH_SMI_SW == 0) /* Hardware MDIO */
   uint32_t val, tick;
 
+  if ((Emac.flags & EMAC_FLAG_POWER) == 0U) {
+    return ARM_DRIVER_ERROR;
+  }
+
   val = ETH->MACMIIAR & ETH_MACMIIAR_CR;
 
   ETH->MACMIIAR = val | ETH_MACMIIAR_MB | ((uint32_t)phy_addr << 11) |
@@ -1153,6 +1222,10 @@ static int32_t PHY_Read (uint8_t phy_addr, uint8_t reg_addr, uint16_t *data) {
   return ARM_DRIVER_ERROR_TIMEOUT;
 
 #else /* Software MDIO */
+  if ((Emac.flags & EMAC_FLAG_POWER) == 0U) {
+    return ARM_DRIVER_ERROR;
+  }
+
   SW_MDIO_Dir (1); /* Dir: output */
   /* 32 consecutive ones on MDO to establish sync */
   SW_MDIO_Write (0xFFFFFFFF, 32);
@@ -1192,6 +1265,10 @@ static int32_t PHY_Write (uint8_t phy_addr, uint8_t reg_addr, uint16_t data) {
 #if (ETH_SMI_SW == 0) /* Hardware MDIO */
   uint32_t val, tick;
 
+  if ((Emac.flags & EMAC_FLAG_POWER) == 0U) {
+    return ARM_DRIVER_ERROR;
+  }
+
   ETH->MACMIIDR = data;
   val = ETH->MACMIIAR & ETH_MACMIIAR_CR;
   ETH->MACMIIAR = val | ETH_MACMIIAR_MB | ETH_MACMIIAR_MW | ((uint32_t)phy_addr << 11) |
@@ -1210,6 +1287,10 @@ static int32_t PHY_Write (uint8_t phy_addr, uint8_t reg_addr, uint16_t data) {
   return ARM_DRIVER_ERROR_TIMEOUT;
 
 #else /* Software MDIO */
+  if ((Emac.flags & EMAC_FLAG_POWER) == 0U) {
+    return ARM_DRIVER_ERROR;
+  }
+
   SW_MDIO_Dir (1); /* Dir: output */
 
   /* 32 consecutive ones on MDO to establish sync */
