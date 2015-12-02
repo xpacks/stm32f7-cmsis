@@ -18,8 +18,8 @@
  * 3. This notice may not be removed or altered from any source distribution.
  *
  *
- * $Date:        29. June 2015
- * $Revision:    V1.1
+ * $Date:        28. August 2015
+ * $Revision:    V1.2
  *
  * Driver:       Driver_USART1, Driver_USART2, Driver_USART3, Driver_USART4,
  *               Driver_USART5, Driver_USART6, Driver_USART7, Driver_USART8,
@@ -42,34 +42,68 @@
  * -------------------------------------------------------------------------- */
 
 /* History:
+ *  Version 1.2
+ *    Removed checking if Asynchronous Single-wire mode has been configured in CubeMX
  *  Version 1.1
- *    Corrected unwanted receive stop (Caused by calling USART_Receive function, while receiver is still busy.) 
+ *    Corrected unwanted receive stop (Caused by calling USART_Receive function, while receiver is still busy.)
  *  Version 1.0
  *    Initial release
  */
+ 
+ /*! \page stm32f7_usart CMSIS-Driver USART Setup
 
-/* STM32CubeMX configuration:
- *
- * Pinout tab:
- *   - Select UARTx and/or USARTx peripheral and enable mode (Asynchronous,Synchronous,
- *     Single wire, IrDA, Smart Card).
- * Clock Configuration tab:
- *   - Configure clock (APB1 and APB2 are used USARTs/UARTs)
- * Configuration tab:
- *   - Select UARTx/USARTx under Connectivity section which opens UARTx/USARTx Configuration window:
- *       - Parameter Settings tab: settings are unused by this driver
- *       - NVIC Settings: enable USARTx/UARTx global interrupt
- *       - GPIO Settings: configure as needed
- *       - DMA Settings:  to enable DMA transfers you need to
- *           - add USARTx_RX/UARTx_RX and USARTx_TX/UARTx_TX DMA Request
- *           - select Normal DMA mode (for RX and TX)
- *           - deselect Use Fifo option (for RX and TX)
- *           - go to NVIC Settings tab and enable RX and TX stream global interrupt
- */
+The CMSIS-Driver USART requires:
+  - Setup of USART/UART mode (Asynchronous, Synchronous, Single wire, IrDA or SmartCard)
+  - Optional configuration of Hardware Flow Control (only in Asynchronous mode).
+ 
+The example below uses correct settings for STM32F746G-Discovery:  
+  - USART1 Mode:             Asynchronous
+  - Hardware Flow Control:   Disable
+
+For different boards, refer to the hardware schematics to reflect correct setup values.
+
+The STM32CubeMX configuration steps for Pinout, Clock, and System Configuration are 
+listed below. Enter the values that are marked \b bold.
+   
+Pinout tab
+----------
+  1. Configure USART1 mode
+     - Peripherals \b USART1: Mode=<b>Asynchronous</b>, Hardware Flow Control=<b>Disable</b>
+  2. Configure USART1_TX pin (is not the default pin):
+     - Click in chip diagram on pin \b PA9 and select \b USART1_TX.
+          
+Clock Configuration tab
+-----------------------
+  1. Configure USART1 Clock.
+  
+Configuration tab
+-----------------
+  1. Under Connectivity open \b USART1 Configuration:
+     - \e optional <b>DMA Settings</b>: setup DMA transfers for Rx and Tx (DMA is optional)\n
+       \b Add - Select \b USART1_RX: Stream=DMA2 Stream 2, DMA Request Settings: not used\n
+       \b Add - Select \b USART1_TX: Stream=DMA2 Stream 7, DMA Request Settings: not used
+
+     - <b>GPIO Settings</b>: review settings, no changes required
+          Pin Name | Signal on Pin | GPIO mode | GPIO Pull-up/Pull..| Maximum out | User Label
+          :--------|:--------------|:----------|:-------------------|:------------|:----------
+          PB7      | USART1_RX     | Alternate | Pull-up            | High        |.
+          PA9      | USART1_TX     | Alternate | Pull-up            | High        |.          
+     - <b>NVIC Settings</b>: enable interrupts
+          Interrupt Table                      | Enable | Preemption Priority | Sub Priority
+          :------------------------------------|:-------|:--------------------|:--------------
+          USART1 global interrupt              |\b ON   | 0                   | 0
+          DMA2 stream2 global interrupt        |   ON   | 0                   | 0
+          DMA2 stream7 global interrupt        |   ON   | 0                   | 0
+     - Parameter Settings: not used
+     - User Constants: not used
+     - Click \b OK to close the USART1 Configuration dialog
+*/
+
+/*! \cond */
  
 #include "USART_STM32F7xx.h"
 
-#define ARM_USART_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,1)
+#define ARM_USART_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,2)
 
 // Driver Version
 static const ARM_DRIVER_VERSION usart_driver_version = { ARM_USART_API_VERSION, ARM_USART_DRV_VERSION };
@@ -112,7 +146,7 @@ extern USART_HandleTypeDef husart1;
 #elif (MX_USART1_VM == VM_IRDA)
 extern IRDA_HandleTypeDef hirda1;
 #elif (MX_USART1_VM == VM_SMARTCARD)
-extern SMARTCARD_HandleTypeDef hsc1;
+extern SMARTCARD_HandleTypeDef hsmartcard1;
 #else
 #error "Incorrect virtual mode is selected"
 #endif
@@ -184,11 +218,7 @@ static const USART_RESOURCES USART1_Resources = {
 #ifdef RTE_DEVICE_FRAMEWORK_CUBE_MX
 #if (MX_USART1_VM == VM_ASYNC)
   &huart1,
-#ifdef MX_USART1_SINGLE_WIRE
-  VM_ASYNC_SINGLE_WIRE,
-#else
   VM_ASYNC,
-#endif
 #elif (MX_USART1_VM == VM_SYNC)
   &husart1,
   VM_SYNC,
@@ -196,7 +226,7 @@ static const USART_RESOURCES USART1_Resources = {
   &hirda1,
   VM_IRDA,
 #elif (MX_USART1_VM == VM_SMARTCARD)
-  &hsc1,
+  &hsmartcard1,
   VM_SMARTCARD,
 #endif
 #endif
@@ -310,7 +340,7 @@ extern USART_HandleTypeDef husart2;
 #elif (MX_USART2_VM == VM_IRDA)
 extern IRDA_HandleTypeDef hirda2;
 #elif (MX_USART2_VM == VM_SMARTCARD)
-extern SMARTCARD_HandleTypeDef hsc2;
+extern SMARTCARD_HandleTypeDef hsmartcard2;
 #else
 #error "Incorrect virtual mode is selected"
 #endif
@@ -382,11 +412,7 @@ static const USART_RESOURCES USART2_Resources = {
 #ifdef RTE_DEVICE_FRAMEWORK_CUBE_MX
 #if (MX_USART2_VM == VM_ASYNC)
   &huart2,
-#ifdef MX_USART2_SINGLE_WIRE
-  VM_ASYNC_SINGLE_WIRE,
-#else
   VM_ASYNC,
-#endif
 #elif (MX_USART2_VM == VM_SYNC)
   &husart2,
   VM_SYNC,
@@ -394,7 +420,7 @@ static const USART_RESOURCES USART2_Resources = {
   &hirda2,
   VM_IRDA,
 #elif (MX_USART2_VM == VM_SMARTCARD)
-  &hsc2,
+  &hsmartcard2,
   VM_SMARTCARD,
 #endif
 #endif
@@ -508,7 +534,7 @@ extern USART_HandleTypeDef husart3;
 #elif (MX_USART3_VM == VM_IRDA)
 extern IRDA_HandleTypeDef hirda3;
 #elif (MX_USART3_VM == VM_SMARTCARD)
-extern SMARTCARD_HandleTypeDef hsc3;
+extern SMARTCARD_HandleTypeDef hsmartcard3;
 #else
 #error "Incorrect virtual mode is selected"
 #endif
@@ -580,11 +606,7 @@ static const USART_RESOURCES USART3_Resources = {
 #ifdef RTE_DEVICE_FRAMEWORK_CUBE_MX
 #if (MX_USART3_VM == VM_ASYNC)
   &huart3,
-#ifdef MX_USART3_SINGLE_WIRE
-  VM_ASYNC_SINGLE_WIRE,
-#else
   VM_ASYNC,
-#endif
 #elif (MX_USART3_VM == VM_SYNC)
   &husart3,
   VM_SYNC,
@@ -592,7 +614,7 @@ static const USART_RESOURCES USART3_Resources = {
   &hirda3,
   VM_IRDA,
 #elif (MX_USART3_VM == VM_SMARTCARD)
-  &hsc3,
+  &hsmartcard3,
   VM_SMARTCARD,
 #endif
 #endif
@@ -765,11 +787,7 @@ static const USART_RESOURCES USART4_Resources = {
 #ifdef RTE_DEVICE_FRAMEWORK_CUBE_MX
 #if (MX_UART4_VM == Asynchronous)
   &huart4,
-#ifdef MX_UART4_SINGLE_WIRE
-  VM_ASYNC_SINGLE_WIRE,
-#else
   VM_ASYNC,
-#endif
 #elif (MX_UART4_VM == IrDA)
   &hirda4,
   VM_IRDA,
@@ -912,11 +930,7 @@ static const USART_RESOURCES USART5_Resources = {
 #ifdef RTE_DEVICE_FRAMEWORK_CUBE_MX
 #if (MX_UART5_VM == Asynchronous)
   &huart5,
-#ifdef MX_USART5_SINGLE_WIRE
-  VM_ASYNC_SINGLE_WIRE,
-#else
   VM_ASYNC,
-#endif
 #elif (MX_UART5_VM == IrDA)
   &hirda5,
   VM_IRDA,
@@ -1000,7 +1014,7 @@ extern USART_HandleTypeDef husart6;
 #elif (MX_USART6_VM == VM_IRDA)
 extern IRDA_HandleTypeDef hirda6;
 #elif (MX_USART6_VM == VM_SMARTCARD)
-extern SMARTCARD_HandleTypeDef hsc6;
+extern SMARTCARD_HandleTypeDef hsmartcard6;
 #else
 #error "Incorrect virtual mode is selected"
 #endif
@@ -1072,11 +1086,7 @@ static const USART_RESOURCES USART6_Resources = {
 #ifdef RTE_DEVICE_FRAMEWORK_CUBE_MX
 #if (MX_USART6_VM == VM_ASYNC)
   &huart6,
-#ifdef MX_USART6_SINGLE_WIRE
-  VM_ASYNC_SINGLE_WIRE,
-#else
   VM_ASYNC,
-#endif
 #elif (MX_USART6_VM == VM_SYNC)
   &husart6,
   VM_SYNC,
@@ -1084,7 +1094,7 @@ static const USART_RESOURCES USART6_Resources = {
   &hirda6,
   VM_IRDA,
 #elif (MX_USART6_VM == VM_SMARTCARD)
-  &hsc6,
+  &hsmartcard6,
   VM_SMARTCARD,
 #endif
 #endif
@@ -1257,11 +1267,7 @@ static const USART_RESOURCES USART7_Resources = {
 #ifdef RTE_DEVICE_FRAMEWORK_CUBE_MX
 #if (MX_UART7_VM == Asynchronous)
   &huart7,
-#ifdef MX_UART7_SINGLE_WIRE
-  VM_ASYNC_SINGLE_WIRE,
-#else
   VM_ASYNC,
-#endif
 #elif (MX_UART7_VM == IrDA)
   &hirda7,
   VM_IRDA,
@@ -1404,11 +1410,7 @@ static const USART_RESOURCES USART8_Resources = {
 #ifdef RTE_DEVICE_FRAMEWORK_CUBE_MX
 #if (MX_UART8_VM == Asynchronous)
   &huart8,
-#ifdef MX_UART8_SINGLE_WIRE
-  VM_ASYNC_SINGLE_WIRE,
-#else
   VM_ASYNC,
-#endif
 #elif (MX_UART8_VM == IrDA)
   &hirda8,
   VM_IRDA,
@@ -1753,7 +1755,6 @@ static int32_t USART_PowerControl (      ARM_POWER_STATE  state,
       switch (usart->vmode) {
 #ifdef USART_ASYNC
         case VM_ASYNC:
-        case VM_ASYNC_SINGLE_WIRE:
           HAL_UART_MspDeInit ((UART_HandleTypeDef*) usart->h);
           break;
 #endif
@@ -1859,7 +1860,6 @@ static int32_t USART_PowerControl (      ARM_POWER_STATE  state,
       switch (usart->vmode) {
 #ifdef USART_ASYNC
         case VM_ASYNC:
-        case VM_ASYNC_SINGLE_WIRE:
           ((UART_HandleTypeDef*)usart->h)->Instance = usart->reg;
           HAL_UART_MspInit ((UART_HandleTypeDef*) usart->h);
           break;
@@ -2419,9 +2419,6 @@ static int32_t USART_Control (      uint32_t          control,
     case ARM_USART_MODE_SYNCHRONOUS_SLAVE:
       return ARM_USART_ERROR_MODE;
     case ARM_USART_MODE_SINGLE_WIRE:
-#ifdef RTE_DEVICE_FRAMEWORK_CUBE_MX
-      if (usart->vmode != VM_ASYNC_SINGLE_WIRE) { return ARM_USART_ERROR_MODE; }
-#endif
       // Enable Half duplex
       cr3 |= USART_CR3_HDSEL;
       mode = ARM_USART_MODE_SINGLE_WIRE;
@@ -3580,3 +3577,5 @@ ARM_DRIVER_USART Driver_USART8 = {
     USART8_GetModemStatus
 };
 #endif
+
+/*! \endcond */

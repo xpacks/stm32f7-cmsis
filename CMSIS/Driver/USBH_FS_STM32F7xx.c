@@ -18,8 +18,8 @@
  * 3. This notice may not be removed or altered from any source distribution.
  *
  *
- * $Date:        3. July 2015
- * $Revision:    V1.0
+ * $Date:        25. August 2015
+ * $Revision:    V1.1
  *
  * Driver:       Driver_USBH0
  * Configured:   via RTE_Device.h configuration file
@@ -40,38 +40,75 @@
  *                      requirements
  *     - default value: 12
  *     - maximum value: 12
- * --------------------------------------------------------------------------
- * STM32CubeMX configuration:
- *
- * Pinout tab:
- *   - Select USB_OTG_FS peripheral and enable Host mode for proper PHY
- *   - Select USB_OTG_FS_VBUS_Power pin on STM32F7xx package in chip view
- *         - Left click on selected pin
- *         - Select pin as GPIO Input
- *         - Right click on pin to enter "USB_OTG_FS_VBUS_Power" User Label
- *          (If pin active state is High then constant
- *           USB_OTG_FS_VBUS_Power_Pin_Active with value 1 should be defined)
- *   - Select USB_OTG_FS_Overrcurrent pin
- *         - Left click on selected pin in chip view
- *         - Select pin as GPIO Input
- *         - Right click on pin to enter "USB_OTG_FS_Overrcurrent" User Label
- *          (If pin active state is High then constant
- *           USB_OTG_FS_Overcurrent_Pin_Active with value 1 should be defined)
- * Clock Configuration tab:
- *   - Configure clock
- * Configuration tab:
- *   - Select USB_FS under Connectivity section which opens USB_FS
- *     Configuration window:
- *       - Parameter Settings tab: settings are unused by this driver
- *       - NVIC Settings: enable USB On The Go FS global interrupt
- *       - GPIO Settings: configure as needed
  * -------------------------------------------------------------------------- */
 
 /* History:
+ *  Version 1.1
+ *    STM32CubeMX generated code can also be used to configure the driver.
  *  Version 1.0
  *    Initial release
  */
 
+/*! \page stm32f7_usbh_fs CMSIS-Driver USBH_FS Setup
+
+The CMSIS-Driver USBH_FS requires:
+  - Setup of USB clk to 48MHz
+  - Configuration of USB_OTG_FS
+  - Optional Configuration for VBUS Power Pin:
+    - Configure arbitrary pin in GPIO_Output mode and add User Label: USB_OTG_FS_VBUS_Power
+  - Optional Configuration for Overcurrent Pin:
+    - Configure arbitrary pin in GPIO_Input mode and add User Label: USB_OTG_FS_Overcurrent
+ 
+\note The User Label name is used to connect the CMSIS-Driver to the GPIO pin.
+
+The example below uses correct settings for STM32F746G-Discovery Board:
+  - USB_OTG_FS Mode: Host_Only
+  - VBUS Power Pin: PD5
+  - Overcurrent Pin: PD4
+ 
+The STM32CubeMX configuration steps for Pinout, Clock, and System Configuration are
+listed below. Enter the values that are marked \b bold.
+ 
+Pinout tab
+----------
+  1. Configure USBH mode
+     - Peripherals \b USB_OTG_FS: Mode=<b>Host_Only</b>
+  2. Configure USB_OTG_FS_VBUS_Power pin:
+     - Click in chip diagram on pin \b PD5 and select \b GPIO_Output
+  3. Configure USB_OTG_FS_Overcurrent pin:
+     - Click in chip diagram on pin \b PD4 and select \b GPIO_Input
+ 
+Clock Configuration tab
+-----------------------
+  1. Configure USB Clock: "To USB (MHz)": 48
+ 
+Configuration tab
+-----------------
+  1. Under Connectivity open \b USB_OTG_FS Configuration:
+     - DMA Settings: not used
+     - <b>GPIO Settings</b>: review settings, no changes required
+          Pin Name | Signal on Pin | GPIO mode | GPIO Pull-up/Pull..| Maximum out | User Label
+          :--------|:--------------|:----------|:-------------------|:------------|:----------
+          PA11     | USB_OTG_FS_DM | Alternate | No pull-up and no..| High        |.
+          PA12     | USB_OTG_FS_DP | Alternate | No pull-up and no..| High        |.
+     - <b>NVIC Settings</b>: enable interrupts
+          Interrupt Table                      | Enable | Preemption Priority | Sub Priority
+          :------------------------------------|:-------|:--------------------|:--------------
+          USB On The Go FS global interrupt    |\b ON   | 0                   | 0
+     - Parameter Settings: not used
+     - User Constants: not used
+     - Click \b OK to close the USB_OTG_FS Configuration dialog
+  2. Under System open \b GPIO Pin Configuration
+     - Enter user label for USB_OTG_FS_VBUS_Power and USB_OTG_FS_Overcurrent pin
+          Pin Name | Signal on Pin | GPIO mode       | GPIO Pull-up/Pull..| Maximum out | User Label
+          :--------|:--------------|:----------------|:-------------------|:------------|:----------
+          PD5      | n/a           | Output Push pull| No pull-up and no..| n/a         |\b USB_OTG_FS_VBUS_Power
+          PD4      | n/a           | Input mode      | No pull-up and no..| n/a         |\b USB_OTG_FS_Overcurrent
+ 
+     - Click \b OK to close the Pin Configuration dialog
+*/
+
+/*! \cond */
 
 #include <stdint.h>
 #include <string.h>
@@ -95,10 +132,16 @@ extern void OTG_FS_PinsUnconfigure (uint8_t pins_mask);
 extern void OTG_FS_PinVbusOnOff    (bool state);
 extern bool OTG_FS_PinGetOC        (void);
 
+#ifdef RTE_DEVICE_FRAMEWORK_CUBE_MX
+#ifdef MX_USB_OTG_FS_HOST
+extern HCD_HandleTypeDef hhcd_USB_OTG_FS;
+#endif
+#endif
+
 
 // USBH Driver *****************************************************************
 
-#define ARM_USBH_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,0)
+#define ARM_USBH_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,1)
 
 // Driver Version
 static const ARM_DRIVER_VERSION usbh_driver_version = { ARM_USBH_API_VERSION, ARM_USBH_DRV_VERSION };
@@ -410,7 +453,15 @@ static int32_t USBH_Initialize (ARM_USBH_SignalPortEvent_t cb_port_event,
   SignalPipeEvent = cb_pipe_event;
 
   otg_fs_role = ARM_USB_ROLE_HOST;
+
+#ifdef RTE_DEVICE_FRAMEWORK_CLASSIC
   OTG_FS_PinsConfigure (ARM_USB_PIN_DP | ARM_USB_PIN_DM | ARM_USB_PIN_OC | ARM_USB_PIN_VBUS);
+#endif
+
+#ifdef RTE_DEVICE_FRAMEWORK_CUBE_MX
+  OTG_FS_PinsConfigure (ARM_USB_PIN_OC | ARM_USB_PIN_VBUS);
+  hhcd_USB_OTG_FS.Instance = USB_OTG_FS;
+#endif
 
   return ARM_DRIVER_OK;
 }
@@ -422,7 +473,14 @@ static int32_t USBH_Initialize (ARM_USBH_SignalPortEvent_t cb_port_event,
 */
 static int32_t USBH_Uninitialize (void) {
 
+#ifdef RTE_DEVICE_FRAMEWORK_CLASSIC
   OTG_FS_PinsUnconfigure (ARM_USB_PIN_DP | ARM_USB_PIN_DM | ARM_USB_PIN_OC | ARM_USB_PIN_VBUS);
+#endif
+
+#ifdef RTE_DEVICE_FRAMEWORK_CUBE_MX
+  OTG_FS_PinsUnconfigure (ARM_USB_PIN_OC | ARM_USB_PIN_VBUS);
+#endif
+
   otg_fs_role = ARM_USB_ROLE_NONE;
 
   return ARM_DRIVER_OK;
@@ -438,8 +496,10 @@ static int32_t USBH_PowerControl (ARM_POWER_STATE state) {
 
   switch (state) {
     case ARM_POWER_OFF:
+#ifdef RTE_DEVICE_FRAMEWORK_CLASSIC
       NVIC_DisableIRQ      (OTG_FS_IRQn);               // Disable interrupt
       NVIC_ClearPendingIRQ (OTG_FS_IRQn);               // Clear pending interrupt
+#endif
       hw_powered     = false;                           // Clear powered flag
       OTG->GAHBCFG  &= ~OTG_FS_GAHBCFG_GINTMSK;         // Disable USB interrupts
       RCC->AHB2RSTR |=  RCC_AHB2RSTR_OTGFSRST;          // Reset OTG FS module
@@ -449,13 +509,21 @@ static int32_t USBH_PowerControl (ARM_POWER_STATE state) {
       OTG->GCCFG    &= ~OTG_FS_GCCFG_PWRDWN;            // Enable PHY power down
       OTG->PCGCCTL  |=  OTG_FS_PCGCCTL_STPPCLK;         // Stop PHY clock
       OTG->GCCFG     =  0U;                             // Reset core configuration
+#ifdef RTE_DEVICE_FRAMEWORK_CLASSIC
       RCC->AHB2ENR  &= ~RCC_AHB2ENR_OTGFSEN;            // Disable OTG FS clock
+#else
+      HAL_HCD_MspDeInit(&hhcd_USB_OTG_FS);
+#endif
       break;
 
     case ARM_POWER_FULL:
       if (hw_powered == true) { return ARM_DRIVER_OK; }
 
+#ifdef RTE_DEVICE_FRAMEWORK_CLASSIC
       RCC->AHB2ENR  |=  RCC_AHB2ENR_OTGFSEN;            // OTG FS clock enable
+#else
+      HAL_HCD_MspInit(&hhcd_USB_OTG_FS);
+#endif
       RCC->AHB2RSTR |=  RCC_AHB2RSTR_OTGFSRST;          // Reset OTG FS module
       osDelay(1U);
       RCC->AHB2RSTR &= ~RCC_AHB2RSTR_OTGFSRST;          // Clear reset of OTG FS module
@@ -504,7 +572,9 @@ static int32_t USBH_PowerControl (ARM_POWER_STATE state) {
       NVIC_SetPriority (OTG_FS_IRQn, 0);                // Set highest interrupt priority
 
       hw_powered     = true;                            // Set powered flag
+#ifdef RTE_DEVICE_FRAMEWORK_CLASSIC
       NVIC_EnableIRQ   (OTG_FS_IRQn);                   // Enable interrupt
+#endif
       break;
 
     default:
@@ -1161,3 +1231,5 @@ ARM_DRIVER_USBH Driver_USBH0 = {
   USBH_PipeTransferAbort,
   USBH_GetFrameNumber
 };
+
+/*! \endcond */

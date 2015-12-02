@@ -18,14 +18,15 @@
  * 3. This notice may not be removed or altered from any source distribution.
  *
  *
- * $Date:        3. July 2015
- * $Revision:    V1.0
+ * $Date:        24. August 2015
+ * $Revision:    V1.1
  *
  * Project:      OTG High-Speed Driver Header for ST STM32F7xx
  * -------------------------------------------------------------------------- */
 
 #include <stdint.h>
 #include "stm32f7xx_hal.h"
+#include "RTE_Components.h"
 
 #ifdef    RTE_DEVICE_FRAMEWORK_CLASSIC
 #include "RTE_Device.h"
@@ -40,6 +41,14 @@
 #endif
 
 // If Framework Classic is used create MX defines from RTE defines
+
+#ifdef RTE_Drivers_USBD1
+#define MX_USB_OTG_HS_DEVICE                    1
+#endif
+#ifdef RTE_Drivers_USBH1
+#define MX_USB_OTG_HS_HOST                      1
+#endif
+
 #define MX_USB_OTG_HS_GPIO_PIN_(n)              GPIO_PIN_##n
 #define MX_USB_OTG_HS_GPIO_PIN(n)               MX_USB_OTG_HS_GPIO_PIN_(n)
 
@@ -222,7 +231,7 @@
 #error  Enable USB_OTG_HS in STM32CubeMX!
 #endif
 
-#if     defined(MX_USB_OTG_FS_VBUS_Power)
+#if     defined(MX_USB_OTG_HS_VBUS_Power)
 // Pin USB_OTG_HS_VBUS_Power : GPIO pin
 #define MX_USB_OTG_HS_VBUS_Power_Pin            1
 #define MX_USB_OTG_HS_VBUS_Power_GPIO_PuPd      MX_VAL(MX_USB_OTG_HS_VBUS_Power, GPIO_PuPd)
@@ -234,7 +243,7 @@
 #endif
 #endif
 
-#if     defined(MX_USB_OTG_FS_Overcurrent)
+#if     defined(MX_USB_OTG_HS_Overcurrent)
 // Pin USB_OTG_HS_Overcurrent : GPIO pin
 #define MX_USB_OTG_HS_Overcurrent_Pin           1
 #define MX_USB_OTG_HS_Overcurrent_GPIO_PuPd     MX_VAL(MX_USB_OTG_HS_Overcurrent, GPIO_PuPd)

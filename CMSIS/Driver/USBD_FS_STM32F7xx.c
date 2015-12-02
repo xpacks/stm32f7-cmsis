@@ -18,8 +18,8 @@
  * 3. This notice may not be removed or altered from any source distribution.
  *
  *
- * $Date:        3. July 2015
- * $Revision:    V1.0
+ * $Date:        24. August 2015
+ * $Revision:    V1.1
  *
  * Driver:       Driver_USBD0
  * Configured:   via RTE_Device.h configuration file
@@ -42,26 +42,55 @@
  *     - maximum value:      5
  *   USBD_FS_VBUS_DETECT:    defines if driver supports VBUS detection
  *     - default value: 1    enabled
- * --------------------------------------------------------------------------
- * STM32CubeMX configuration:
- *
- * Pinout tab:
- *   - Select USB_OTG_FS peripheral and enable Device mode for proper PHY
- * Clock Configuration tab:
- *   - Configure clock
- * Configuration tab:
- *   - Select USB_FS under Connectivity section which opens USB_FS
- *     Configuration window:
- *       - Parameter Settings tab: settings are unused by this driver
- *       - NVIC Settings: enable USB On The Go FS global interrupt
- *       - GPIO Settings: configure as needed
  * -------------------------------------------------------------------------- */
 
 /* History:
+ *  Version 1.1
+ *    STM32CubeMX generated code can also be used to configure the driver.
  *  Version 1.0
  *    Initial release
  */
 
+/*! \page stm32f7_usbd_fs CMSIS-Driver USBD_FS Setup
+
+The CMSIS-Driver USBD_FS requires:
+  - Setup of USB clk to 48MHz
+  - Configuration of USB_OTG_FS
+ 
+The example below uses correct settings for STM32F746G-Discovery Board:
+  - USB_OTG_FS Mode: Device_Only
+ 
+The STM32CubeMX configuration steps for Pinout, Clock, and System Configuration are
+listed below. Enter the values that are marked \b bold.
+ 
+Pinout tab
+----------
+  1. Configure USBD mode
+     - Peripherals \b USB_OTG_FS: Mode=<b>Device_Only</b>
+ 
+Clock Configuration tab
+-----------------------
+  1. Configure USB Clock: "To USB (MHz)": 48
+ 
+Configuration tab
+-----------------
+  1. Under Connectivity open \b USB_OTG_FS Configuration:
+     - DMA Settings: not used
+     - <b>GPIO Settings</b>: review settings, no changes required
+          Pin Name | Signal on Pin | GPIO mode | GPIO Pull-up/Pull..| Maximum out | User Label
+          :--------|:--------------|:----------|:-------------------|:------------|:----------
+          PA11     | USB_OTG_FS_DM | Alternate | No pull-up and no..| High        |.
+          PA12     | USB_OTG_FS_DP | Alternate | No pull-up and no..| High        |.
+     - <b>NVIC Settings</b>: enable interrupts
+          Interrupt Table                      | Enable | Preemption Priority | Sub Priority
+          :------------------------------------|:-------|:--------------------|:--------------
+          USB On The Go FS global interrupt    |\b ON   | 0                   | 0
+     - Parameter Settings: not used
+     - User Constants: not used
+     - Click \b OK to close the USB_OTG_FS Configuration dialog
+*/
+
+/*! \cond */
 
 #include <stdint.h>
 #include <string.h>
@@ -87,10 +116,16 @@ extern uint8_t otg_fs_role;
 extern void OTG_FS_PinsConfigure   (uint8_t pins_mask);
 extern void OTG_FS_PinsUnconfigure (uint8_t pins_mask);
 
+#ifdef RTE_DEVICE_FRAMEWORK_CUBE_MX
+#ifdef MX_USB_OTG_FS_DEVICE
+extern PCD_HandleTypeDef hpcd_USB_OTG_FS;
+#endif
+#endif
+
 
 // USBD Driver *****************************************************************
 
-#define ARM_USBD_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,0)
+#define ARM_USBD_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,1)
 
 // Driver Version
 static const ARM_DRIVER_VERSION usbd_driver_version = { ARM_USBD_API_VERSION, ARM_USBD_DRV_VERSION };
@@ -441,11 +476,18 @@ static int32_t USBD_Initialize (ARM_USBD_SignalDeviceEvent_t   cb_device_event,
   SignalEndpointEvent = cb_endpoint_event;
 
   otg_fs_role = ARM_USB_ROLE_DEVICE;
+#ifdef RTE_DEVICE_FRAMEWORK_CLASSIC
   OTG_FS_PinsConfigure (ARM_USB_PIN_DP | ARM_USB_PIN_DM
 #if  (USBD_FS_VBUS_DETECT == 1)
                       | ARM_USB_PIN_VBUS
 #endif
                         );
+
+#endif
+
+#ifdef RTE_DEVICE_FRAMEWORK_CUBE_MX
+  hpcd_USB_OTG_FS.Instance = USB_OTG_FS;
+#endif
 
   return ARM_DRIVER_OK;
 }
@@ -457,11 +499,14 @@ static int32_t USBD_Initialize (ARM_USBD_SignalDeviceEvent_t   cb_device_event,
 */
 static int32_t USBD_Uninitialize (void) {
 
+#ifdef RTE_DEVICE_FRAMEWORK_CLASSIC
   OTG_FS_PinsUnconfigure (ARM_USB_PIN_DP | ARM_USB_PIN_DM
 #if  (USBD_FS_VBUS_DETECT == 1)
                         | ARM_USB_PIN_VBUS
 #endif
                          );
+#endif
+
   otg_fs_role = ARM_USB_ROLE_NONE;
 
   return ARM_DRIVER_OK;
@@ -477,8 +522,10 @@ static int32_t USBD_PowerControl (ARM_POWER_STATE state) {
 
   switch (state) {
     case ARM_POWER_OFF:
+#ifdef RTE_DEVICE_FRAMEWORK_CLASSIC
       NVIC_DisableIRQ      (OTG_FS_IRQn);               // Disable interrupt
       NVIC_ClearPendingIRQ (OTG_FS_IRQn);               // Clear pending interrupt
+#endif
       hw_powered     = false;                           // Clear powered flag
       OTG->DCTL     |=  OTG_FS_DCTL_SDIS;               // Soft disconnect enabled
       OTG->GAHBCFG  &= ~OTG_FS_GAHBCFG_GINTMSK;         // Disable USB interrupts
@@ -490,13 +537,20 @@ static int32_t USBD_PowerControl (ARM_POWER_STATE state) {
       OTG->GCCFG    &= ~OTG_FS_GCCFG_PWRDWN;            // Enable PHY power down
       OTG->PCGCCTL  |=  OTG_FS_PCGCCTL_STPPCLK;         // Stop PHY clock
       OTG->GCCFG     =  0U;                             // Reset core configuration
+#ifdef RTE_DEVICE_FRAMEWORK_CLASSIC
       RCC->AHB2ENR  &= ~RCC_AHB2ENR_OTGFSEN;            // Disable OTG FS clock
+#else
+      HAL_PCD_MspDeInit(&hpcd_USB_OTG_FS);
+#endif
       break;
 
     case ARM_POWER_FULL:
       if (hw_powered == true) { return ARM_DRIVER_OK; }
-
+#ifdef RTE_DEVICE_FRAMEWORK_CLASSIC
       RCC->AHB2ENR  |=  RCC_AHB2ENR_OTGFSEN;            // OTG FS clock enable
+#else
+      HAL_PCD_MspInit(&hpcd_USB_OTG_FS);
+#endif
       RCC->AHB2RSTR |=  RCC_AHB2RSTR_OTGFSRST;          // Reset OTG FS module
       osDelay(1U);
       RCC->AHB2RSTR &= ~RCC_AHB2RSTR_OTGFSRST;          // Clear reset of OTG FS module
@@ -556,7 +610,9 @@ static int32_t USBD_PowerControl (ARM_POWER_STATE state) {
                         OTG_FS_GAHBCFG_TXFELVL) ;
 
       hw_powered     = true;                            // Set powered flag
+#ifdef RTE_DEVICE_FRAMEWORK_CLASSIC
       NVIC_EnableIRQ   (OTG_FS_IRQn);                   // Enable interrupt
+#endif
       break;
 
     default:
@@ -1266,3 +1322,5 @@ ARM_DRIVER_USBD Driver_USBD0 = {
   USBD_EndpointTransferAbort,
   USBD_GetFrameNumber
 };
+
+/*! \endcond */

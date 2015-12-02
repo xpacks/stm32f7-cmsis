@@ -18,8 +18,8 @@
  * 3. This notice may not be removed or altered from any source distribution.
  *
  *
- * $Date:        30. June 2015
- * $Revision:    V1.0
+ * $Date:        21. August 2015
+ * $Revision:    V1.1
  *
  * Project:      USART Driver definitions for ST STM32F7xx
  * -------------------------------------------------------------------------- */
@@ -38,12 +38,9 @@
 
 #ifdef   RTE_DEVICE_FRAMEWORK_CUBE_MX
 #define  VM_ASYNC                        (1UL)
-#define  VM_ASYNC_SINGLE_WIRE            (2UL)
-#define  VM_ASYNC_MULTI_PROCESSOR        (3UL)
-#define  VM_ASYNC_LIN                    (4UL)
-#define  VM_SYNC                         (5UL)
-#define  VM_IRDA                         (6UL)
-#define  VM_SMARTCARD                    (7UL)
+#define  VM_SYNC                         (2UL)
+#define  VM_IRDA                         (3UL)
+#define  VM_SMARTCARD                    (4UL)
 #define  Asynchronous                    VM_ASYNC
 #define  IrDA                            VM_IRDA
 #include "MX_Device.h"
@@ -68,14 +65,8 @@
 #define USART_SMARTCARD                  (1UL)
 #endif
 #endif
+#endif
 
-#ifdef MX_USART1_MULTI_PROCESSOR
-  #error "USART multiprocessor mode is not supported. Please select USART proper mode in Cube MX."
-#endif
-#ifdef MX_USART1_LIN
-  #error "USART LIN mode is not supported. Please select proper USART mode in Cube MX."
-#endif
-#endif
 
 #ifdef MX_USART2
 
@@ -96,14 +87,8 @@
 #define USART_SMARTCARD                  (1UL)
 #endif
 #endif
+#endif
 
-#ifdef MX_USART2_MULTI_PROCESSOR
-  #error "USART multiprocessor mode is not supported. Please select USART proper mode in Cube MX."
-#endif
-#ifdef MX_USART2_LIN
-  #error "USART LIN mode is not supported. Please select proper USART mode in Cube MX."
-#endif
-#endif
 
 #ifdef MX_USART3
 
@@ -124,14 +109,8 @@
 #define USART_SMARTCARD                  (1UL)
 #endif
 #endif
+#endif
 
-#ifdef MX_USART3_MULTI_PROCESSOR
-  #error "USART multiprocessor mode is not supported. Please select USART proper mode in Cube MX."
-#endif
-#ifdef MX_USART3_LIN
-  #error "USART LIN mode is not supported. Please select proper USART mode in Cube MX."
-#endif
-#endif
 
 #ifdef MX_UART4
 
@@ -144,14 +123,8 @@
 #define USART_IRDA                       (1UL)
 #endif
 #endif
+#endif
 
-#ifdef MX_UART4_MULTI_PROCESSOR
-  #error "USART multiprocessor mode is not supported. Please select USART proper mode in Cube MX."
-#endif
-#ifdef MX_UART4_LIN
-  #error "USART LIN mode is not supported. Please select proper USART mode in Cube MX."
-#endif
-#endif
 
 #ifdef MX_UART5
 
@@ -164,14 +137,8 @@
 #define USART_IRDA                       (1UL)
 #endif
 #endif
+#endif
 
-#ifdef MX_UART5_MULTI_PROCESSOR
-  #error "USART multiprocessor mode is not supported. Please select USART proper mode in Cube MX."
-#endif
-#ifdef MX_UART5_LIN
-  #error "USART LIN mode is not supported. Please select proper USART mode in Cube MX."
-#endif
-#endif
 
 #ifdef MX_USART6
 
@@ -192,14 +159,8 @@
 #define USART_SMARTCARD                  (1UL)
 #endif
 #endif
+#endif
 
-#ifdef MX_USART6_MULTI_PROCESSOR
-  #error "USART multiprocessor mode is not supported. Please select USART proper mode in Cube MX."
-#endif
-#ifdef MX_USART6_LIN
-  #error "USART LIN mode is not supported. Please select proper USART mode in Cube MX."
-#endif
-#endif
 
 #ifdef MX_UART7
 
@@ -212,14 +173,8 @@
 #define USART_IRDA                       (1UL)
 #endif
 #endif
+#endif
 
-#ifdef MX_UART7_MULTI_PROCESSOR
-  #error "USART multiprocessor mode is not supported. Please select USART proper mode in Cube MX."
-#endif
-#ifdef MX_UART7_LIN
-  #error "USART LIN mode is not supported. Please select proper USART mode in Cube MX."
-#endif
-#endif
 
 #ifdef MX_UART8
 
@@ -231,13 +186,6 @@
 #ifndef USART_IRDA
 #define USART_IRDA                       (1UL)
 #endif
-#endif
-
-#ifdef MX_UART8_MULTI_PROCESSOR
-  #error "USART multiprocessor mode is not supported. Please select USART proper mode in Cube MX."
-#endif
-#ifdef MX_UART8_LIN
-  #error "USART LIN mode is not supported. Please select proper USART mode in Cube MX."
 #endif
 #endif
 

@@ -18,8 +18,8 @@
  * 3. This notice may not be removed or altered from any source distribution.
  *
  *
- * $Date:        01. July 2015
- * $Revision:    V1.0
+ * $Date:        21. August 2015
+ * $Revision:    V1.1
  *
  * Driver:       Driver_ETH_MAC0
  * Configured:   via RTE_Device.h configuration file
@@ -34,23 +34,70 @@
  * -------------------------------------------------------------------------- */
 
 /* History:
+ *  Version 1.1
+ *    Corrected lockup after long runtime (unhandled MMC interrupts)
+ *    Enhanced STM32CubeMx compatibility
  *  Version 1.0
  *    Initial release
  */
+ 
+/*! \page stm32f7_emac CMSIS-Driver Ethernet MAC Setup
 
-/* STM32CubeMX configuration:
- *
- * Pinout tab:
- *   - Select ETH peripheral and select MII or RMII mode
- * Clock Configuration tab:
- *   - Ensure that HCLK is at least 25MHz or above
- *   - Ensure that SYSCLK is at least 50MHz or above if Ethernet PTP is required
- * Configuration tab:
- *   - Select ETH under Connectivity section which opens ETH Configuration window:
- *       - Parameter Settings tab: settings are unused by this driver
- *       - NVIC Settings: enable Ethernet global interrupt
- *       - GPIO Settings: configure as needed
- */
+The CMSIS-Driver EMAC requires:
+  - Setup of HCLK to 25MHz or higher
+  - Optional setup of SYSCLK to 50MHz or higher, when Ethernet PTP is used
+  - Setup of ETH in MII or RMII mode
+  - Optional configuration for software controlled SMI:
+    - Ethernet MDIO pin: configure arbitrary pin in GPIO_Output mode and add User Label: Ethernet_MDIO
+    - Ethernet MDC pin: configure arbitrary pin in GPIO_Output mode and add User Label: Ethernet_MDC
+
+\note The User Label name is used to connect the CMSIS-Driver to the GPIO pin.
+
+The example below uses correct settings for STM32F746G-Discovery:
+  - ETH Mode: RMII
+
+For different boards, refer to the hardware schematics to reflect correct setup values.
+
+The STM32CubeMX configuration steps for Pinout, Clock, and System Configuration are 
+listed below. Enter the values that are marked \b bold.
+   
+Pinout tab
+----------
+  1. Configure ETH mode
+     - Peripherals \b ETH: Mode= \b RMII
+
+Clock Configuration tab
+-----------------------
+  1. Configure HCLK Clock: HCLK (MHz) = <b>25 or higher</b>
+
+Configuration tab
+-----------------
+  1. Under Connectivity open \b ETH Configuration:
+     - <b>GPIO Settings</b>: review settings, no changes required
+          Pin Name | Signal on Pin | GPIO mode | GPIO Pull-up/Pull..| Maximum out | User Label
+          :--------|:--------------|:----------|:-------------------|:------------|:----------
+          PA1      | ETH_REF_CLK   | Alternate | No pull-up and no..| High        |.
+          PA2      | ETH_MDIO      | Alternate | No pull-up and no..| High        |.
+          PA7      | ETH_CRS_DV    | Alternate | No pull-up and no..| High        |.
+          PC1      | ETH_MDC       | Alternate | No pull-up and no..| High        |.
+          PC4      | ETH_RXD0      | Alternate | No pull-up and no..| High        |.
+          PC5      | ETH_RXD1      | Alternate | No pull-up and no..| High        |.
+          PG11     | ETH_TX_EN     | Alternate | No pull-up and no..| High        |.
+          PG13     | ETH_TXD0      | Alternate | No pull-up and no..| High        |.
+          PG14     | ETH_TXD1      | Alternate | No pull-up and no..| High        |.
+
+     - <b>NVIC Settings</b>: enable interrupts
+          Interrupt Table                      | Enable | Preemption Priority | Sub Priority
+          :------------------------------------|:-------|:--------------------|:--------------
+          Ethernet global interrupt            |\b ON   | 0                   | 0
+
+     - Parameter Settings: not used
+     - User Constants: not used
+
+     Click \b OK to close the ETH Configuration dialog
+*/
+
+/*! \cond */
 
 /* Receive/transmit Checksum offload enable */
 #ifndef EMAC_CHECKSUM_OFFLOAD
@@ -69,7 +116,7 @@
 
 #include "EMAC_STM32F7xx.h"
 
-#define ARM_ETH_MAC_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,0) /* driver version */
+#define ARM_ETH_MAC_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,1) /* driver version */
 
 /* Timeouts */
 #define PHY_TIMEOUT         2U          /* PHY Register access timeout in ms  */
@@ -84,39 +131,39 @@ void ETH_IRQHandler (void);
 
 #if defined(RTE_DEVICE_FRAMEWORK_CUBE_MX)
 extern ETH_HandleTypeDef heth;
-#endif
-
+#else
 /* Ethernet Pin definitions */
 static const ETH_PIN eth_pins[] = {
-  { MX_ETH_MDC_GPIOx,  MX_ETH_MDC_GPIO_Pin  },        /* MII, RMII */
-  { MX_ETH_MDIO_GPIOx, MX_ETH_MDIO_GPIO_Pin },        /* MII, RMII */
-  { MX_ETH_TXD0_GPIOx, MX_ETH_TXD0_GPIO_Pin },        /* MII, RMII */
-  { MX_ETH_TXD1_GPIOx, MX_ETH_TXD1_GPIO_Pin },        /* MII, RMII */
-  { MX_ETH_RXD0_GPIOx, MX_ETH_RXD0_GPIO_Pin },        /* MII, RMII */
-  { MX_ETH_RXD1_GPIOx, MX_ETH_RXD1_GPIO_Pin },        /* MII, RMII */
-  { MX_ETH_TX_EN_GPIOx, MX_ETH_TX_EN_GPIO_Pin },      /* MII, RMII */
+  { MX_Ethernet_MDC_GPIOx,  MX_Ethernet_MDC_GPIO_Pin }, /* MII, RMII */
+  { MX_Ethernet_MDIO_GPIOx, MX_Ethernet_MDIO_GPIO_Pin}, /* MII, RMII */
+  { MX_ETH_TXD0_GPIOx, MX_ETH_TXD0_GPIO_Pin },          /* MII, RMII */
+  { MX_ETH_TXD1_GPIOx, MX_ETH_TXD1_GPIO_Pin },          /* MII, RMII */
+  { MX_ETH_RXD0_GPIOx, MX_ETH_RXD0_GPIO_Pin },          /* MII, RMII */
+  { MX_ETH_RXD1_GPIOx, MX_ETH_RXD1_GPIO_Pin },          /* MII, RMII */
+  { MX_ETH_TX_EN_GPIOx, MX_ETH_TX_EN_GPIO_Pin },        /* MII, RMII */
 #if (ETH_MII)
-  { MX_ETH_TXD2_GPIOx, MX_ETH_TXD2_GPIO_Pin },        /* MII, ---- */
-  { MX_ETH_TXD3_GPIOx, MX_ETH_TXD3_GPIO_Pin },        /* MII, ---- */
-  { MX_ETH_RXD2_GPIOx, MX_ETH_RXD2_GPIO_Pin },        /* MII, ---- */
-  { MX_ETH_RXD3_GPIOx, MX_ETH_RXD3_GPIO_Pin },        /* MII, ---- */
-  { MX_ETH_TX_CLK_GPIOx, MX_ETH_TX_CLK_GPIO_Pin },    /* MII, ---- */
-  { MX_ETH_RX_CLK_GPIOx, MX_ETH_RX_CLK_GPIO_Pin },    /* MII, ---- */
-  { MX_ETH_RX_DV_GPIOx, MX_ETH_RX_DV_GPIO_Pin },      /* MII, ---- */
+  { MX_ETH_TXD2_GPIOx, MX_ETH_TXD2_GPIO_Pin },          /* MII, ---- */
+  { MX_ETH_TXD3_GPIOx, MX_ETH_TXD3_GPIO_Pin },          /* MII, ---- */
+  { MX_ETH_RXD2_GPIOx, MX_ETH_RXD2_GPIO_Pin },          /* MII, ---- */
+  { MX_ETH_RXD3_GPIOx, MX_ETH_RXD3_GPIO_Pin },          /* MII, ---- */
+  { MX_ETH_TX_CLK_GPIOx, MX_ETH_TX_CLK_GPIO_Pin },      /* MII, ---- */
+  { MX_ETH_RX_CLK_GPIOx, MX_ETH_RX_CLK_GPIO_Pin },      /* MII, ---- */
+  { MX_ETH_RX_DV_GPIOx, MX_ETH_RX_DV_GPIO_Pin },        /* MII, ---- */
   #ifdef MX_ETH_RX_ER_GPIOx
-  { MX_ETH_RX_ER_GPIOx, MX_ETH_RX_ER_GPIO_Pin },      /* MII, ---- */
+  { MX_ETH_RX_ER_GPIOx, MX_ETH_RX_ER_GPIO_Pin },        /* MII, ---- */
   #endif
   #ifdef MX_ETH_CRS_GPIOx
-  { MX_ETH_CRS_GPIOx,   MX_ETH_CRS_GPIO_Pin },        /* MII, ---- */
+  { MX_ETH_CRS_GPIOx,   MX_ETH_CRS_GPIO_Pin },          /* MII, ---- */
   #endif
   #ifdef MX_ETH_COL_GPIOx
-  { MX_ETH_COL_GPIOx, MX_ETH_COL_GPIO_Pin },          /* MII, ---- */
+  { MX_ETH_COL_GPIOx, MX_ETH_COL_GPIO_Pin },            /* MII, ---- */
   #endif
 #else
-  { MX_ETH_CRS_DV_GPIOx, MX_ETH_CRS_DV_GPIO_Pin },    /* ---, RMII */
-  { MX_ETH_REF_CLK_GPIOx, MX_ETH_REF_CLK_GPIO_Pin },  /* ---, RMII */
+  { MX_ETH_CRS_DV_GPIOx, MX_ETH_CRS_DV_GPIO_Pin },      /* ---, RMII */
+  { MX_ETH_REF_CLK_GPIOx, MX_ETH_REF_CLK_GPIO_Pin },    /* ---, RMII */
 #endif
 };
+#endif
 
 /* Driver Version */
 static const ARM_DRIVER_VERSION DriverVersion = {
@@ -269,7 +316,7 @@ static uint32_t crc32_data (const uint8_t *data, uint32_t len) {
   return (crc ^ 0xFFFFFFFFU);
 }
 
-#if (RTE_ETH_SMI_SW == 1) /* Software MDIO */
+#if (ETH_SMI_SW != 0) /* Software MDIO */
 /**
   \fn          void SW_MDIO_Dir (uint32_t dir)
   \brief       Turnaround MDO
@@ -279,13 +326,13 @@ static void SW_MDIO_Init (void) {
   GPIO_InitTypeDef GPIO_InitStruct;
 
   /* Set MDC as output */
-  GPIO_InitStruct.Pin   = MX_ETH_MDC_GPIO_Pin;
+  GPIO_InitStruct.Pin   = MX_Ethernet_MDC_GPIO_Pin;
   GPIO_InitStruct.Mode  = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull  = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
-  HAL_GPIO_Init(MX_ETH_MDC_GPIOx, &GPIO_InitStruct);
+  HAL_GPIO_Init(MX_Ethernet_MDC_GPIOx, &GPIO_InitStruct);
 
-  HAL_GPIO_WritePin (MX_ETH_MDC_GPIOx, MX_ETH_MDC_GPIO_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin (MX_Ethernet_MDC_GPIOx, MX_Ethernet_MDC_GPIO_Pin, GPIO_PIN_RESET);
 }
 
 /**
@@ -297,15 +344,15 @@ static void SW_MDIO_Dir (uint32_t dir) {
   GPIO_InitTypeDef GPIO_InitStruct;
 
   /* Set MDIO as input */
-  GPIO_InitStruct.Pin   = MX_ETH_MDIO_GPIO_Pin;
+  GPIO_InitStruct.Pin   = MX_Ethernet_MDIO_GPIO_Pin;
   GPIO_InitStruct.Mode  = (dir) ? (GPIO_MODE_OUTPUT_PP) : (GPIO_MODE_INPUT);
   GPIO_InitStruct.Pull  = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
-  HAL_GPIO_Init(MX_ETH_MDIO_GPIOx, &GPIO_InitStruct);
+  HAL_GPIO_Init(MX_Ethernet_MDIO_GPIOx, &GPIO_InitStruct);
   
   if (dir == 0) {
-    HAL_GPIO_WritePin (MX_ETH_MDC_GPIOx, MX_ETH_MDC_GPIO_Pin, GPIO_PIN_SET);
-    HAL_GPIO_WritePin (MX_ETH_MDC_GPIOx, MX_ETH_MDC_GPIO_Pin, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin (MX_Ethernet_MDC_GPIOx, MX_Ethernet_MDC_GPIO_Pin, GPIO_PIN_SET);
+    HAL_GPIO_WritePin (MX_Ethernet_MDC_GPIOx, MX_Ethernet_MDC_GPIO_Pin, GPIO_PIN_RESET);
   }
 }
 
@@ -320,10 +367,10 @@ static void SW_MDIO_Write (uint32_t data, uint32_t len) {
   data <<= (32 - len);
   for (; len; len--) {
     /* Set data bit */
-    HAL_GPIO_WritePin (MX_ETH_MDIO_GPIOx, MX_ETH_MDIO_GPIO_Pin, (data & 0x80000000) ? GPIO_PIN_SET : GPIO_PIN_RESET);
+    HAL_GPIO_WritePin (MX_Ethernet_MDIO_GPIOx, MX_Ethernet_MDIO_GPIO_Pin, (data & 0x80000000) ? GPIO_PIN_SET : GPIO_PIN_RESET);
     /* Clock it out */
-    HAL_GPIO_WritePin (MX_ETH_MDC_GPIOx, MX_ETH_MDC_GPIO_Pin, GPIO_PIN_SET);
-    HAL_GPIO_WritePin (MX_ETH_MDC_GPIOx, MX_ETH_MDC_GPIO_Pin, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin (MX_Ethernet_MDC_GPIOx, MX_Ethernet_MDC_GPIO_Pin, GPIO_PIN_SET);
+    HAL_GPIO_WritePin (MX_Ethernet_MDC_GPIOx, MX_Ethernet_MDC_GPIO_Pin, GPIO_PIN_RESET);
 
     data <<= 1;
   }
@@ -341,9 +388,9 @@ static uint32_t SW_MDIO_Read (void) {
   for (i = 0; i < 16; i++) {
     data <<= 1;
     /* Clock in data bit */
-    HAL_GPIO_WritePin (MX_ETH_MDC_GPIOx, MX_ETH_MDC_GPIO_Pin, GPIO_PIN_SET);
-    HAL_GPIO_WritePin (MX_ETH_MDC_GPIOx, MX_ETH_MDC_GPIO_Pin, GPIO_PIN_RESET);
-    if (HAL_GPIO_ReadPin(MX_ETH_MDIO_GPIOx, MX_ETH_MDIO_GPIO_Pin) == GPIO_PIN_SET) {
+    HAL_GPIO_WritePin (MX_Ethernet_MDC_GPIOx, MX_Ethernet_MDC_GPIO_Pin, GPIO_PIN_SET);
+    HAL_GPIO_WritePin (MX_Ethernet_MDC_GPIOx, MX_Ethernet_MDC_GPIO_Pin, GPIO_PIN_RESET);
+    if (HAL_GPIO_ReadPin(MX_Ethernet_MDIO_GPIOx, MX_Ethernet_MDIO_GPIO_Pin) == GPIO_PIN_SET) {
       data |= 1;
     }
   }
@@ -411,7 +458,7 @@ static int32_t Initialize (ARM_ETH_MAC_SignalEvent_t cb_event) {
     heth.Instance = ETH;
   #endif
   
-  #if (RTE_ETH_SMI_SW == 1) /* Software MDIO */
+  #if (ETH_SMI_SW != 0) /* Software MDIO */
     SW_MDIO_Init();
   #endif
 
@@ -430,12 +477,15 @@ static int32_t Initialize (ARM_ETH_MAC_SignalEvent_t cb_event) {
   \return      \ref execution_status
 */
 static int32_t Uninitialize (void) {
+#if defined(RTE_DEVICE_FRAMEWORK_CLASSIC)
   const ETH_PIN *io;
 
   /* Unconfigure ethernet pins */
   for (io = eth_pins; io != &eth_pins[sizeof(eth_pins)/sizeof(ETH_PIN)]; io++) {
     HAL_GPIO_DeInit(io->port, io->pin);
   }
+#endif
+  Emac.flags = 0U;
 
   return ARM_DRIVER_OK;
 }
@@ -451,19 +501,18 @@ static int32_t PowerControl (ARM_POWER_STATE state) {
 
   switch (state) {
     case ARM_POWER_OFF:
+      /* Reset Ethernet MAC peripheral */
+      __HAL_RCC_ETHMAC_FORCE_RESET();
+      __NOP(); __NOP(); __NOP(); __NOP();
+      __HAL_RCC_ETHMAC_RELEASE_RESET();
+
       #if defined(RTE_DEVICE_FRAMEWORK_CUBE_MX)
         HAL_ETH_MspDeInit (&heth);
-      #endif
-
+      #else
       /* Disable ethernet interrupts */
       NVIC_DisableIRQ(ETH_IRQn);
       ETH->DMAIER  = 0U;
       ETH->PTPTSCR = 0U;
-
-      /* Reset Ethernet MAC peripheral */
-      __ETHMAC_FORCE_RESET();
-      __NOP(); __NOP(); __NOP(); __NOP();
-      __ETHMAC_RELEASE_RESET();
 
       /* Disable Ethernet clocks */
       __HAL_RCC_ETHMAC_CLK_DISABLE();
@@ -471,6 +520,7 @@ static int32_t PowerControl (ARM_POWER_STATE state) {
       __HAL_RCC_ETHMACRX_CLK_DISABLE();
       #if (EMAC_TIME_STAMP)
       __HAL_RCC_ETHMACPTP_CLK_DISABLE();
+      #endif
       #endif
 
       Emac.flags = EMAC_FLAG_INIT;
@@ -486,14 +536,14 @@ static int32_t PowerControl (ARM_POWER_STATE state) {
       }
       #if defined(RTE_DEVICE_FRAMEWORK_CUBE_MX)
         HAL_ETH_MspInit (&heth);
-      #endif
-
+      #else
       /* Enable Ethernet clocks */
       __HAL_RCC_ETHMAC_CLK_ENABLE();
       __HAL_RCC_ETHMACTX_CLK_ENABLE();
       __HAL_RCC_ETHMACRX_CLK_ENABLE();
       #if (EMAC_TIME_STAMP)
       __HAL_RCC_ETHMACPTP_CLK_ENABLE();
+      #endif
       #endif
 
       /* Soft reset MAC DMA controller */
@@ -554,8 +604,14 @@ static int32_t PowerControl (ARM_POWER_STATE state) {
       Emac.tx_ts_index  = 0U;
       #endif
 
+      /* Disable MMC interrupts */
+      ETH->MMCTIMR = ETH_MMCTIMR_TGFM  | ETH_MMCTIMR_TGFMSCM | ETH_MMCTIMR_TGFSCM;
+      ETH->MMCRIMR = ETH_MMCRIMR_RGUFM | ETH_MMCRIMR_RFAEM   | ETH_MMCRIMR_RFCEM;
+
+      #if defined(RTE_DEVICE_FRAMEWORK_CLASSIC)
       NVIC_ClearPendingIRQ (ETH_IRQn);
       NVIC_EnableIRQ (ETH_IRQn);
+      #endif
 
       Emac.frame_end = NULL;
       Emac.flags    |= EMAC_FLAG_POWER;
@@ -1075,7 +1131,7 @@ static int32_t Control (uint32_t control, uint32_t arg) {
   \return      \ref execution_status
 */
 static int32_t PHY_Read (uint8_t phy_addr, uint8_t reg_addr, uint16_t *data) {
-#if (RTE_ETH_SMI_HW != 0) /* Hardware MDIO */
+#if (ETH_SMI_SW == 0) /* Hardware MDIO */
   uint32_t val, tick;
 
   val = ETH->MACMIIAR & ETH_MACMIIAR_CR;
@@ -1133,7 +1189,7 @@ static int32_t PHY_Read (uint8_t phy_addr, uint8_t reg_addr, uint16_t *data) {
   \return      \ref execution_status
 */
 static int32_t PHY_Write (uint8_t phy_addr, uint8_t reg_addr, uint16_t data) {
-#if (RTE_ETH_SMI_HW != 0) /* Hardware MDIO */
+#if (ETH_SMI_SW == 0) /* Hardware MDIO */
   uint32_t val, tick;
 
   ETH->MACMIIDR = data;
@@ -1226,3 +1282,5 @@ ARM_DRIVER_ETH_MAC Driver_ETH_MAC0 = {
   PHY_Read,
   PHY_Write
 };
+
+/*! \endcond */

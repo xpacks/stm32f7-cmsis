@@ -6,7 +6,8 @@ IFS=$'\n\t'
 # http://www.keil.com/pack/Keil.STM32F7xx_DFP.x.x.x.pack
 
 # RELEASE_VERSION="2.0.0"
-RELEASE_VERSION="2.1.0"
+# RELEASE_VERSION="2.1.0"
+RELEASE_VERSION="2.2.0"
 
 FAMILY="STM32F7"
 GITHUB_PROJECT="xpacks/stm32f7-cmsis"

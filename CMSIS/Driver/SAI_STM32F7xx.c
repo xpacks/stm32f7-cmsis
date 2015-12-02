@@ -41,7 +41,7 @@
 
 /*
  * NOTE:
- *  The SAI input clock must be propaly done in the user application
+ *  The SAI input clock must be properly configured in the user application
  */
 
 #include "SAI_STM32F7xx.h"
@@ -888,6 +888,8 @@ static int32_t SAI_PowerControl (ARM_POWER_STATE  state,
       // Activate all slots (default)
       sai->rx->reg->SLOTR = 0xFFFF0F00U;
       sai->tx->reg->SLOTR = 0xFFFF0F00U;
+
+      break;
 
     case ARM_POWER_LOW:
     default: return ARM_DRIVER_ERROR_UNSUPPORTED;

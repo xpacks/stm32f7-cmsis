@@ -44,23 +44,67 @@
  *    Initial release
  */
 
-/* STM32CubeMX configuration:
- *
- * Pinout tab:
- *   - Select SPIx peripheral and enable mode
- * Clock Configuration tab:
- *   - Configure clock (APB2 is used for SPIx)
- * Configuration tab:
- *   - Select SPIx under Connectivity section which opens SPIx Configuration window:
- *       - Parameter Settings tab: settings are unused by this driver
- *       - NVIC Settings: enable SPIx global interrupt
- *       - GPIO Settings: configure as needed
- *       - DMA Settings:  to enable DMA transfers you need to
- *           - add SPIx_RX and SPIx_TX DMA Request
- *           - select Normal DMA mode (for RX and TX)
- *           - deselect Use Fifo option (for RX and TX)
- *           - go to NVIC Settings tab and enable RX and TX stream global interrupt
- */
+ /*! \page stm32f7_spi CMSIS-Driver SPI Setup 
+
+The CMSIS-Driver SPI requires:
+  - Setup of SPIx input clock
+  - Setup of SPIx in Full-Duplex Master/Slave mode with optional DMA for Rx and Tx transfers
+ 
+The example below uses correct settings for STM32F746G-Discovery:
+  - SPI2 Mode: Full-Duplex Master/Slave
+
+For different boards, refer to the hardware schematics to reflect correct setup values.
+
+The STM32CubeMX configuration steps for Pinout, Clock, and System Configuration are 
+listed below. Enter the values that are marked \b bold.
+   
+Pinout tab
+----------
+  1. Configure mode
+    - Peripherals \b SPI2: Mode= \b Full-Duplex Master , Hardware NSS Signal= \b ON
+
+  2. Configure pin PB14, PB15, PI1 and pin PI0 as SPI2 peripheral alternative pins
+    - Click in chip diagram on pin \b PB14 and select \b SPI2_MISO
+    - Click in chip diagram on pin \b PB15 and select \b SPI2_MOSI
+    - Click in chip diagram on pin \b PI1 and select \b SPI2_SCK
+    - Click in chip diagram on pin \b PI0 and select \b SPI2_NSS
+
+Clock Configuration tab
+-----------------------
+  1. Configure APB2 clock
+    - Setup "APB2 peripheral clocks (MHz)" to match application requirements
+
+Configuration tab
+-----------------
+  1. Under Connectivity open \b SPI2 Configuration:
+     - \e optional <b>DMA Settings</b>: setup DMA transfers for Rx and Tx\n
+       \b Add - Select \b SPI2_RX: Stream=DMA1 Stream 3, Direction=Peripheral to Memory, Priority=Low,
+          DMA Request Settings: not used\n
+       \b Add - Select \b SPI2_TX: Stream=DMA1 Stream 4, Direction=Memory to Peripheral, Priority=Low,
+          DMA Request Settings: not used
+
+     - <b>GPIO Settings</b>: review settings, no changes required
+          Pin Name | Signal on Pin | GPIO mode | GPIO Pull-up/Pull..| Maximum out | User Label
+          :--------|:--------------|:----------|:-------------------|:------------|:----------
+          PB14     | SPI2_MISO     | Alternate | No pull-up and no..| High        |.
+          PB15     | SPI2_MOSI     | Alternate | No pull-up and no..| High        |.
+          PI1      | SPI2_SCK      | Alternate | No pull-up and no..| High        |.
+          PI0      | SPI2_NSS      | Alternate | No pull-up and no..| High        |.
+
+     - <b>NVIC Settings</b>: enable interrupts
+          Interrupt Table                      | Enable | Preemption Priority | Sub Priority
+          :------------------------------------|:-------|:--------------------|:--------------
+          DMA1 stream3 global interrupt        |   ON   | 0                   | 0
+          DMA1 stream4 global interrupt        |   ON   | 0                   | 0
+          SPI2 global interrupt                |\b ON   | 0                   | 0
+
+     - Parameter Settings: not used
+     - User Constants: not used
+   
+     Click \b OK to close the SPI2 Configuration dialog
+*/
+
+/*! \cond */
 
 #include "SPI_STM32F7xx.h"
 
@@ -86,7 +130,7 @@ extern SPI_HandleTypeDef hspi1;
 
 // SPI1 Run-Time Information
 static SPI_INFO          SPI1_Info = {0};
-static SPI_TRANSFER_INFO SPI1_TransfefInfo = {0};
+static SPI_TRANSFER_INFO SPI1_TransferInfo = {0};
 
 
 #ifdef MX_SPI1_MOSI_Pin
@@ -190,7 +234,7 @@ static const SPI_RESOURCES SPI1_Resources = {
 #endif
 
   &SPI1_Info,
-  &SPI1_TransfefInfo
+  &SPI1_TransferInfo
 };
 #endif /* MX_SPI1 */
 
@@ -202,7 +246,7 @@ extern SPI_HandleTypeDef hspi2;
 
 // SPI2 Run-Time Information
 static SPI_INFO          SPI2_Info = {0};
-static SPI_TRANSFER_INFO SPI2_TransfefInfo = {0};
+static SPI_TRANSFER_INFO SPI2_TransferInfo = {0};
 
 
 #ifdef MX_SPI2_MOSI_Pin
@@ -306,7 +350,7 @@ static const SPI_RESOURCES SPI2_Resources = {
 #endif
 
   &SPI2_Info,
-  &SPI2_TransfefInfo
+  &SPI2_TransferInfo
 };
 #endif /* MX_SPI2 */
 
@@ -318,7 +362,7 @@ extern SPI_HandleTypeDef hspi3;
 
 // SPI3 Run-Time Information
 static SPI_INFO          SPI3_Info = {0};
-static SPI_TRANSFER_INFO SPI3_TransfefInfo = {0};
+static SPI_TRANSFER_INFO SPI3_TransferInfo = {0};
 
 
 #ifdef MX_SPI3_MOSI_Pin
@@ -422,7 +466,7 @@ static const SPI_RESOURCES SPI3_Resources = {
 #endif
 
   &SPI3_Info,
-  &SPI3_TransfefInfo
+  &SPI3_TransferInfo
 };
 #endif /* MX_SPI3 */
 
@@ -434,7 +478,7 @@ extern SPI_HandleTypeDef hspi4;
 
 // SPI4 Run-Time Information
 static SPI_INFO          SPI4_Info = {0};
-static SPI_TRANSFER_INFO SPI4_TransfefInfo = {0};
+static SPI_TRANSFER_INFO SPI4_TransferInfo = {0};
 
 
 #ifdef MX_SPI4_MOSI_Pin
@@ -538,7 +582,7 @@ static const SPI_RESOURCES SPI4_Resources = {
 #endif
 
   &SPI4_Info,
-  &SPI4_TransfefInfo
+  &SPI4_TransferInfo
 };
 #endif /* MX_SPI4 */
 
@@ -550,7 +594,7 @@ extern SPI_HandleTypeDef hspi5;
 
 // SPI5 Run-Time Information
 static SPI_INFO          SPI5_Info = {0};
-static SPI_TRANSFER_INFO SPI5_TransfefInfo = {0};
+static SPI_TRANSFER_INFO SPI5_TransferInfo = {0};
 
 
 #ifdef MX_SPI5_MOSI_Pin
@@ -654,7 +698,7 @@ static const SPI_RESOURCES SPI5_Resources = {
 #endif
 
   &SPI5_Info,
-  &SPI5_TransfefInfo
+  &SPI5_TransferInfo
 };
 #endif /* MX_SPI5 */
 
@@ -666,7 +710,7 @@ extern SPI_HandleTypeDef hspi6;
 
 // SPI6 Run-Time Information
 static SPI_INFO          SPI6_Info = {0};
-static SPI_TRANSFER_INFO SPI6_TransfefInfo = {0};
+static SPI_TRANSFER_INFO SPI6_TransferInfo = {0};
 
 
 #ifdef MX_SPI6_MOSI_Pin
@@ -770,7 +814,7 @@ static const SPI_RESOURCES SPI6_Resources = {
 #endif
 
   &SPI6_Info,
-  &SPI6_TransfefInfo
+  &SPI6_TransferInfo
 };
 #endif /* MX_SPI6 */
 
@@ -2159,3 +2203,5 @@ ARM_DRIVER_SPI Driver_SPI6 = {
   SPI6_GetStatus
 };
 #endif
+
+/*! \endcond */

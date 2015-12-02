@@ -18,8 +18,8 @@
  * 3. This notice may not be removed or altered from any source distribution.
  *
  *
- * $Date:        3. July 2015
- * $Revision:    V1.0
+ * $Date:        24. August 2015
+ * $Revision:    V1.1
  *
  * Driver:       Driver_USBD1
  * Configured:   via RTE_Device.h configuration file
@@ -42,26 +42,67 @@
  *     - maximum value:      7
  *   USBD_HS_VBUS_DETECT:    defines if driver supports VBUS detection
  *     - default value: 1    enabled
- * --------------------------------------------------------------------------
- * STM32CubeMX configuration:
- *
- * Pinout tab:
- *   - Select USB_OTG_HS peripheral and enable Device mode for proper PHY
- * Clock Configuration tab:
- *   - Configure clock
- * Configuration tab:
- *   - Select USB_HS under Connectivity section which opens USB_HS
- *     Configuration window:
- *       - Parameter Settings tab: settings are unused by this driver
- *       - NVIC Settings: enable USB On The Go HS global interrupt
- *       - GPIO Settings: configure as needed
  * -------------------------------------------------------------------------- */
 
 /* History:
+ *  Version 1.1
+ *    STM32CubeMX generated code can also be used to configure the driver.
  *  Version 1.0
  *    Initial release
  */
 
+/*! \page stm32f7_usbd_hs CMSIS-Driver USBD_HS Setup
+
+The CMSIS-Driver USBD_HS requires:
+  - Setup of USB clk to 48MHz (if internal Full-speed Phy is used)
+  - Configuration of USB_OTG_HS
+ 
+The example below uses correct settings for STM32F746G-Discovery Board:
+  - USB_OTG_HS Mode: External Phy: Device_Only
+ 
+The STM32CubeMX configuration steps for Pinout, Clock, and System Configuration are
+listed below. Enter the values that are marked \b bold.
+ 
+Pinout tab
+----------
+  1. Configure USBD mode
+     - Peripherals \b USB_OTG_HS: External Phy: Mode=<b>Device_Only</b>
+  2. Configure USB_OTG_HS_ULPI_DIR pin (is not the default pin):
+     - Click in chip diagram on pin \b PC2 and select \b USB_OTG_HS_ULPI_DIR
+ 
+Clock Configuration tab
+-----------------------
+  1. AHB frequency should be higher than 30 MHz
+ 
+Configuration tab
+-----------------
+  1. Under Connectivity open \b USB_OTG_HS Configuration:
+     - DMA Settings: not used
+     - <b>GPIO Settings</b>: review settings, no changes required
+          Pin Name | Signal on Pin        | GPIO mode | GPIO Pull-up/Pull..| Maximum out | User Label
+          :--------|:--------------       |:----------|:-------------------|:------------|:----------
+          PA3      | USB_OTG_DS_ULPI_D0   | Alternate | No pull-up and no..| High        |.
+          PA5      | USB_OTG_DS_ULPI_CK   | Alternate | No pull-up and no..| High        |.
+          PB0      | USB_OTG_DS_ULPI_D1   | Alternate | No pull-up and no..| High        |.
+          PB1      | USB_OTG_DS_ULPI_D2   | Alternate | No pull-up and no..| High        |.
+          PB5      | USB_OTG_DS_ULPI_D7   | Alternate | No pull-up and no..| High        |.
+          PB10     | USB_OTG_DS_ULPI_D3   | Alternate | No pull-up and no..| High        |.
+          PB11     | USB_OTG_DS_ULPI_D4   | Alternate | No pull-up and no..| High        |.
+          PB12     | USB_OTG_DS_ULPI_D5   | Alternate | No pull-up and no..| High        |.
+          PB13     | USB_OTG_DS_ULPI_D6   | Alternate | No pull-up and no..| High        |.
+          PC0      | USB_OTG_DS_ULPI_STP  | Alternate | No pull-up and no..| High        |.
+          PC2      | USB_OTG_DS_ULPI_DIR  | Alternate | No pull-up and no..| High        |.
+          PH4      | USB_OTG_DS_ULPI_NXT  | Alternate | No pull-up and no..| High        |.
+     - <b>NVIC Settings</b>: enable interrupts
+          Interrupt Table                      | Enable | Preemption Priority | Sub Priority
+          :------------------------------------|:-------|:--------------------|:--------------
+          USB On The Go HS global interrupt    |\b ON   | 0                   | 0
+     - Parameter Settings: not used
+     - User Constants: not used
+     - Click \b OK to close the USB_OTG_HS Configuration dialog
+*/
+
+/*! \cond */
 
 #include <stdint.h>
 #include <string.h>
@@ -87,10 +128,16 @@ extern uint8_t otg_hs_role;
 extern void OTG_HS_PinsConfigure   (uint8_t pins_mask);
 extern void OTG_HS_PinsUnconfigure (uint8_t pins_mask);
 
+#ifdef RTE_DEVICE_FRAMEWORK_CUBE_MX
+#ifdef MX_USB_OTG_HS_DEVICE
+extern PCD_HandleTypeDef hpcd_USB_OTG_HS;
+#endif
+#endif
+
 
 // USBD Driver *****************************************************************
 
-#define ARM_USBD_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,0)
+#define ARM_USBD_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,1)
 
 // Driver Version
 static const ARM_DRIVER_VERSION usbd_driver_version = { ARM_USBD_API_VERSION, ARM_USBD_DRV_VERSION };
@@ -467,11 +514,18 @@ static int32_t USBD_Initialize (ARM_USBD_SignalDeviceEvent_t   cb_device_event,
   SignalEndpointEvent = cb_endpoint_event;
 
   otg_hs_role = ARM_USB_ROLE_DEVICE;
+
+#ifdef RTE_DEVICE_FRAMEWORK_CLASSIC
   OTG_HS_PinsConfigure (ARM_USB_PIN_DP | ARM_USB_PIN_DM
 #if  (USBD_HS_VBUS_DETECT == 1)
                       | ARM_USB_PIN_VBUS
 #endif
                        );
+#endif
+
+#ifdef RTE_DEVICE_FRAMEWORK_CUBE_MX
+  hpcd_USB_OTG_HS.Instance = USB_OTG_HS;
+#endif
 
   return ARM_DRIVER_OK;
 }
@@ -483,11 +537,14 @@ static int32_t USBD_Initialize (ARM_USBD_SignalDeviceEvent_t   cb_device_event,
 */
 static int32_t USBD_Uninitialize (void) {
 
+#ifdef RTE_DEVICE_FRAMEWORK_CLASSIC
   OTG_HS_PinsUnconfigure (ARM_USB_PIN_DP | ARM_USB_PIN_DM
 #if  (USBD_HS_VBUS_DETECT == 1)
                         | ARM_USB_PIN_VBUS
 #endif
                          );
+#endif
+
   otg_hs_role = ARM_USB_ROLE_NONE;
 
   return ARM_DRIVER_OK;
@@ -503,8 +560,10 @@ static int32_t USBD_PowerControl (ARM_POWER_STATE state) {
 
   switch (state) {
     case ARM_POWER_OFF:
+#ifdef RTE_DEVICE_FRAMEWORK_CLASSIC
       NVIC_DisableIRQ      (OTG_HS_IRQn);               // Disable interrupt
       NVIC_ClearPendingIRQ (OTG_HS_IRQn);               // Clear pending interrupt
+#endif
       hw_powered     = false;                           // Clear powered flag
       OTG->DCTL     |=  OTG_HS_DCTL_SDIS;               // Soft disconnect enabled
       OTG->GAHBCFG  &= ~OTG_HS_GAHBCFG_GINTMSK;         // Disable USB interrupts
@@ -520,17 +579,26 @@ static int32_t USBD_PowerControl (ARM_POWER_STATE state) {
 #endif
       OTG->PCGCCTL  |=  OTG_HS_PCGCCTL_STPPCLK;         // Stop PHY clock
       OTG->GCCFG     =  0U;                             // Reset core configuration
+
+#ifdef RTE_DEVICE_FRAMEWORK_CLASSIC
       RCC->AHB1ENR  &= ~RCC_AHB1ENR_OTGHSEN;            // Disable OTG HS clock
+
+#else
+      HAL_PCD_MspDeInit(&hpcd_USB_OTG_HS);
+#endif
       break;
 
     case ARM_POWER_FULL:
       if (hw_powered == true) { return ARM_DRIVER_OK; }
-
+#ifdef RTE_DEVICE_FRAMEWORK_CLASSIC
 #ifdef MX_USB_OTG_HS_ULPI_D7_Pin                        // External ULPI High-speed PHY
-      RCC->AHB1ENR  |=  RCC_AHB1ENR_OTGHSULPIEN;        // OTG HS ULPI clock enable
+      __USB_OTG_HS_ULPI_CLK_ENABLE();
+#endif
+      __USB_OTG_HS_CLK_ENABLE();
+#else
+      HAL_PCD_MspInit(&hpcd_USB_OTG_HS);
 #endif
 
-      RCC->AHB1ENR  |=  RCC_AHB1ENR_OTGHSEN;            // OTG HS clock enable
       RCC->AHB1RSTR |=  RCC_AHB1RSTR_OTGHRST;           // Reset OTG HS module
       osDelay(1U);
       RCC->AHB1RSTR &= ~RCC_AHB1RSTR_OTGHRST;           // Clear reset of OTG HS module
@@ -544,7 +612,7 @@ static int32_t USBD_PowerControl (ARM_POWER_STATE state) {
                         OTG_HS_GUSBCFG_ULPIEVBUSI |     // ULPI int VBUS indicator
                         OTG_HS_GUSBCFG_ULPIEVBUSD);     // ULPI int VBUS drive
 #else                                                   // On-chip Full-speed PHY
-      OTG->GUSBCFG  |= (OTG_HS_GUSBCFG_PHSEL   |        // Full-speed transceiver
+      OTG->GUSBCFG  |= (OTG_HS_GUSBCFG_PHYSEL  |        // Full-speed transceiver
                         OTG_HS_GUSBCFG_PHYLPCS);        // 48 MHz external clock
 #endif
       // Wait until AHB Master state machine is in the idle condition
@@ -601,7 +669,9 @@ static int32_t USBD_PowerControl (ARM_POWER_STATE state) {
                         OTG_HS_GAHBCFG_TXFELVL) ;
 
       hw_powered     = true;                            // Set powered flag
+#ifdef RTE_DEVICE_FRAMEWORK_CLASSIC
       NVIC_EnableIRQ   (OTG_HS_IRQn);                   // Enable interrupt
+#endif
       break;
 
     default:
@@ -1342,3 +1412,5 @@ ARM_DRIVER_USBD Driver_USBD1 = {
   USBD_EndpointTransferAbort,
   USBD_GetFrameNumber
 };
+
+/*! \endcond */
