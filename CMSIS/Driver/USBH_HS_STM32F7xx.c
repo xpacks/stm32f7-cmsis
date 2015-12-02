@@ -1,0 +1,1206 @@
+/* -----------------------------------------------------------------------------
+ * Copyright (c) 2013-2015 ARM Ltd.
+ *
+ * This software is provided 'as-is', without any express or implied warranty.
+ * In no event will the authors be held liable for any damages arising from
+ * the use of this software. Permission is granted to anyone to use this
+ * software for any purpose, including commercial applications, and to alter
+ * it and redistribute it freely, subject to the following restrictions:
+ *
+ * 1. The origin of this software must not be misrepresented; you must not
+ *    claim that you wrote the original software. If you use this software in
+ *    a product, an acknowledgment in the product documentation would be
+ *    appreciated but is not required.
+ *
+ * 2. Altered source versions must be plainly marked as such, and must not be
+ *    misrepresented as being the original software.
+ *
+ * 3. This notice may not be removed or altered from any source distribution.
+ *
+ *
+ * $Date:        3. July 2015
+ * $Revision:    V1.0
+ *
+ * Driver:       Driver_USBH1
+ * Configured:   via RTE_Device.h configuration file
+ * Project:      USB High/Full-Speed Host Driver for ST STM32F7xx
+ * --------------------------------------------------------------------------
+ * Use the following configuration settings in the middleware component
+ * to connect to this driver.
+ *
+ *   Configuration Setting                  Value
+ *   ---------------------                  -----
+ *   Connect to hardware via Driver_USBH# = 1
+ *   USB Host controller interface        = Custom
+ * --------------------------------------------------------------------------
+ * Defines used for driver configuration (at compile time):
+ *
+ *   USBH_MAX_PIPE_NUM: defines maximum number of Pipes that driver will
+ *                      support, this value impacts driver memory
+ *                      requirements
+ *     - default value: 16
+ *     - maximum value: 16
+ * --------------------------------------------------------------------------
+ * STM32CubeMX configuration:
+ *
+ * Pinout tab:
+ *   - Select USB_OTG_HS peripheral and enable Host mode for proper PHY
+ *   - Select USB_OTG_HS_VBUS_Power pin on STM32F7xx package in chip view
+ *         - Left click on selected pin
+ *         - Select pin as GPIO Input
+ *         - Right click on pin to enter "USB_OTG_HS_VBUS_Power" User Label
+ *          (If pin active state is High then constant
+ *           USB_OTG_HS_VBUS_Power_Pin_Active with value 1 should be defined)
+ *   - Select USB_OTG_HS_Overrcurrent pin
+ *         - Left click on selected pin in chip view
+ *         - Select pin as GPIO Input
+ *         - Right click on pin to enter "USB_OTG_HS_Overrcurrent" User Label
+ *          (If pin active state is High then constant
+ *           USB_OTG_HS_Overcurrent_Pin_Active with value 1 should be defined)
+ * Clock Configuration tab:
+ *   - Configure clock
+ * Configuration tab:
+ *   - Select USB_HS under Connectivity section which opens USB_HS
+ *     Configuration window:
+ *       - Parameter Settings tab: settings are unused by this driver
+ *       - NVIC Settings: enable USB On The Go HS global interrupt
+ *       - GPIO Settings: configure as needed
+ * -------------------------------------------------------------------------- */
+
+/* History:
+ *  Version 1.0
+ *    Initial release
+ */
+
+
+#include <stdint.h>
+#include <string.h>
+#include "cmsis_os.h"
+
+#include "Driver_USBH.h"
+
+#include "OTG_HS_STM32F7xx.h"
+
+#ifndef USBH_MAX_PIPE_NUM
+#define USBH_MAX_PIPE_NUM               16U
+#endif
+#if    (USBH_MAX_PIPE_NUM > 16)
+#error  Too many Pipes, maximum Pipes that this driver supports is 16 !!!
+#endif
+
+extern uint8_t otg_hs_role;
+
+extern void OTG_HS_PinsConfigure   (uint8_t pins_mask);
+extern void OTG_HS_PinsUnconfigure (uint8_t pins_mask);
+extern void OTG_HS_PinVbusOnOff    (bool state);
+extern bool OTG_HS_PinGetOC        (void);
+
+
+// USBH Driver *****************************************************************
+
+#define ARM_USBH_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,0)
+
+// Driver Version
+static const ARM_DRIVER_VERSION usbh_driver_version = { ARM_USBH_API_VERSION, ARM_USBH_DRV_VERSION };
+
+// Driver Capabilities
+static const ARM_USBH_CAPABILITIES usbh_driver_capabilities = {
+  0x0001U,      // Root HUB available Ports Mask
+  0U,           // Automatic SPLIT packet handling
+  1U,           // Signal Connect event
+  1U,           // Signal Disconnect event
+  0U            // Signal Overcurrent event
+};
+
+#define OTG                     OTG_HS
+
+// FIFO sizes in bytes (total available memory for FIFOs is 4 kB)
+#define RX_FIFO_SIZE            2048U   // RxFIFO depth is half of max 4 kB
+#define TX_FIFO_SIZE_NON_PERI   1024U   // Non-periodic Tx FIFO size
+#define TX_FIFO_SIZE_PERI       1024U   // Periodic Tx FIFO size
+
+static volatile uint32_t *OTG_DFIFO[] = { OTG_HS_DFIFO0,
+                                          OTG_HS_DFIFO1,
+                                          OTG_HS_DFIFO2,
+                                          OTG_HS_DFIFO3,
+                                          OTG_HS_DFIFO4,
+                                          OTG_HS_DFIFO5,
+                                          OTG_HS_DFIFO6,
+                                          OTG_HS_DFIFO7,
+                                          OTG_HS_DFIFO8,
+                                          OTG_HS_DFIFO9,
+                                          OTG_HS_DFIFO10,
+                                          OTG_HS_DFIFO11,
+                                          OTG_HS_DFIFO12,
+                                          OTG_HS_DFIFO13,
+                                          OTG_HS_DFIFO14,
+                                          OTG_HS_DFIFO15
+                                        };
+
+typedef struct {                        // Pipe structure definition
+  uint32_t  packet;
+  uint8_t  *data;
+  uint32_t  num;
+  uint32_t  num_transferred_total;
+  uint32_t  num_transferring;
+  uint16_t  ep_max_packet_size;
+  uint16_t  interval_reload;
+  uint16_t  interval;
+  uint8_t   ep_type;
+  uint8_t   active;
+  uint8_t   in_progress;
+  uint8_t   event;
+} PIPE_t;
+
+static ARM_USBH_SignalPortEvent_t SignalPortEvent;
+static ARM_USBH_SignalPipeEvent_t SignalPipeEvent;
+
+static bool            hw_powered = false;
+static bool            port_reset;
+
+// Pipes runtime information
+static volatile PIPE_t pipe[USBH_MAX_PIPE_NUM];
+
+
+// Auxiliary functions
+
+/**
+  \fn          uint32_t USBH_CH_GetIndexFromAddress (OTG_HS_HC *ptr_ch)
+  \brief       Get the Index of Channel from it's Address.
+  \param[in]   ptr_ch   Pointer to the Channel
+  \return      Index of the Channel
+*/
+__INLINE static uint32_t USBH_CH_GetIndexFromAddress (OTG_HS_HC *ptr_ch) {
+  return (ptr_ch - ((OTG_HS_HC *)(&OTG->HCCHAR0)));
+}
+
+/**
+  \fn          OTG_HS_HC *USBH_CH_GetAddressFromIndex (uint32_t index)
+  \brief       Get the Channel Address from it's Index.
+  \param[in]   index    Index of the Channel
+  \return      Address of the Channel
+*/
+__INLINE static OTG_HS_HC *USBH_CH_GetAddressFromIndex (uint32_t index) {
+  return (((OTG_HS_HC *)(&OTG->HCCHAR0)) + index);
+}
+
+/**
+  \fn          OTG_HS_HC *USBH_CH_FindFree (void)
+  \brief       Find a free Channel.
+  \return      Pointer to the first free Channel (NULL = no free Channel is available)
+*/
+__INLINE static OTG_HS_HC *USBH_CH_FindFree (void) {
+  OTG_HS_HC *ptr_ch;
+  uint32_t   i;
+
+  ptr_ch = (OTG_HS_HC *)(&(OTG->HCCHAR0));
+
+  for (i = 0U; i < USBH_MAX_PIPE_NUM; i++) {
+    if ((ptr_ch->HCCHAR & 0x3FFFFFFFU) == 0U) { return ptr_ch; }
+    ptr_ch++;
+  }
+
+  return NULL;
+}
+
+/**
+  \fn          bool USBH_CH_Disable (OTG_HS_HC *ptr_ch)
+  \brief       Disable the Channel.
+  \param[in]   ptr_ch   Pointer to the Channel
+  \return      true = success, false = fail
+*/
+__INLINE static bool USBH_CH_Disable (OTG_HS_HC *ptr_ch) {
+  uint32_t i;
+
+  if (ptr_ch == 0U) { return false; }
+
+  ptr_ch->HCTSIZ &= ~OTG_HS_HCISIZx_DOPING;
+
+  if ((ptr_ch->HCINT & OTG_HS_HCINTx_CHH) != 0U) { return true; }
+
+  if ((ptr_ch->HCCHAR & OTG_HS_HCCHARx_CHENA) != 0U) {
+    ptr_ch->HCINTMSK = 0U;
+    osDelay(1U);
+    if ((ptr_ch->HCINT & OTG_HS_HCINTx_NAK) != 0U) {
+      ptr_ch->HCINT  =  0x7BBU;
+      return true;
+    }
+    ptr_ch->HCINT  =  0x7BBU;
+    ptr_ch->HCCHAR =  ptr_ch->HCCHAR | OTG_HS_HCCHARx_CHENA | OTG_HS_HCCHARx_CHDIS;
+    for (i = 0U; i < 1000U; i++) {
+      if ((ptr_ch->HCINT & OTG_HS_HCINTx_CHH) != 0U) {
+        ptr_ch->HCINT = 0x7BBU;
+        return true;
+      }
+    }
+    return false;
+  }
+
+  return true;
+}
+
+/**
+  \fn          bool USBH_HW_StartTransfer (PIPE_t *ptr_pipe, OTG_HS_HC *ptr_ch)
+  \brief       Start transfer on Pipe.
+  \param[in]   ptr_pipe Pointer to Pipe
+  \param[in]   ptr_ch   Pointer to Channel
+  \return      true = success, false = fail
+*/
+static bool USBH_HW_StartTransfer (PIPE_t *ptr_pipe, OTG_HS_HC *ptr_ch) {
+  uint32_t           hcchar;
+  uint32_t           hctsiz;
+  uint32_t           hcintmsk;
+  uint32_t           num_to_transfer;
+  uint8_t           *ptr_src;
+  volatile uint32_t *ptr_dest;
+  uint16_t           cnt;
+  uint8_t            out;
+
+  if (ptr_pipe == 0U)                        { return false; }
+  if (ptr_ch   == 0U)                        { return false; }
+  if ((OTG->HPRT & OTG_HS_HPRT_PCSTS) == 0U) { return false; }
+
+  hcchar   = ptr_ch->HCCHAR;                    // Read channel characteristics
+  hctsiz   = ptr_ch->HCTSIZ;                    // Read channel size info
+  hcintmsk = 0U;
+  cnt      = 0U;
+  out      = 0U;
+
+  // Prepare transfer
+                                                // Prepare HCCHAR register
+  hcchar &=       (OTG_HS_HCCHARx_ODDFRM    |   // Keep ODDFRM
+                   OTG_HS_HCCHARx_DAD_MSK   |   // Keep DAD
+                   OTG_HS_HCCHARx_MCNT_MSK  |   // Keep MCNT
+                   OTG_HS_HCCHARx_EPTYP_MSK |   // Keep EPTYP
+                   OTG_HS_HCCHARx_LSDEV     |   // Keep LSDEV
+                   OTG_HS_HCCHARx_EPNUM_MSK |   // Keep EPNUM
+                   OTG_HS_HCCHARx_MPSIZ_MSK);   // Keep MPSIZ
+  switch ((ptr_pipe->packet & ARM_USBH_PACKET_TOKEN_Msk) & ~ARM_USBH_PACKET_PING) {
+    case ARM_USBH_PACKET_IN:
+      hcchar   |=  OTG_HS_HCCHARx_EPDIR;
+      hcintmsk  = (OTG_HS_HCINTMSKx_DTERRM  |
+                   OTG_HS_HCINTMSKx_BBERRM  |
+                   OTG_HS_HCINTMSKx_TXERRM  |
+                   OTG_HS_HCINTMSKx_ACKM    |
+                   OTG_HS_HCINTMSKx_NAKM    |
+                   OTG_HS_HCINTMSKx_STALLM  |
+                   OTG_HS_HCINTMSKx_XFRCM)  ;
+      break;
+    case ARM_USBH_PACKET_OUT:
+      hcchar   &= ~OTG_HS_HCCHARx_EPDIR;
+      hcintmsk  = (OTG_HS_HCINTMSKx_TXERRM  |
+                   OTG_HS_HCINTMSKx_ACKM    |
+                   OTG_HS_HCINTMSKx_NAKM    |
+                   OTG_HS_HCINTMSKx_STALLM  |
+                   OTG_HS_HCINTMSKx_XFRCM)  ;
+      out       =  1U;
+      break;
+    case ARM_USBH_PACKET_SETUP:
+      hcchar   &= ~OTG_HS_HCCHARx_EPDIR;
+      hcintmsk  = (OTG_HS_HCINTMSKx_TXERRM  |
+                   OTG_HS_HCINTMSKx_XFRCM)  ;
+      hctsiz   &= ~OTG_HS_HCTSIZx_DPID_MSK;
+      hctsiz   |=  OTG_HS_HCTSIZx_DPID_MDATA;
+      out       =  1U;
+      break;
+    default:
+      return false;
+  }
+  if ((ptr_pipe->packet & ARM_USBH_PACKET_PING) != 0U) {
+    hctsiz     |=  OTG_HS_HCISIZx_DOPING;
+  }
+
+  num_to_transfer = ptr_pipe->num - ptr_pipe->num_transferred_total;
+  switch (ptr_pipe->ep_type) {
+    case ARM_USB_ENDPOINT_CONTROL:
+    case ARM_USB_ENDPOINT_BULK:
+      if (out != 0U) {
+        // For packet OUT/SETUP limit number of bytes to send to maximum FIFO size
+        if (num_to_transfer > TX_FIFO_SIZE_NON_PERI) {
+          num_to_transfer = TX_FIFO_SIZE_NON_PERI;
+        }
+        cnt = (num_to_transfer + 3U) / 4U;
+      }
+      break;
+    case ARM_USB_ENDPOINT_ISOCHRONOUS:
+    case ARM_USB_ENDPOINT_INTERRUPT:
+      if (out != 0U) {
+        // For packet OUT/SETUP limit number of bytes to send to maximum FIFO size
+        if (num_to_transfer > TX_FIFO_SIZE_PERI) {
+          num_to_transfer = TX_FIFO_SIZE_PERI;
+        }
+        cnt = (num_to_transfer + 3U) / 4U;
+      }
+      if ((OTG->HFNUM & 1U) != 0U) {
+        hcchar &= ~OTG_HS_HCCHARx_ODDFRM;
+      } else {
+        hcchar |=  OTG_HS_HCCHARx_ODDFRM;
+      }
+      break;
+  }
+  hcchar       &= ~OTG_HS_HCCHARx_CHDIS;
+  hcchar       |=  OTG_HS_HCCHARx_CHENA;
+
+                                                  // Prepare HCTSIZ register
+  hctsiz       &=  OTG_HS_HCTSIZx_DPID_MSK;       // Keep DPID
+  switch (ptr_pipe->packet & ARM_USBH_PACKET_DATA_Msk) {
+    case ARM_USBH_PACKET_DATA0:
+      hctsiz   &= ~OTG_HS_HCTSIZx_DPID_MSK;
+      hctsiz   |=  OTG_HS_HCTSIZx_DPID_DATA0;
+      break;
+    case ARM_USBH_PACKET_DATA1:
+      hctsiz   &= ~OTG_HS_HCTSIZx_DPID_MSK;
+      hctsiz   |=  OTG_HS_HCTSIZx_DPID_DATA1;
+      break;
+    default:
+      break;
+  }
+
+                                                  // Prepare HCTSIZ register
+  if (num_to_transfer != 0U) {                    // Normal packet
+                                                  // Prepare PKTCNT field
+    hctsiz |= ((num_to_transfer + ptr_pipe->ep_max_packet_size - 1U) / ptr_pipe->ep_max_packet_size) << 19;
+    hctsiz |=   num_to_transfer;                  // Prepare XFRSIZ field
+  } else {                                        // Zero length packet
+    hctsiz |=   1U << 19;                         // Prepare PKTCNT field
+    hctsiz |=   0U;                               // Prepare XFRSIZ field
+  }
+
+  if (cnt != 0U) {
+    ptr_src  = ptr_pipe->data + ptr_pipe->num_transferred_total;
+    ptr_dest = OTG_DFIFO[USBH_CH_GetIndexFromAddress (ptr_ch)];
+  }
+  if (out != 0U) {
+    // For OUT/SETUP transfer num_transferring represents num of bytes to be sent
+    ptr_pipe->num_transferring = num_to_transfer;
+  } else {
+    // For IN transfer num_transferring represents num of bytes received (handled in IRQ)
+    ptr_pipe->num_transferring = 0U;
+  }
+  NVIC_DisableIRQ (OTG_HS_IRQn);                  // Disable OTG interrupt
+  ptr_ch->HCINTMSK = hcintmsk;                    // Enable channel interrupts
+  ptr_ch->HCTSIZ   = hctsiz;                      // Write ch transfer size
+  ptr_ch->HCCHAR   = hcchar;                      // Write ch characteristics
+  while (cnt != 0U) {                             // Load data
+    *ptr_dest = *((__packed uint32_t *)ptr_src);
+    ptr_src  += 4U;
+    cnt--;
+  }
+  NVIC_EnableIRQ  (OTG_HS_IRQn);                  // Enable OTG interrupt
+
+  return true;
+}
+
+
+// USBH Driver functions
+
+/**
+  \fn          ARM_DRIVER_VERSION USBH_GetVersion (void)
+  \brief       Get driver version.
+  \return      \ref ARM_DRIVER_VERSION
+*/
+static ARM_DRIVER_VERSION USBH_GetVersion (void) { return usbh_driver_version; }
+
+/**
+  \fn          ARM_USBH_CAPABILITIES USBH_GetCapabilities (void)
+  \brief       Get driver capabilities.
+  \return      \ref ARM_USBH_CAPABILITIES
+*/
+static ARM_USBH_CAPABILITIES USBH_GetCapabilities (void) { return usbh_driver_capabilities; }
+
+/**
+  \fn          int32_t USBH_Initialize (ARM_USBH_SignalPortEvent_t cb_port_event,
+                                        ARM_USBH_SignalPipeEvent_t cb_pipe_event)
+  \brief       Initialize USB Host Interface.
+  \param[in]   cb_port_event  Pointer to \ref ARM_USBH_SignalPortEvent
+  \param[in]   cb_pipe_event  Pointer to \ref ARM_USBH_SignalPipeEvent
+  \return      \ref execution_status
+*/
+static int32_t USBH_Initialize (ARM_USBH_SignalPortEvent_t cb_port_event,
+                                ARM_USBH_SignalPipeEvent_t cb_pipe_event) {
+
+  SignalPortEvent = cb_port_event;
+  SignalPipeEvent = cb_pipe_event;
+
+  otg_hs_role = ARM_USB_ROLE_HOST;
+  OTG_HS_PinsConfigure (ARM_USB_PIN_DP | ARM_USB_PIN_DM | ARM_USB_PIN_OC | ARM_USB_PIN_VBUS);
+
+  return ARM_DRIVER_OK;
+}
+
+/**
+  \fn          int32_t USBH_Uninitialize (void)
+  \brief       De-initialize USB Host Interface.
+  \return      \ref execution_status
+*/
+static int32_t USBH_Uninitialize (void) {
+
+  OTG_HS_PinsUnconfigure (ARM_USB_PIN_DP | ARM_USB_PIN_DM | ARM_USB_PIN_OC | ARM_USB_PIN_VBUS);
+  otg_hs_role = ARM_USB_ROLE_NONE;
+
+  return ARM_DRIVER_OK;
+}
+
+/**
+  \fn          int32_t USBH_PowerControl (ARM_POWER_STATE state)
+  \brief       Control USB Host Interface Power.
+  \param[in]   state  Power state
+  \return      \ref execution_status
+*/
+static int32_t USBH_PowerControl (ARM_POWER_STATE state) {
+
+  switch (state) {
+    case ARM_POWER_OFF:
+      NVIC_DisableIRQ      (OTG_HS_IRQn);               // Disable interrupt
+      NVIC_ClearPendingIRQ (OTG_HS_IRQn);               // Clear pending interrupt
+      hw_powered     = false;                           // Clear powered flag
+      OTG->GAHBCFG  &= ~OTG_HS_GAHBCFG_GINTMSK;         // Disable USB interrupts
+      RCC->AHB1RSTR |=  RCC_AHB1RSTR_OTGHRST;           // Reset OTG HS module
+      port_reset     =  false;                          // Reset variables
+      memset((void *)(pipe), 0, sizeof(pipe));
+
+#ifdef MX_USB_OTG_HS_ULPI_D7_Pin                        // External ULPI High-speed PHY
+      RCC->AHB1ENR  &= ~RCC_AHB1ENR_OTGHSULPIEN;        // OTG HS ULPI clock disable
+#else                                                   // On-chip Full-speed PHY
+      OTG->GCCFG    &= ~OTG_HS_GCCFG_PWRDWN;            // Enable PHY power down
+#endif
+      OTG->PCGCCTL  |=  OTG_HS_PCGCCTL_STPPCLK;         // Stop PHY clock
+      OTG->GCCFG     =  0U;                             // Reset core configuration
+      RCC->AHB1ENR  &= ~RCC_AHB1ENR_OTGHSEN;            // Disable OTG HS clock
+      break;
+
+    case ARM_POWER_FULL:
+      if (hw_powered == true) { return ARM_DRIVER_OK; }
+
+#ifdef MX_USB_OTG_HS_ULPI_D7_Pin                        // External ULPI High-speed PHY
+      RCC->AHB1ENR  |=  RCC_AHB1ENR_OTGHSULPIEN;        // OTG HS ULPI clock enable
+#endif
+
+      RCC->AHB1ENR  |=  RCC_AHB1ENR_OTGHSEN;            // OTG HS clock enable
+      RCC->AHB1RSTR |=  RCC_AHB1RSTR_OTGHRST;           // Reset OTG HS module
+      osDelay(1U);
+      RCC->AHB1RSTR &= ~RCC_AHB1RSTR_OTGHRST;           // Clear reset of OTG HS module
+      osDelay(1U);
+
+#ifdef MX_USB_OTG_HS_ULPI_D7_Pin                        // External ULPI High-speed PHY
+      OTG->GCCFG    &= ~OTG_HS_GCCFG_PWRDWN;            // Enable power down
+      OTG->GUSBCFG  &=~(OTG_HS_GUSBCFG_TSDPS      |     // Data line pulsing using utmi_txvalid (default)
+                        OTG_HS_GUSBCFG_ULPIFSLS   |     // ULPI interface
+                        OTG_HS_GUSBCFG_PHYSEL     |     // High-speed transceiver
+                        OTG_HS_GUSBCFG_ULPIEVBUSI);     // ULPI int VBUS indicator
+      OTG->GUSBCFG  |=  OTG_HS_GUSBCFG_ULPIEVBUSD ;     // ULPI ext VBUS drive
+#else                                                   // On-chip Full-speed PHY
+      OTG->GCCFG    |=  OTG_HS_GCCFG_PWRDWN;            // Disable power down
+      OTG->GUSBCFG  |= (OTG_HS_GUSBCFG_PHSEL   |        // Full-speed transceiver
+                        OTG_HS_GUSBCFG_PHYLPCS);        // 48 MHz external clock
+#endif
+      // Wait until AHB Master state machine is in the idle condition
+      while ((OTG->GRSTCTL & OTG_HS_GRSTCTL_AHBIDL) == 0U);
+
+      OTG->GRSTCTL  |=  OTG_HS_GRSTCTL_CSRST;           // Core soft reset
+      while ((OTG->GRSTCTL & OTG_HS_GRSTCTL_CSRST) != 0U);
+      osDelay (1U);
+
+      // Wait until AHB Master state machine is in the idle condition
+      while ((OTG->GRSTCTL & OTG_HS_GRSTCTL_AHBIDL) == 0U);
+
+      if (((OTG->GUSBCFG & OTG_HS_GUSBCFG_FHMOD) == 0U) || ((OTG->GUSBCFG & OTG_HS_GUSBCFG_FDMOD) != 0U)) {
+        OTG->GUSBCFG &= ~OTG_HS_GUSBCFG_FDMOD;          // Clear force device mode
+        OTG->GUSBCFG |=  OTG_HS_GUSBCFG_FHMOD;          // Force host mode
+        osDelay (50U);
+      }
+      port_reset     =  false;                          // Reset variables
+      memset((void *)(pipe), 0, sizeof(pipe));
+
+      OTG->PCGCCTL  &= ~OTG_HS_PCGCCTL_STPPCLK;         // Start PHY clock
+#ifdef MX_USB_OTG_HS_ULPI_D7_Pin                        // External ULPI High-speed PHY
+      OTG->HCFG     &= ~OTG_HS_HCFG_FSLSS;              // Support for HS
+#else                                                   // On-chip Full-speed PHY
+      OTG->HCFG     |=  OTG_HS_HCFG_FSLSS;              // Support for FS/LS only
+#endif
+      OTG->GCCFG    &= ~OTG_HS_GCCFG_VBDEN;             // Disable VBUS sensing
+
+      // Rx FIFO setting
+      OTG->GRXFSIZ   = (RX_FIFO_SIZE/4U);
+      // Non-periodic Tx FIFO setting
+      OTG->HNPTXFSIZ = ((TX_FIFO_SIZE_NON_PERI/4U) << 16) |  (RX_FIFO_SIZE / 4U);
+      // Periodic Tx FIFO setting
+      OTG->HPTXFSIZ  = ((TX_FIFO_SIZE_PERI    /4U) << 16) | ((RX_FIFO_SIZE + TX_FIFO_SIZE_NON_PERI) / 4U);
+
+      OTG->HAINTMSK  = (1U << USBH_MAX_PIPE_NUM) - 1U;  // Enable channel interrupts
+      OTG->GINTMSK   = (OTG_HS_GINTMSK_DISCINT |        // Unmask interrupts
+                        OTG_HS_GINTMSK_HCIM    |
+                        OTG_HS_GINTMSK_PRTIM   |
+                        OTG_HS_GINTMSK_RXFLVLM |
+                        OTG_HS_GINTMSK_SOFM)   ;
+
+      OTG->GAHBCFG  |=  OTG_HS_GAHBCFG_GINTMSK;         // Enable interrupts
+      NVIC_SetPriority (OTG_HS_IRQn, 0);                // Set highest interrupt priority
+
+      hw_powered     = true;                            // Set powered flag
+      NVIC_EnableIRQ   (OTG_HS_IRQn);                   // Enable interrupt
+      break;
+
+    default:
+      return ARM_DRIVER_ERROR_UNSUPPORTED;
+  }
+
+  return ARM_DRIVER_OK;
+}
+
+/**
+  \fn          int32_t USBH_PortVbusOnOff (uint8_t port, bool vbus)
+  \brief       Root HUB Port VBUS on/off.
+  \param[in]   port  Root HUB Port Number
+  \param[in]   vbus
+                - \b false VBUS off
+                - \b true  VBUS on
+  \return      \ref execution_status
+*/
+static int32_t USBH_PortVbusOnOff (uint8_t port, bool vbus) {
+
+  if (hw_powered == false) { return ARM_DRIVER_ERROR;           }
+  if (port != 0U)          { return ARM_DRIVER_ERROR_PARAMETER; }
+
+  if (vbus != 0U) {                                     // VBUS power on
+    OTG->HPRT    |=  OTG_HS_HPRT_PPWR;                  // Port power on
+    OTG_HS_PinVbusOnOff (true);                         // VBUS pin on
+  } else {                                              // VBUS power off
+    OTG_HS_PinVbusOnOff (false);                        // VBUS pin off
+    OTG->HPRT    &= ~OTG_HS_HPRT_PPWR;                  // Port power off
+  }
+
+  return ARM_DRIVER_OK;
+}
+
+/**
+  \fn          int32_t USBH_PortReset (uint8_t port)
+  \brief       Do Root HUB Port Reset.
+  \param[in]   port  Root HUB Port Number
+  \return      \ref execution_status
+*/
+static int32_t USBH_PortReset (uint8_t port) {
+  uint32_t hprt;
+
+  if (hw_powered == false) { return ARM_DRIVER_ERROR;           }
+  if (port != 0U)          { return ARM_DRIVER_ERROR_PARAMETER; }
+
+  hprt = OTG->HPRT;
+
+  port_reset = true;
+  hprt  =  OTG->HPRT;
+  hprt &= ~OTG_HS_HPRT_PENA;                            // Disable port
+  hprt |=  OTG_HS_HPRT_PRST;                            // Port reset
+  OTG->HPRT = hprt;
+  osDelay (50U);
+  hprt &= ~OTG_HS_HPRT_PRST;                            // Clear port reset
+  OTG->HPRT = hprt;
+  osDelay (50U);
+  if (port_reset == true) {
+    port_reset = false;
+    return ARM_DRIVER_ERROR;
+  }
+
+  return ARM_DRIVER_OK;
+}
+
+/**
+  \fn          int32_t USBH_PortSuspend (uint8_t port)
+  \brief       Suspend Root HUB Port (stop generating SOFs).
+  \param[in]   port  Root HUB Port Number
+  \return      \ref execution_status
+*/
+static int32_t USBH_PortSuspend (uint8_t port) {
+
+  if (hw_powered == false) { return ARM_DRIVER_ERROR;           }
+  if (port != 0U)          { return ARM_DRIVER_ERROR_PARAMETER; }
+
+  OTG->HPRT |=  OTG_HS_HPRT_PSUSP;                      // Port suspend
+
+  return ARM_DRIVER_OK;
+}
+
+/**
+  \fn          int32_t USBH_PortResume (uint8_t port)
+  \brief       Resume Root HUB Port (start generating SOFs).
+  \param[in]   port  Root HUB Port Number
+  \return      \ref execution_status
+*/
+static int32_t USBH_PortResume (uint8_t port) {
+
+  if (hw_powered == false) { return ARM_DRIVER_ERROR;           }
+  if (port != 0U)          { return ARM_DRIVER_ERROR_PARAMETER; }
+
+  OTG->HPRT |=  OTG_HS_HPRT_PRES;                       // Port resume
+
+  return ARM_DRIVER_OK;
+}
+
+/**
+  \fn          ARM_USBH_PORT_STATE USBH_PortGetState (uint8_t port)
+  \brief       Get current Root HUB Port State.
+  \param[in]   port  Root HUB Port Number
+  \return      Port State \ref ARM_USBH_PORT_STATE
+*/
+static ARM_USBH_PORT_STATE USBH_PortGetState (uint8_t port) {
+  ARM_USBH_PORT_STATE port_state = { 0U, 0U, 0U };
+  uint32_t hprt;
+
+  if (hw_powered == false) { return port_state; }
+  if (port != 0U)          { return port_state; }
+
+  hprt = OTG->HPRT;
+
+  port_state.connected   = (hprt & OTG_HS_HPRT_PCSTS) != 0U;
+#ifdef MX_USB_OTG_HS_Overcurrent_Pin
+  port_state.overcurrent = OTG_HS_PinGetOC ();
+#elif  defined(MX_USB_OTG_HS_ULPI_D7_Pin)
+  port_state.overcurrent = (hprt & OTG_HS_HPRT_POCA) != 0U;
+#else
+  port_state.overcurrent = 0U;
+#endif
+  switch ((hprt & OTG_HS_HPRT_PSPD_MSK) >> OTG_HS_HPRT_PSPD_POS) {
+    case 0:                                             // High speed
+     port_state.speed = ARM_USB_SPEED_HIGH;
+     break;
+    case 1:                                             // Full speed
+     port_state.speed = ARM_USB_SPEED_FULL;
+     break;
+    case 2:                                             // Low speed
+     port_state.speed = ARM_USB_SPEED_LOW;
+     break;
+    default:
+     break;
+  }
+
+  return port_state;
+}
+
+/**
+  \fn          ARM_USBH_PIPE_HANDLE USBH_PipeCreate (uint8_t  dev_addr,
+                                                     uint8_t  dev_speed,
+                                                     uint8_t  hub_addr,
+                                                     uint8_t  hub_port,
+                                                     uint8_t  ep_addr,
+                                                     uint8_t  ep_type,
+                                                     uint16_t ep_max_packet_size,
+                                                     uint8_t  ep_interval)
+  \brief       Create Pipe in System.
+  \param[in]   dev_addr   Device Address
+  \param[in]   dev_speed  Device Speed
+  \param[in]   hub_addr   Hub Address
+  \param[in]   hub_port   Hub Port
+  \param[in]   ep_addr    Endpoint Address
+                - ep_addr.0..3: Address
+                - ep_addr.7:    Direction
+  \param[in]   ep_type    Endpoint Type (ARM_USB_ENDPOINT_xxx)
+  \param[in]   ep_max_packet_size Endpoint Maximum Packet Size
+  \param[in]   ep_interval        Endpoint Polling Interval
+  \return      Pipe Handle \ref ARM_USBH_PIPE_HANDLE
+*/
+static ARM_USBH_PIPE_HANDLE USBH_PipeCreate (uint8_t dev_addr, uint8_t dev_speed, uint8_t hub_addr, uint8_t hub_port, uint8_t ep_addr, uint8_t ep_type, uint16_t ep_max_packet_size, uint8_t  ep_interval) {
+  PIPE_t    *ptr_pipe;
+  OTG_HS_HC *ptr_ch;
+
+  if (hw_powered == false) { return NULL; }
+
+  ptr_ch = USBH_CH_FindFree ();                 // Find free Channel
+  if (ptr_ch == 0U) { return NULL; }            // If no free
+
+  ptr_pipe = (PIPE_t *)(&pipe[USBH_CH_GetIndexFromAddress (ptr_ch)]);
+
+  memset((void *)ptr_pipe, 0, sizeof(PIPE_t));  // Clear Pipes runtime information
+
+  // Fill in all fields of Endpoint Descriptor
+  ptr_ch->HCCHAR = (OTG_HS_HCCHARx_MPSIZ   (ep_max_packet_size)              ) |
+                   (OTG_HS_HCCHARx_EPNUM   (ep_addr)                         ) |
+                   (OTG_HS_HCCHARx_EPDIR * (((ep_addr >> 7) & 0x0001U) == 0U)) |
+                   (OTG_HS_HCCHARx_LSDEV * (dev_speed == ARM_USB_SPEED_LOW)  ) |
+                   (OTG_HS_HCCHARx_EPTYP   (ep_type)                         ) |
+                   (OTG_HS_HCCHARx_DAD     (dev_addr)                        ) ;
+
+  // Store Pipe settings
+  ptr_pipe->ep_max_packet_size = ep_max_packet_size;
+  ptr_pipe->ep_type            = ep_type;
+  switch (ep_type) {
+    case ARM_USB_ENDPOINT_CONTROL:
+    case ARM_USB_ENDPOINT_BULK:
+      break;
+    case ARM_USB_ENDPOINT_ISOCHRONOUS:
+    case ARM_USB_ENDPOINT_INTERRUPT:
+      if (dev_speed == ARM_USB_SPEED_HIGH) {
+        if ((ep_interval > 0U) && (ep_interval <= 16U)) {
+          ptr_pipe->interval_reload = (uint16_t)1U << (ep_interval - 1U);
+        }
+      } else if ((dev_speed == ARM_USB_SPEED_FULL) || (dev_speed == ARM_USB_SPEED_LOW)) {
+        if (ep_interval > 0U) {
+          ptr_pipe->interval_reload = ep_interval;
+        }
+      }
+      ptr_pipe->interval = 0U;
+      ptr_ch->HCCHAR |= OTG_HS_HCCHARx_MCNT((((ep_max_packet_size >> 11) + 1U) & 3U));
+      break;
+  }
+
+  return ((ARM_USBH_EP_HANDLE)ptr_ch);
+}
+
+/**
+  \fn          int32_t USBH_PipeModify (ARM_USBH_PIPE_HANDLE pipe_hndl,
+                                        uint8_t              dev_addr,
+                                        uint8_t              dev_speed,
+                                        uint8_t              hub_addr,
+                                        uint8_t              hub_port,
+                                        uint16_t             ep_max_packet_size)
+  \brief       Modify Pipe in System.
+  \param[in]   pipe_hndl  Pipe Handle
+  \param[in]   dev_addr   Device Address
+  \param[in]   dev_speed  Device Speed
+  \param[in]   hub_addr   Hub Address
+  \param[in]   hub_port   Hub Port
+  \param[in]   ep_max_packet_size Endpoint Maximum Packet Size
+  \return      \ref execution_status
+*/
+static int32_t USBH_PipeModify (ARM_USBH_PIPE_HANDLE pipe_hndl, uint8_t dev_addr, uint8_t dev_speed, uint8_t hub_addr, uint8_t hub_port, uint16_t ep_max_packet_size) {
+  PIPE_t    *ptr_pipe;
+  OTG_HS_HC *ptr_ch;
+  uint32_t   hcchar;
+
+  if (hw_powered == false)    { return ARM_DRIVER_ERROR;           }
+  if (pipe_hndl  == 0U)       { return ARM_DRIVER_ERROR_PARAMETER; }
+
+  ptr_ch   = (OTG_HS_HC *)(pipe_hndl);
+  ptr_pipe = (PIPE_t    *)(&pipe[USBH_CH_GetIndexFromAddress (ptr_ch)]);
+  if (ptr_pipe->active != 0U) { return ARM_DRIVER_ERROR_BUSY;      }
+
+  // Fill in all fields of Endpoint Descriptor
+  hcchar  =   ptr_ch->HCCHAR;
+  hcchar &= ~(OTG_HS_HCCHARx_MPSIZ_MSK |                // Clear maximum packet size field
+              OTG_HS_HCCHARx_LSDEV     |                // Clear device speed bit
+              OTG_HS_HCCHARx_DAD_MSK)  ;                // Clear device address field
+  hcchar |=   OTG_HS_HCCHARx_MPSIZ   (ep_max_packet_size)              |
+             (OTG_HS_HCCHARx_LSDEV * (dev_speed == ARM_USB_SPEED_LOW)) |
+             (OTG_HS_HCCHARx_DAD     (dev_addr))                       ;
+  ptr_ch->HCCHAR = hcchar;                              // Update modified fields
+
+  ptr_pipe->ep_max_packet_size = ep_max_packet_size;
+
+  return ARM_DRIVER_OK;
+}
+
+/**
+  \fn          int32_t USBH_PipeDelete (ARM_USBH_PIPE_HANDLE pipe_hndl)
+  \brief       Delete Pipe from System.
+  \param[in]   pipe_hndl  Pipe Handle
+  \return      \ref execution_status
+*/
+static int32_t USBH_PipeDelete (ARM_USBH_PIPE_HANDLE pipe_hndl) {
+  PIPE_t    *ptr_pipe;
+  OTG_HS_HC *ptr_ch;
+
+  if (hw_powered == false)    { return ARM_DRIVER_ERROR;           }
+  if (pipe_hndl  == 0U)       { return ARM_DRIVER_ERROR_PARAMETER; }
+
+  ptr_ch   = (OTG_HS_HC *)(pipe_hndl);
+  ptr_pipe = (PIPE_t    *)(&pipe[USBH_CH_GetIndexFromAddress (ptr_ch)]);
+  if (ptr_pipe->active != 0U) { return ARM_DRIVER_ERROR_BUSY;      }
+
+  ptr_ch->HCCHAR   = 0U;
+  ptr_ch->HCINT    = 0U;
+  ptr_ch->HCINTMSK = 0U;
+  ptr_ch->HCTSIZ   = 0U;
+
+  // Clear all fields of Pipe structure
+  memset((void *)ptr_pipe, 0, sizeof(PIPE_t));
+
+  return ARM_DRIVER_OK;
+}
+
+/**
+  \fn          int32_t USBH_PipeReset (ARM_USBH_PIPE_HANDLE pipe_hndl)
+  \brief       Reset Pipe.
+  \param[in]   pipe_hndl  Pipe Handle
+  \return      \ref execution_status
+*/
+static int32_t USBH_PipeReset (ARM_USBH_PIPE_HANDLE pipe_hndl) {
+  PIPE_t    *ptr_pipe;
+  OTG_HS_HC *ptr_ch;
+
+  if (hw_powered == false)    { return ARM_DRIVER_ERROR;           }
+  if (pipe_hndl  == 0U)       { return ARM_DRIVER_ERROR_PARAMETER; }
+
+  ptr_ch   = (OTG_HS_HC *)(pipe_hndl);
+  ptr_pipe = (PIPE_t    *)(&pipe[USBH_CH_GetIndexFromAddress (ptr_ch)]);
+  if (ptr_pipe->active != 0U) { return ARM_DRIVER_ERROR_BUSY;      }
+
+  ptr_ch->HCINT    = 0U;
+  ptr_ch->HCINTMSK = 0U;
+  ptr_ch->HCTSIZ   = 0U;
+
+  return ARM_DRIVER_OK;
+}
+
+/**
+  \fn          int32_t USBH_PipeTransfer (ARM_USBH_PIPE_HANDLE pipe_hndl,
+                                          uint32_t             packet,
+                                          uint8_t             *data,
+                                          uint32_t             num)
+  \brief       Transfer packets through USB Pipe.
+  \param[in]   pipe_hndl  Pipe Handle
+  \param[in]   packet     Packet information
+  \param[in]   data       Pointer to buffer with data to send or for data to receive
+  \param[in]   num        Number of data bytes to transfer
+  \return      \ref execution_status
+*/
+static int32_t USBH_PipeTransfer (ARM_USBH_PIPE_HANDLE pipe_hndl, uint32_t packet, uint8_t *data, uint32_t num) {
+  PIPE_t *ptr_pipe;
+
+  if (hw_powered == false)                   { return ARM_DRIVER_ERROR;           }
+  if (pipe_hndl  == 0U)                      { return ARM_DRIVER_ERROR_PARAMETER; }
+  if ((OTG->HPRT & OTG_HS_HPRT_PCSTS) == 0U) { return ARM_DRIVER_ERROR;           }
+
+  ptr_pipe = (PIPE_t *)(&pipe[USBH_CH_GetIndexFromAddress ((OTG_HS_HC *)(pipe_hndl))]);
+  if (ptr_pipe->active != 0U)                         { return ARM_DRIVER_ERROR_BUSY;      }
+
+  // Update current transfer information
+  ptr_pipe->packet                = packet;
+  ptr_pipe->data                  = data;
+  ptr_pipe->num                   = num;
+  ptr_pipe->num_transferred_total = 0U;
+  ptr_pipe->num_transferring      = 0U;
+  ptr_pipe->active                = 0U;
+  ptr_pipe->in_progress           = 0U;
+  ptr_pipe->event                 = 0U;
+  if ((ptr_pipe->ep_type == ARM_USB_ENDPOINT_INTERRUPT) && (ptr_pipe->interval != 0U)) {
+    // Already active interrupt endpoint (it will restart in IRQ based on interval)
+    ptr_pipe->active              = 1U;
+  } else {
+    ptr_pipe->in_progress         = 1U;
+    ptr_pipe->active              = 1U;
+    if (USBH_HW_StartTransfer (ptr_pipe, (OTG_HS_HC *)pipe_hndl) == 0U) {
+      ptr_pipe->in_progress       = 0U;
+      ptr_pipe->active            = 0U;
+      return ARM_DRIVER_ERROR;
+    }
+  }
+
+  return ARM_DRIVER_OK;
+}
+
+/**
+  \fn          uint32_t USBH_PipeTransferGetResult (ARM_USBH_PIPE_HANDLE pipe_hndl)
+  \brief       Get result of USB Pipe transfer.
+  \param[in]   pipe_hndl  Pipe Handle
+  \return      number of successfully transferred data bytes
+*/
+static uint32_t USBH_PipeTransferGetResult (ARM_USBH_PIPE_HANDLE pipe_hndl) {
+
+  if (pipe_hndl == 0U) { return 0U; }
+
+  return (pipe[USBH_CH_GetIndexFromAddress((OTG_HS_HC *)pipe_hndl)].num_transferred_total);
+}
+
+/**
+  \fn          int32_t USBH_PipeTransferAbort (ARM_USBH_PIPE_HANDLE pipe_hndl)
+  \brief       Abort current USB Pipe transfer.
+  \param[in]   pipe_hndl  Pipe Handle
+  \return      \ref execution_status
+*/
+static int32_t USBH_PipeTransferAbort (ARM_USBH_PIPE_HANDLE pipe_hndl) {
+  PIPE_t *ptr_pipe;
+
+  if (hw_powered == false) { return ARM_DRIVER_ERROR;           }
+  if (pipe_hndl  == 0U)    { return ARM_DRIVER_ERROR_PARAMETER; }
+
+  ptr_pipe = (PIPE_t *)(&pipe[USBH_CH_GetIndexFromAddress ((OTG_HS_HC *)(pipe_hndl))]);
+
+  if (ptr_pipe->active != 0U) {
+    ptr_pipe->active = 0U;
+    if (USBH_CH_Disable((OTG_HS_HC *)(pipe_hndl)) == 0U) { return ARM_DRIVER_ERROR; }
+  }
+
+  return ARM_DRIVER_OK;
+}
+
+/**
+  \fn          uint16_t USBH_GetFrameNumber (void)
+  \brief       Get current USB Frame Number.
+  \return      Frame Number
+*/
+static uint16_t USBH_GetFrameNumber (void) {
+
+  if (hw_powered == false) { return 0U; }
+
+  return ((OTG->HFNUM >> 3) & 0x7FFU);
+}
+
+/**
+  \fn          void USBH_HS_IRQ (uint32_t gintsts)
+  \brief       USB Host Interrupt Routine (IRQ).
+*/
+void USBH_HS_IRQ (uint32_t gintsts) {
+  PIPE_t            *ptr_pipe;
+  OTG_HS_HC         *ptr_ch;
+  uint8_t           *ptr_data;
+  volatile uint32_t *dfifo;
+  uint32_t           hprt, haint, hcint, pktcnt, xfrsiz, mpsiz, hcchar, hcchar_upd, transferred;
+  uint32_t           grxsts, bcnt, ch, dat, len, len_rest;
+  uint8_t            signal;
+
+  if ((gintsts & OTG_HS_GINTSTS_HPRTINT) != 0U) {       // If host port interrupt
+    hprt = OTG->HPRT;
+    OTG->HPRT = hprt & (~OTG_HS_HPRT_PENA);             // Leave PENA bit
+    if ((hprt & OTG_HS_HPRT_PCDET) != 0U) {             // Port connect detected
+#ifdef MX_USB_OTG_HS_ULPI_D7_Pin                        // External ULPI High-speed PHY
+      OTG->HFIR = 60000U;
+#else                                                   // On-chip Full-speed PHY
+      OTG->HFIR = 48000U;
+#endif
+      if (port_reset == false) {                        // If port not under reset
+        SignalPortEvent(0, ARM_USBH_EVENT_CONNECT);
+      }
+    }
+    if ((hprt & OTG_HS_HPRT_PENCHNG) != 0U) {           // If port enable changed
+      if ((hprt & OTG_HS_HPRT_PENA) != 0U) {            // If device connected
+        if (port_reset == true) {
+          port_reset = false;
+          SignalPortEvent(0, ARM_USBH_EVENT_RESET);
+        }
+      }
+    }
+  }
+  if ((gintsts & OTG_HS_GINTSTS_DISCINT) != 0U) {       // If device disconnected
+    OTG->GINTSTS = OTG_HS_GINTSTS_DISCINT;              // Clear disconnect interrupt
+    if (port_reset == false) {                          // Ignore disconnect under reset
+      ptr_ch   = (OTG_HS_HC *)(&OTG->HCCHAR0);
+      ptr_pipe = (PIPE_t    *)(pipe);
+      for (ch = 0U; ch < USBH_MAX_PIPE_NUM; ch++) {
+        if (ptr_pipe->active != 0U) {
+          ptr_pipe->active = 0U;
+          SignalPipeEvent((ARM_USBH_EP_HANDLE)ptr_ch, ARM_USBH_EVENT_BUS_ERROR);
+        }
+        ptr_ch++;
+        ptr_pipe++;
+      }
+      SignalPortEvent(0, ARM_USBH_EVENT_DISCONNECT);
+    }
+  }
+                                                        // Handle reception interrupt
+  if ((gintsts & OTG_HS_GINTSTS_RXFLVL) != 0U) {        // If RXFIFO non-empty interrupt
+    OTG->GINTMSK &= ~OTG_HS_GINTMSK_RXFLVLM;
+    grxsts = OTG->GRXSTSR;
+    if (((grxsts >> 17) & 0x0FU) == 0x02U) {            // If PKTSTS = 0x02
+      grxsts     = (OTG->GRXSTSP);
+      ch         = (grxsts     ) & 0x00FU;
+      bcnt       = (grxsts >> 4) & 0x7FFU;
+      dfifo      =  OTG_DFIFO[ch];
+      ptr_data   =  pipe[ch].data + pipe[ch].num_transferred_total;
+      len        =  bcnt / 4U;                          // Received number of 32-bit data
+      len_rest   =  bcnt & 3U;                          // Number of bytes left
+      while (len != 0U) {
+        *((__packed uint32_t *)ptr_data) = *dfifo;
+        ptr_data += 4U;
+        len--;
+      }
+      if (len_rest != 0U) {
+        dat = *((__packed uint32_t *)dfifo);
+        while (len_rest != 0U) {
+          *ptr_data++ = dat;
+          dat >>= 8;
+          len_rest--;
+        }
+      }
+      pipe[ch].num_transferring      += bcnt;
+      pipe[ch].num_transferred_total += bcnt;
+    } else {                                            // If PKTSTS != 0x02
+      grxsts      = OTG->GRXSTSP;
+    }
+    OTG->GINTMSK |= OTG_HS_GINTMSK_RXFLVLM;
+  }
+                                                        // Handle host ctrl interrupt
+  if ((gintsts & OTG_HS_GINTSTS_HCINT) != 0U) {         // If host channel interrupt
+    haint = OTG->HAINT;
+    for (ch = 0U; ch < USBH_MAX_PIPE_NUM; ch++) {
+      if (haint == 0U) { break; }
+      if ((haint & (1U << ch)) != 0U) {                 // If channels interrupt active
+        haint     &= ~(1U << ch);
+        signal     =   0U;
+        ptr_ch     =  (OTG_HS_HC *)(&OTG->HCCHAR0) + ch;
+        ptr_pipe   =  (PIPE_t    *)(&pipe[ch]);
+        hcint      =   ptr_ch->HCINT & ptr_ch->HCINTMSK;
+        hcchar     =   ptr_ch->HCCHAR;
+        hcchar_upd =   0U;
+        if ((hcint & OTG_HS_HCINTx_XFRC) != 0U) {       // If data transfer finished
+          if ((ptr_ch->HCCHAR & (1U << 15)) != 0U) {    // If endpoint IN
+            ptr_pipe->event = ARM_USBH_EVENT_TRANSFER_COMPLETE;
+          } else {                                      // If endpoint OUT
+            ptr_pipe->num_transferred_total += pipe[ch].num_transferring;
+            ptr_pipe->num_transferring       = 0U;
+            if (ptr_pipe->num_transferred_total == pipe[ch].num) {
+              ptr_pipe->event = ARM_USBH_EVENT_TRANSFER_COMPLETE;
+            }
+          }
+          goto halt_ch;
+        } else if (((hcint & OTG_HS_HCINTx_NYET ) != 0U) ||     // If NYET received
+                   ((hcint & OTG_HS_HCINTx_STALL) != 0U) ||     // If STALL received
+                   ((hcint & OTG_HS_HCINTx_NAK  ) != 0U) ||     // If NAK received
+                   ((hcint & OTG_HS_HCINTx_TXERR) != 0U) ||     // If TXERR received
+                   ((hcint & OTG_HS_HCINTx_BBERR) != 0U) ||     // If BBERR received
+                   ((hcint & OTG_HS_HCINTx_DTERR) != 0U)) {     // If DTERR received
+                                                        // Update transfer info
+          if ((ptr_ch->HCCHAR & (1U << 15)) == 0U) {    // If endpoint OUT
+            // Calculate number of successfully transferred bytes for Endpoint
+            // OUT for Endpoint IN number of transferred bytes are handled on
+            // RXFIFO non-empty interrupt
+            pktcnt = (ptr_ch->HCTSIZ >> 19) & 0x3FFU;
+            xfrsiz = (ptr_ch->HCTSIZ      ) & 0x7FFFFU;
+            mpsiz  = (ptr_ch->HCCHAR      ) & 0x7FFU;
+            if (ptr_pipe->num_transferring >= mpsiz) {
+              if (pktcnt > 0U) {
+                transferred = pipe[ch].num_transferring - ((mpsiz * (pktcnt-1)) + xfrsiz);
+              } else {
+                transferred = 0U;
+              }
+            } else {
+              transferred = pipe[ch].num_transferring - xfrsiz;
+            }
+            ptr_pipe->num_transferred_total += transferred;
+            ptr_pipe->num_transferring       = 0U;
+          }
+
+          if ((hcint & OTG_HS_HCINTx_NYET) != 0U) {     // If NYET received
+            ptr_pipe->packet |= ARM_USBH_PACKET_PING;   // Do Ping
+            goto halt_ch;
+          } else if ((hcint & OTG_HS_HCINTx_STALL)!=0U){// If STALL received
+            ptr_pipe->event = ARM_USBH_EVENT_HANDSHAKE_STALL;
+            goto halt_ch;
+          } else if ((hcint & OTG_HS_HCINTx_NAK) != 0U){// If NAK received
+            // On NAK, NAK is not returned to middle layer but transfer is
+            // restarted from driver for remaining data
+            if ((ptr_ch->HCCHAR & (1U << 15)) != 0U) {  // If endpoint IN
+              if (ptr_pipe->ep_type == ARM_USB_ENDPOINT_INTERRUPT) {
+                goto halt_ch;
+              } else {
+                if ((OTG->HPRT & OTG_HS_HPRT_PCSTS) != 0U) {
+                  hcchar_upd = hcchar | OTG_HS_HCCHARx_CHENA;
+                } else {
+                  goto halt_ch;
+                }
+              }
+            } else {                                    // If endpoint OUT
+              if (((OTG->HPRT & OTG_HS_HPRT_PSPD_MSK) >> OTG_HS_HPRT_PSPD_POS) == 0U) { // If high-speed active
+                switch (ptr_pipe->ep_type) {
+                  case ARM_USB_ENDPOINT_CONTROL:
+                  case ARM_USB_ENDPOINT_BULK:
+                    ptr_pipe->packet |= ARM_USBH_PACKET_PING;   // Do Ping
+                    break;
+                  case ARM_USB_ENDPOINT_ISOCHRONOUS:
+                  case ARM_USB_ENDPOINT_INTERRUPT:
+                    break;
+                }
+              }
+              goto halt_ch;
+            }
+          } else {
+            ptr_pipe->event = ARM_USBH_EVENT_BUS_ERROR;
+            goto halt_ch;
+          }
+        } else if ((hcint & OTG_HS_HCINTx_CHH) != 0U) { // If channel halted
+                                                        // Transfer is done here
+          ptr_ch->HCINTMSK = 0U;                        // Mask all interrupts
+          hcint = 0x7BBU;                               // Clear all interrupts
+          ptr_pipe->in_progress = 0U;
+          if (ptr_pipe->event != 0U) {
+            ptr_pipe->active = 0U;
+            signal = 1U;
+          }
+        } else if ((hcint & OTG_HS_HCINTx_ACK) != 0U) { // If ACK received
+          // On ACK, ACK is not an event that can be returned so when channel
+          // is halted it will be signalled to middle layer if transfer is
+          // completed otherwise transfer will be restarted for remaining
+          // data
+          if ((ptr_ch->HCCHAR & (1U << 15)) != 0U) {    // If endpoint IN
+            if ((ptr_pipe->num != pipe[ch].num_transferred_total) &&                    // If all data was not transferred
+                (ptr_pipe->num_transferring != 0U)                &&                    // If zero-length packet was not received
+               ((ptr_pipe->num_transferred_total%ptr_pipe->ep_max_packet_size) == 0U)){ // If short packet was not received
+              if ((OTG->HPRT & OTG_HS_HPRT_PCSTS) != 0U) {
+                hcchar_upd = hcchar | OTG_HS_HCCHARx_CHENA;
+              } else {
+                goto halt_ch;
+              }
+            }
+          } else {
+            if ((ptr_pipe->packet & ARM_USBH_PACKET_PING) != 0U) {
+              ptr_pipe->packet &= ~ARM_USBH_PACKET_PING;
+              ptr_pipe->event   =  ARM_USBH_EVENT_TRANSFER_COMPLETE;
+              goto halt_ch;
+            }
+          }
+        } else {
+halt_ch:                                                // Halt the channel
+          ptr_ch->HCINTMSK = OTG_HS_HCINTx_CHH;
+          hcchar_upd = hcchar | OTG_HS_HCCHARx_CHENA | OTG_HS_HCCHARx_CHDIS;
+        }
+        ptr_ch->HCINT = hcint;
+        if (signal     != 0U) { SignalPipeEvent((ARM_USBH_EP_HANDLE)ptr_ch, ptr_pipe->event); }
+        if (hcchar_upd != 0U) { ptr_ch->HCCHAR = hcchar_upd; }
+      }
+    }
+  }
+
+  // Handle periodic transfer timings
+  if ((gintsts & OTG_HS_GINTSTS_SOF) != 0U) {           // If start of frame interrupt
+    OTG->GINTSTS =  OTG_HS_GINTSTS_SOF;                 // Clear SOF interrupt
+    ptr_pipe     = (PIPE_t *)(pipe);
+    for (ch = 0U; ch < USBH_MAX_PIPE_NUM; ch++) {
+      // If interrupt transfer is active handle period (interval)
+      if ((ptr_pipe->ep_type == ARM_USB_ENDPOINT_INTERRUPT) && (ptr_pipe->active != 0U) && (ptr_pipe->interval != 0U)) {
+        ptr_pipe->interval--;
+      }
+      ptr_pipe++;
+    }
+  }
+
+  // Handle restarts of unfinished transfers (due to NAK or ACK)
+  ptr_pipe = (PIPE_t *)(pipe);
+  for (ch = 0U; ch < USBH_MAX_PIPE_NUM; ch++) {
+    if ((ptr_pipe->active != 0U) && (ptr_pipe->in_progress == 0U)) {
+      // Restart periodic transfer if not in progress and interval expired
+      if (ptr_pipe->ep_type == ARM_USB_ENDPOINT_INTERRUPT) {
+        if (ptr_pipe->interval == 0U) {
+          ptr_pipe->interval = ptr_pipe->interval_reload;
+        } else {
+          continue;
+        }
+      }
+
+      ptr_pipe->in_progress = 1;
+      if (USBH_HW_StartTransfer (ptr_pipe, USBH_CH_GetAddressFromIndex (ch)) == 0U) {
+        ptr_pipe->in_progress = 0U;
+        ptr_pipe->active      = 0U;
+      }
+    }
+    ptr_pipe++;
+  }
+}
+
+ARM_DRIVER_USBH Driver_USBH1 = {
+  USBH_GetVersion,
+  USBH_GetCapabilities,
+  USBH_Initialize,
+  USBH_Uninitialize,
+  USBH_PowerControl,
+  USBH_PortVbusOnOff,
+  USBH_PortReset,
+  USBH_PortSuspend,
+  USBH_PortResume,
+  USBH_PortGetState,
+  USBH_PipeCreate,
+  USBH_PipeModify,
+  USBH_PipeDelete,
+  USBH_PipeReset,
+  USBH_PipeTransfer,
+  USBH_PipeTransferGetResult,
+  USBH_PipeTransferAbort,
+  USBH_GetFrameNumber
+};
