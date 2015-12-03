@@ -18,6 +18,7 @@ ARCHIVE_URL="http://www.keil.com/pack/${ARCHIVE_NAME}"
 
 LOCAL_ARCHIVE_FILE="/tmp/xpacks/${ARCHIVE_NAME}"
 
+echo "Cleaning previous files..."
 for f in *
 do
   if [ "${f}" == "scripts" ]
@@ -34,8 +35,10 @@ then
   curl -o "${LOCAL_ARCHIVE_FILE}" -L "${ARCHIVE_URL}"
 fi
 
+echo "Unpacking '${ARCHIVE_NAME}'..."
 unzip -q "${LOCAL_ARCHIVE_FILE}"
 
+echo "Removing unnecessary files..."
 rm -rf \
 _htmresc \
 CMSIS/Flash \
@@ -60,6 +63,7 @@ package.xml
 
 find . -name '*.exe' -exec rm \{} \;
 
+echo "Creating README.md..."
 cat <<EOF >README.md
 # ${FAMILY} CMSIS
 
@@ -105,3 +109,5 @@ To save space, the following folders/files were removed:
 * package.xml
 
 EOF
+
+echo "Done."
