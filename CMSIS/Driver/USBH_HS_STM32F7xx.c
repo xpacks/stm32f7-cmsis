@@ -620,7 +620,9 @@ static int32_t USBH_PowerControl (ARM_POWER_STATE state) {
 #else                                                   // On-chip Full-speed PHY
       OTG->PCGCCTL  &= ~OTG_HS_PCGCCTL_STPPCLK;         // Start PHY clock
       OTG->GCCFG    |=  OTG_HS_GCCFG_PWRDWN;            // Disable power down
-      OTG->GUSBCFG  |= (OTG_HS_GUSBCFG_PHSEL   |        // Full-speed transceiver
+      // [Lix]
+      // corrected PHSEL to PHYSEL in the line below
+      OTG->GUSBCFG  |= (OTG_HS_GUSBCFG_PHYSEL   |       // Full-speed transceiver
                         OTG_HS_GUSBCFG_PHYLPCS);        // 48 MHz external clock
 #endif
 
@@ -833,10 +835,13 @@ static ARM_USBH_PIPE_HANDLE USBH_PipeCreate (uint8_t dev_addr, uint8_t dev_speed
   PIPE_t    *ptr_pipe;
   OTG_HS_HC *ptr_ch;
 
-  if (hw_powered == false) { return NULL; }
+  // [LNP]
+  if (hw_powered == false) { return 0; }
 
-  ptr_ch = USBH_CH_FindFree ();                 // Find free Channel
-  if (ptr_ch == 0U) { return NULL; }            // If no free
+  ptr_ch = USBH_CH_FindFree ();              // Find free Channel
+
+  // [LNP]
+  if (ptr_ch == 0U) { return 0; }            // If no free
 
   ptr_pipe = (PIPE_t *)(&pipe[USBH_CH_GetIndexFromAddress (ptr_ch)]);
 
@@ -1087,10 +1092,12 @@ void USBH_HS_IRQ (uint32_t gintsts) {
         case 0:                                         // High-speed detected
           break;
         case 1:                                         // Full-speed detected
-          OTG->HCFG = OTG_FS_HCFG_FSLSPCS(1U);
+        	//[LNP] original was: OTG_FS_HCFG_FSLSPCS
+          OTG->HCFG = OTG_HS_HCFG_FSLSPCS(1U);
           break;
         case 2:                                         // Low-speed detected
-          OTG->HCFG = OTG_FS_HCFG_FSLSPCS(2U);
+        	//[LNP] original was: OTG_FS_HCFG_FSLSPCS
+          OTG->HCFG = OTG_HS_HCFG_FSLSPCS(2U);
           break;
         default:
           break;

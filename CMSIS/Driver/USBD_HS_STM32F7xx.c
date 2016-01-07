@@ -390,7 +390,14 @@ static int32_t USBD_ReadFromFifo (uint8_t ep_addr, uint16_t num) {
   volatile ENDPOINT_t *ptr_ep;
   uint32_t             i, residue, val;
   uint8_t             *ptr_dest_8;
+
+  // [LNP]
+#if defined ( __CC_ARM )
   __packed uint32_t   *ptr_dest_32;
+#else
+  uint32_t            *ptr_dest_32;
+#endif
+
   volatile uint32_t   *ptr_src;
   uint8_t              ep_num;
   uint8_t              tmp_buf[4];
@@ -462,7 +469,13 @@ static void USBD_WriteToFifo (uint8_t ep_addr) {
   uint8_t              ep_num;
   uint16_t             num, i;
   volatile uint32_t   *ptr_dest;
+
+  // [LNP]
+#if defined ( __CC_ARM )
   __packed uint32_t   *ptr_src;
+#else
+  uint32_t            *ptr_src;
+#endif
 
   ptr_ep = &ep[EP_ID(ep_addr)];
   ep_num = EP_NUM(ep_addr);
