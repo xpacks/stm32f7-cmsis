@@ -1,5 +1,5 @@
 /* -----------------------------------------------------------------------------
- * Copyright (c) 2013-2015 ARM Ltd.
+ * Copyright (c) 2013-2016 ARM Ltd.
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from
@@ -18,8 +18,8 @@
  * 3. This notice may not be removed or altered from any source distribution.
  *
  *
- * $Date:        24. August 2015
- * $Revision:    V1.1
+ * $Date:        14. January 2016
+ * $Revision:    V1.2
  *
  * Project:      OTG High-Speed Driver Header for ST STM32F7xx
  * -------------------------------------------------------------------------- */
@@ -723,16 +723,10 @@ typedef struct
 #define OTG_HS_DFIFO15        (((uint32_t *) OTG_HS_DFIFO15_BASE))
 
 // OTG_HS Host Channel
-// [LNP]
-#if defined ( __CC_ARM )
-typedef __packed struct {               // Host Channel typedef (HC)
-#else
-typedef struct __packed {               // Host Channel typedef (HC)
-#endif
-
-  __packed union {
+typedef struct __attribute__((packed)) {// Host Channel typedef (HC)
+  union __attribute__((packed)) {
     uint32_t HCCHAR;                    // Channel Characteristics
-    __packed struct {
+    struct __attribute__((packed)) {
       uint32_t MPSIZ     : 11;          // Endpoint Maximum Packet Size
       uint32_t EPNUM     :  4;          // Endpoint Number
       uint32_t EPDIR     :  1;          // Endpoint Direction
@@ -746,16 +740,9 @@ typedef struct __packed {               // Host Channel typedef (HC)
       uint32_t CHENA     :  1;          // Channel Enable
     };
   };
-  __packed union {
+  union __attribute__((packed)) {
     uint32_t HCSPLT;                    // Split Control
-
-    // [LNP]
-    #if defined ( __CC_ARM )
-        __packed struct {
-    #else
-        struct __packed {
-    #endif
-
+    struct __attribute__((packed)) {
       uint32_t PRTADDR   :  7;          // Port Address
       uint32_t HUBADDR   :  7;          // HUB Address
       uint32_t XACTPOS   :  2;          // Transaction Position
@@ -765,16 +752,9 @@ typedef struct __packed {               // Host Channel typedef (HC)
     };
   };
 
-  __packed union {
+  union __attribute__((packed)) {
     uint32_t HCINT;                     // Channel Interrupt
-
-    // [LNP]
-    #if defined ( __CC_ARM )
-        __packed struct {
-    #else
-        struct __packed {
-    #endif
-
+    struct __attribute__((packed)) {
       uint32_t XFCR      :  1;          // Transfer Completed
       uint32_t CHH       :  1;          // Channel Halted
       uint32_t AHBERR    :  1;          // AHB Error
@@ -788,16 +768,9 @@ typedef struct __packed {               // Host Channel typedef (HC)
       uint32_t DTERR     :  1;          // Data Toggle Error
     };
   };
-  __packed union {
+  union __attribute__((packed)) {
     uint32_t HCINTMSK;                  // Channel Interrupt Mask
-
-    // [LNP]
-    #if defined ( __CC_ARM )
-        __packed struct {
-    #else
-        struct __packed {
-    #endif
-
+    struct __attribute__((packed)) {
       uint32_t XFCRM     :  1;          // Transfer Completed Mask
       uint32_t CHHM      :  1;          // Channel Halted Mask
       uint32_t AHBERRM   :  1;          // AHB Error
@@ -811,16 +784,9 @@ typedef struct __packed {               // Host Channel typedef (HC)
       uint32_t DTERRM    :  1;          // Data Toggle Error Mask
     };
   };
-  __packed union {
+  union __attribute__((packed)) {
     uint32_t HCTSIZ;                    // Channel Transfer Size
-
-    // [LNP]
-    #if defined ( __CC_ARM )
-        __packed struct {
-    #else
-        struct __packed {
-    #endif
-
+    struct __attribute__((packed)) {
       uint32_t XFRSIZ    : 19;          // Transfer Size
       uint32_t PKTCNT    : 10;          // Packet Count
       uint32_t DPID      :  2;          // Data PID

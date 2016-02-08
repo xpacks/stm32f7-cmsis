@@ -18,8 +18,8 @@
  * 3. This notice may not be removed or altered from any source distribution.
  *
  *
- * $Date:        8. October 2015
- * $Revision:    V1.0
+ * $Date:        24. December 2015
+ * $Revision:    V1.1
  *
  * Driver:       Driver_CAN1/2
  * Configured:   via RTE_Device.h configuration file
@@ -46,6 +46,8 @@
  * -------------------------------------------------------------------------- */
 
 /* History:
+ *  Version 1.1
+ *    Corrected functionality when only one CAN controller is used
  *  Version 1.0
  *    Initial release
  */
@@ -108,7 +110,9 @@ Configuration tab
 #include "CAN_STM32F7xx.h"
 
 
-// Maximum allowed clock tolerance
+// Externally overridable configuration definitions
+
+// Maximum allowed clock tolerance in 1/1024 steps
 #ifndef CAN_CLOCK_TOLERANCE
 #define CAN_CLOCK_TOLERANCE             (15U)   // 15/1024 approx. 1.5 %
 #endif
@@ -129,8 +133,6 @@ Configuration tab
 #define CAN_RX_OBJ_NUM                  (2U)          // Number of receive objects
 #define CAN_TX_OBJ_NUM                  (3U)          // Number of transmit objects
 #define CAN_TOT_OBJ_NUM                 (CAN_RX_OBJ_NUM + CAN_TX_OBJ_NUM)
-
-#define CAN_CTRL_NUM                    (2U)
 
 // Local Functions *************************************************************
 
@@ -169,14 +171,13 @@ static void Enable_GPIO_Clock (const GPIO_TypeDef *GPIOx) {
 
 // CAN Driver ******************************************************************
 
-#define ARM_CAN_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,0) // CAN driver version
+#define ARM_CAN_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,1) // CAN driver version
 
 // Driver Version
 static const ARM_DRIVER_VERSION can_driver_version = { ARM_CAN_API_VERSION, ARM_CAN_DRV_VERSION };
 
 // Driver Capabilities
-static const ARM_CAN_CAPABILITIES can_driver_capabilities[2] = {
-{                       // CAN1 driver capabilities
+static const ARM_CAN_CAPABILITIES can_driver_capabilities = {
   CAN_TOT_OBJ_NUM,      // Number of CAN Objects available
   1U,                   // Supports reentrant calls to ARM_CAN_MessageSend, ARM_CAN_MessageRead, ARM_CAN_ObjectConfigure and abort message sending used by ARM_CAN_Control.
   0U,                   // Does not support CAN with flexible data-rate mode (CAN_FD)
@@ -184,16 +185,6 @@ static const ARM_CAN_CAPABILITIES can_driver_capabilities[2] = {
   1U,                   // Supports bus monitoring mode
   1U,                   // Supports internal loopback mode
   1U,                   // Supports external loopback mode
-}, 
-{                       // CAN2 driver capabilities
-  CAN_TOT_OBJ_NUM,      // Number of CAN Objects available
-  1U,                   // Supports reentrant calls to ARM_CAN_MessageSend, ARM_CAN_MessageRead, ARM_CAN_ObjectConfigure and abort message sending used by ARM_CAN_Control.
-  0U,                   // Does not support CAN with flexible data-rate mode (CAN_FD)
-  0U,                   // Does not support restricted operation mode
-  1U,                   // Supports bus monitoring mode
-  1U,                   // Supports internal loopback mode
-  1U,                   // Supports external loopback mode
-}
 };
 
 // Object Capabilities
@@ -210,7 +201,7 @@ static const ARM_CAN_OBJ_CAPABILITIES can_object_capabilities_rx = {
 };
 static const ARM_CAN_OBJ_CAPABILITIES can_object_capabilities_tx = {
   1U,                   // Object supports transmission
-  0U,                   // Object does not supports reception
+  0U,                   // Object does not support reception
   0U,                   // Object does not support RTR reception and automatic Data transmission
   0U,                   // Object does not support RTR transmission and automatic Data reception
   0U,                   // Object does not allow assignment of multiple filters to it
@@ -232,20 +223,20 @@ typedef enum _CAN_FILTER_TYPE {
   CAN_FILTER_TYPE_MASKABLE_ID = 1U
 } CAN_FILTER_TYPE;
 
-
 #if    defined(RTE_DEVICE_FRAMEWORK_CUBE_MX)
 extern CAN_HandleTypeDef hcan1;
 extern CAN_HandleTypeDef hcan2;
 #endif
 
-// Local variables and Structures
-static uint8_t                          can_driver_powered[CAN_CTRL_NUM];
-static uint8_t                          can_driver_initialized[CAN_CTRL_NUM];
-static uint8_t                          can_obj_cfg       [CAN_CTRL_NUM][CAN_TOT_OBJ_NUM];
-static ARM_CAN_SignalUnitEvent_t        CAN1_SignalUnitEvent   = NULL;
-static ARM_CAN_SignalObjectEvent_t      CAN1_SignalObjectEvent = NULL;
-static ARM_CAN_SignalUnitEvent_t        CAN2_SignalUnitEvent   = NULL;
-static ARM_CAN_SignalObjectEvent_t      CAN2_SignalObjectEvent = NULL;
+static CAN_TypeDef * const ptr_CANx[2] = { (CAN_TypeDef *)CAN1, (CAN_TypeDef *)CAN2 };
+
+// Local variables and structures
+static uint8_t                     can_driver_powered    [CAN_CTRL_NUM];
+static uint8_t                     can_driver_initialized[CAN_CTRL_NUM];
+static uint8_t                     can_obj_cfg           [CAN_CTRL_NUM][CAN_TOT_OBJ_NUM];
+static ARM_CAN_SignalUnitEvent_t   CAN_SignalUnitEvent   [CAN_CTRL_NUM];
+static ARM_CAN_SignalObjectEvent_t CAN_SignalObjectEvent [CAN_CTRL_NUM];
+
 
 // Helper Functions
 
@@ -262,45 +253,42 @@ static ARM_CAN_SignalObjectEvent_t      CAN2_SignalObjectEvent = NULL;
   \return      execution status
 */
 static int32_t CANx_AddFilter (uint32_t obj_idx, CAN_FILTER_TYPE filter_type, uint32_t id, uint32_t mask, uint8_t x) {
-  CAN_TypeDef *ptr_CAN;
   uint32_t     fa1r, frx, fry, msk;
   uint8_t      bank, bank_end;
   int32_t      status;
 
-  if (obj_idx >= CAN_RX_OBJ_NUM) { return ARM_DRIVER_ERROR_PARAMETER; }
   if (x >= CAN_CTRL_NUM)         { return ARM_DRIVER_ERROR;           }
+  if (obj_idx >= CAN_RX_OBJ_NUM) { return ARM_DRIVER_ERROR_PARAMETER; }
   if (x == 1U)                   { bank = CAN1_FILTER_BANK_NUM; bank_end = CAN1_FILTER_BANK_NUM + CAN2_FILTER_BANK_NUM; }
   else                           { bank = 0U;                   bank_end = CAN1_FILTER_BANK_NUM;                        }
   if (bank >= bank_end)          { return ARM_DRIVER_ERROR;           }
 
-  ptr_CAN = (CAN_TypeDef *)((x) ? CAN2 : CAN1);
-
   status = ARM_DRIVER_OK;
-  ptr_CAN->FMR |= CAN_FMR_FINIT;                                                // Enter filter initialization mode
+  CAN1->FMR |= CAN_FMR_FINIT;                                           // Enter filter initialization mode
 
-  fa1r = ptr_CAN->FA1R;
+  fa1r = CAN1->FA1R;
   msk  = (uint32_t)1U << bank;
 
-  if ((id & ARM_CAN_ID_IDE_Msk) != 0U) {                                        // Extended Identifier
-    frx = (id << 3) | CAN_FRx_32BIT_IDE;                                        // id + IDE
+  if ((id & ARM_CAN_ID_IDE_Msk) != 0U) {                                // Extended Identifier
+    frx = (id << 3) | CAN_FRx_32BIT_IDE;                                // id + IDE
     switch (filter_type) {
       case CAN_FILTER_TYPE_EXACT_ID:
-        fry = (id << 3) | CAN_FRx_32BIT_IDE | CAN_FRx_32BIT_RTR;                // id + IDE + RTR
-        while (bank <= bank_end) {                                              // Find empty place for id
-          if (bank == bank_end) {                                               // If no free found exit
+        fry = (id << 3) | CAN_FRx_32BIT_IDE | CAN_FRx_32BIT_RTR;        // id + IDE + RTR
+        while (bank <= bank_end) {                                      // Find empty place for id
+          if (bank == bank_end) {                                       // If no free found exit
             status = ARM_DRIVER_ERROR;
             break;
           }
-          if ((fa1r & msk) == 0U) {                                             // If filter is not active
-            ptr_CAN->FM1R |=  msk;                                              // Select identifier list mode
-            ptr_CAN->FS1R |=  msk;                                              // Select single 32-bit scale configuration
+          if ((fa1r & msk) == 0U) {                                     // If filter is not active
+            CAN1->FM1R |=  msk;                                         // Select identifier list mode
+            CAN1->FS1R |=  msk;                                         // Select single 32-bit scale configuration
             if (obj_idx & 1U) {
-              ptr_CAN->FFA1R |=  msk;                                           // Assign to FIFO1
+              CAN1->FFA1R |=  msk;                                      // Assign to FIFO1
             } else {
-              ptr_CAN->FFA1R &= ~msk;                                           // Assign to FIFO0
+              CAN1->FFA1R &= ~msk;                                      // Assign to FIFO0
             }
-            ptr_CAN->sFilterRegister[bank].FR1 = frx;                           // id + IDE
-            ptr_CAN->sFilterRegister[bank].FR2 = fry;                           // id + IDE + RTR
+            CAN1->sFilterRegister[bank].FR1 = frx;                      // id + IDE
+            CAN1->sFilterRegister[bank].FR2 = fry;                      // id + IDE + RTR
             break;
           }
           msk <<= 1U;
@@ -308,22 +296,22 @@ static int32_t CANx_AddFilter (uint32_t obj_idx, CAN_FILTER_TYPE filter_type, ui
         }
         break;
       case CAN_FILTER_TYPE_MASKABLE_ID:
-        fry = (mask << 3) | CAN_FRx_32BIT_IDE;                                  // mask + IDE
-        while (bank <= bank_end) {                                              // Find empty place for id
-          if (bank == bank_end) {                                               // If no free found exit
+        fry = (mask << 3) | CAN_FRx_32BIT_IDE;                          // mask + IDE
+        while (bank <= bank_end) {                                      // Find empty place for id
+          if (bank == bank_end) {                                       // If no free found exit
             status = ARM_DRIVER_ERROR;
             break;
           }
-          if ((fa1r & msk) == 0U) {                                             // If filter is not active
-            ptr_CAN->FM1R &= ~msk;                                              // Select identifier mask mode
-            ptr_CAN->FS1R |=  msk;                                              // Select single 32-bit scale configuration
+          if ((fa1r & msk) == 0U) {                                     // If filter is not active
+            CAN1->FM1R &= ~msk;                                         // Select identifier mask mode
+            CAN1->FS1R |=  msk;                                         // Select single 32-bit scale configuration
             if (obj_idx & 1U) {
-              ptr_CAN->FFA1R |=  msk;                                           // Assign to FIFO1
+              CAN1->FFA1R |=  msk;                                      // Assign to FIFO1
             } else {
-              ptr_CAN->FFA1R &= ~msk;                                           // Assign to FIFO0
+              CAN1->FFA1R &= ~msk;                                      // Assign to FIFO0
             }
-            ptr_CAN->sFilterRegister[bank].FR1 = frx;                           // id + IDE
-            ptr_CAN->sFilterRegister[bank].FR2 = fry;                           // mask + IDE
+            CAN1->sFilterRegister[bank].FR1 = frx;                      // id + IDE
+            CAN1->sFilterRegister[bank].FR2 = fry;                      // mask + IDE
             break;
           }
           msk <<= 1U;
@@ -334,36 +322,36 @@ static int32_t CANx_AddFilter (uint32_t obj_idx, CAN_FILTER_TYPE filter_type, ui
         status = ARM_DRIVER_ERROR_PARAMETER;
         break;
     }
-  } else {                                                                      // Standard Identifier
+  } else {                                                              // Standard Identifier
     switch (filter_type) {
       case CAN_FILTER_TYPE_EXACT_ID:
-        frx = ((id & 0xFFFFU) <<  5) |                                          // Low 16 bits = id
-              ((id & 0xFFFFU) << 21) | CAN_FRx_16BIT_H_RTR;                     // High 16 bits = id + RTR
-        while (bank <= bank_end) {                                              // Find empty place for id
-          if (bank == bank_end) {                                               // If no free found exit
+        frx = ((id & 0xFFFFU) <<  5) |                                  // Low 16 bits = id
+              ((id & 0xFFFFU) << 21) | CAN_FRx_16BIT_H_RTR;             // High 16 bits = id + RTR
+        while (bank <= bank_end) {                                      // Find empty place for id
+          if (bank == bank_end) {                                       // If no free found exit
             status = ARM_DRIVER_ERROR;
             break;
           }
-          if ((fa1r & msk) == 0U) {                                             // If filter is not active
-            ptr_CAN->FM1R |=  msk;                                              // Select identifier list mode
-            ptr_CAN->FS1R &= ~msk;                                              // Select dual 16-bit scale configuration
+          if ((fa1r & msk) == 0U) {                                     // If filter is not active
+            CAN1->FM1R |=  msk;                                         // Select identifier list mode
+            CAN1->FS1R &= ~msk;                                         // Select dual 16-bit scale configuration
             if (obj_idx & 1U) {
-              ptr_CAN->FFA1R |=  msk;                                           // Assign to FIFO1
+              CAN1->FFA1R |=  msk;                                      // Assign to FIFO1
             } else {
-              ptr_CAN->FFA1R &= ~msk;                                           // Assign to FIFO0
+              CAN1->FFA1R &= ~msk;                                      // Assign to FIFO0
             }
-            ptr_CAN->sFilterRegister[bank].FR1 = frx;
+            CAN1->sFilterRegister[bank].FR1 = frx;
             break;
-          } else if  (((ptr_CAN->FM1R & msk) != 0U) &&                          // If identifier list mode
-                      ((ptr_CAN->FS1R & msk) == 0U) &&                          // If dual 16-bit scale configuration
-                     (((ptr_CAN->FFA1R >> bank) & 1U) == obj_idx)) {            // If bank has same FIFO assignment as requested
-            if         (ptr_CAN->sFilterRegister[bank].FR1 == 0U) {             // If n and n+1 entry are not used
-              ptr_CAN->FA1R &= ~msk;                                            // Put filter in inactive mode
-              ptr_CAN->sFilterRegister[bank].FR1 = frx;                         // id and id + RTR
+          } else if  (((CAN1->FM1R & msk) != 0U) &&                     // If identifier list mode
+                      ((CAN1->FS1R & msk) == 0U) &&                     // If dual 16-bit scale configuration
+                     (((CAN1->FFA1R >> bank) & 1U) == obj_idx)) {       // If bank has same FIFO assignment as requested
+            if         (CAN1->sFilterRegister[bank].FR1 == 0U) {        // If n and n+1 entry are not used
+              CAN1->FA1R &= ~msk;                                       // Put filter in inactive mode
+              CAN1->sFilterRegister[bank].FR1 = frx;                    // id and id + RTR
               break;
-            } else if (ptr_CAN->sFilterRegister[bank].FR2 == 0U) {              // If n+2 and n+3 entry are not used
-              ptr_CAN->FA1R &= ~msk;                                            // Put filter in inactive mode
-              ptr_CAN->sFilterRegister[bank].FR2 = frx;                         // id and id + RTR
+            } else if (CAN1->sFilterRegister[bank].FR2 == 0U) {         // If n+2 and n+3 entry are not used
+              CAN1->FA1R &= ~msk;                                       // Put filter in inactive mode
+              CAN1->sFilterRegister[bank].FR2 = frx;                    // id and id + RTR
               break;
             }
           }
@@ -372,35 +360,35 @@ static int32_t CANx_AddFilter (uint32_t obj_idx, CAN_FILTER_TYPE filter_type, ui
         }
         break;
       case CAN_FILTER_TYPE_MASKABLE_ID:
-        frx = ((id   & 0xFFFFU) <<  5) |                                        // Low 16 bits = id
-              ((mask & 0xFFFFU) << 21) ;                                        // High 16 bits = mask
-        if ((mask & ARM_CAN_ID_IDE_Msk) != 0U) {                                // If IDE masking enabled
-          frx |= CAN_FRx_16BIT_H_RTR;                                           // High 16 bits = mask + IDE
+        frx = ((id   & 0xFFFFU) <<  5) |                                // Low 16 bits = id
+              ((mask & 0xFFFFU) << 21) ;                                // High 16 bits = mask
+        if ((mask & ARM_CAN_ID_IDE_Msk) != 0U) {                        // If IDE masking enabled
+          frx |= CAN_FRx_16BIT_H_RTR;                                   // High 16 bits = mask + IDE
         }
-        while (bank <= bank_end) {                                              // Find empty place for id
-          if (bank == bank_end) {                                               // If no free found exit
+        while (bank <= bank_end) {                                      // Find empty place for id
+          if (bank == bank_end) {                                       // If no free found exit
             status = ARM_DRIVER_ERROR;
             break;
           }
-          if ((fa1r & msk) == 0U) {                                             // If filter is not active
-            ptr_CAN->FM1R &= ~msk;                                              // Select identifier mask mode
-            ptr_CAN->FS1R &= ~msk;                                              // Select dual 16-bit scale configuration
+          if ((fa1r & msk) == 0U) {                                     // If filter is not active
+            CAN1->FM1R &= ~msk;                                         // Select identifier mask mode
+            CAN1->FS1R &= ~msk;                                         // Select dual 16-bit scale configuration
             if (obj_idx & 1U) {
-              ptr_CAN->FFA1R |=  msk;                                           // Assign to FIFO1
+              CAN1->FFA1R |=  msk;                                      // Assign to FIFO1
             } else {
-              ptr_CAN->FFA1R &= ~msk;                                           // Assign to FIFO0
+              CAN1->FFA1R &= ~msk;                                      // Assign to FIFO0
             }
-            ptr_CAN->sFilterRegister[bank].FR1 = frx;
+            CAN1->sFilterRegister[bank].FR1 = frx;
             break;
-          } else if ((((ptr_CAN->FM1R | ptr_CAN->FS1R) & msk) == 0U) &&         // If identifier mask mode and dual 16-bit scale configuration
-                     (((ptr_CAN->FFA1R >> bank) & 1U) == obj_idx))  {           // If bank has same FIFO assignment as requested
-            if         (ptr_CAN->sFilterRegister[bank].FR1 == 0U) {             // If n entry is not used
-              ptr_CAN->FA1R &= ~msk;                                            // Put filter in inactive mode
-              ptr_CAN->sFilterRegister[bank].FR1 = frx;                         // id and mask
+          } else if ((((CAN1->FM1R | CAN1->FS1R) & msk) == 0U) &&       // If identifier mask mode and dual 16-bit scale configuration
+                     (((CAN1->FFA1R >> bank) & 1U) == obj_idx))  {      // If bank has same FIFO assignment as requested
+            if         (CAN1->sFilterRegister[bank].FR1 == 0U) {        // If n entry is not used
+              CAN1->FA1R &= ~msk;                                       // Put filter in inactive mode
+              CAN1->sFilterRegister[bank].FR1 = frx;                    // id and mask
               break;
-            } else if  (ptr_CAN->sFilterRegister[bank].FR2 == 0U) {             // If n+1 entry is not used
-              ptr_CAN->FA1R &= ~msk;                                            // Put filter in inactive mode
-              ptr_CAN->sFilterRegister[bank].FR2 = frx;                         // id and mask
+            } else if  (CAN1->sFilterRegister[bank].FR2 == 0U) {        // If n+1 entry is not used
+              CAN1->FA1R &= ~msk;                                       // Put filter in inactive mode
+              CAN1->sFilterRegister[bank].FR2 = frx;                    // id and mask
               break;
             }
           }
@@ -415,9 +403,9 @@ static int32_t CANx_AddFilter (uint32_t obj_idx, CAN_FILTER_TYPE filter_type, ui
   }
 
   if (status == ARM_DRIVER_OK) {
-    ptr_CAN->FA1R |= msk;                                                       // Put filter in active mode
+    CAN1->FA1R |= msk;                                                  // Put filter in active mode
   }
-  ptr_CAN->FMR  &= ~CAN_FMR_FINIT;                                              // Exit filter initialization mode
+  CAN1->FMR  &= ~CAN_FMR_FINIT;                                         // Exit filter initialization mode
 
   return status;
 }
@@ -435,43 +423,40 @@ static int32_t CANx_AddFilter (uint32_t obj_idx, CAN_FILTER_TYPE filter_type, ui
   \return      execution status
 */
 static int32_t CANx_RemoveFilter (uint32_t obj_idx, CAN_FILTER_TYPE filter_type, uint32_t id, uint32_t mask, uint8_t x) {
-  CAN_TypeDef *ptr_CAN;
   uint32_t     fa1r, frx, fry, msk;
   int32_t      status;
   uint8_t      bank, bank_end;
 
-  if (obj_idx >= CAN_RX_OBJ_NUM) { return ARM_DRIVER_ERROR_PARAMETER; }
   if (x >= CAN_CTRL_NUM)         { return ARM_DRIVER_ERROR;           }
+  if (obj_idx >= CAN_RX_OBJ_NUM) { return ARM_DRIVER_ERROR_PARAMETER; }
   if (x == 1U)                   { bank = CAN1_FILTER_BANK_NUM; bank_end = CAN1_FILTER_BANK_NUM + CAN2_FILTER_BANK_NUM; }
   else                           { bank = 0U;                   bank_end = CAN1_FILTER_BANK_NUM;                        }
   if (bank >= bank_end)          { return ARM_DRIVER_ERROR;           }
 
-  ptr_CAN = (CAN_TypeDef *)((x) ? CAN2 : CAN1);
-
   status = ARM_DRIVER_OK;
-  ptr_CAN->FMR |= CAN_FMR_FINIT;                                                // Enter filter initialization mode
+  CAN1->FMR |= CAN_FMR_FINIT;                                           // Enter filter initialization mode
 
-  fa1r = ptr_CAN->FA1R;
+  fa1r = CAN1->FA1R;
   msk  = (uint32_t)1U << bank;
 
-  if ((id & ARM_CAN_ID_IDE_Msk) != 0U) {                                        // Extended Identifier
-    frx = (id << 3) | CAN_FRx_32BIT_IDE;                                        // id + IDE
+  if ((id & ARM_CAN_ID_IDE_Msk) != 0U) {                                // Extended Identifier
+    frx = (id << 3) | CAN_FRx_32BIT_IDE;                                // id + IDE
     switch (filter_type) {
       case CAN_FILTER_TYPE_EXACT_ID:
-        fry = (id << 3) | CAN_FRx_32BIT_IDE | CAN_FRx_32BIT_RTR;                // id + IDE + RTR
-        while (bank <= bank_end) {                                              // Find empty place for id
-          if (bank == bank_end) {                                               // If no free found exit
+        fry = (id << 3) | CAN_FRx_32BIT_IDE | CAN_FRx_32BIT_RTR;        // id + IDE + RTR
+        while (bank <= bank_end) {                                      // Find empty place for id
+          if (bank == bank_end) {                                       // If no free found exit
             status = ARM_DRIVER_ERROR;
             break;
           }
-          if (((fa1r & msk) != 0U) &&                                           // If filter is active
-             (((ptr_CAN->FM1R & ptr_CAN->FS1R) & msk) != 0U) &&                 // If identifier list mode and single 32-bit scale configuration
-             (((ptr_CAN->FFA1R >> bank) & 1U) == obj_idx) &&                    // If bank has same FIFO assignment as requested
-             (ptr_CAN->sFilterRegister[bank].FR1 == frx) &&
-             (ptr_CAN->sFilterRegister[bank].FR2 == fry)) {
-            ptr_CAN->FA1R &= ~msk;                                              // Put filter in inactive mode
-            ptr_CAN->sFilterRegister[bank].FR1 = 0U;
-            ptr_CAN->sFilterRegister[bank].FR2 = 0U;
+          if (((fa1r & msk) != 0U) &&                                   // If filter is active
+             (((CAN1->FM1R & CAN1->FS1R) & msk) != 0U) &&               // If identifier list mode and single 32-bit scale configuration
+             (((CAN1->FFA1R >> bank) & 1U) == obj_idx) &&               // If bank has same FIFO assignment as requested
+             (CAN1->sFilterRegister[bank].FR1 == frx) &&
+             (CAN1->sFilterRegister[bank].FR2 == fry)) {
+            CAN1->FA1R &= ~msk;                                         // Put filter in inactive mode
+            CAN1->sFilterRegister[bank].FR1 = 0U;
+            CAN1->sFilterRegister[bank].FR2 = 0U;
             break;
           }
           msk <<= 1U;
@@ -479,21 +464,21 @@ static int32_t CANx_RemoveFilter (uint32_t obj_idx, CAN_FILTER_TYPE filter_type,
        }
         break;
       case CAN_FILTER_TYPE_MASKABLE_ID:
-        fry = (mask << 3) | CAN_FRx_32BIT_IDE;                                  // mask + IDE
-        while (bank <= bank_end) {                                              // Find empty place for id
-          if (bank == bank_end) {                                               // If no free found exit
+        fry = (mask << 3) | CAN_FRx_32BIT_IDE;                          // mask + IDE
+        while (bank <= bank_end) {                                      // Find empty place for id
+          if (bank == bank_end) {                                       // If no free found exit
             status = ARM_DRIVER_ERROR;
             break;
           }
-          if (((fa1r & msk) != 0U) &&                                           // If filter is active
-              ((ptr_CAN->FM1R & msk) == 0U) &&                                  // If identifier mask mode
-              ((ptr_CAN->FS1R & msk) != 0U) &&                                  // If single 32-bit scale configuration
-             (((ptr_CAN->FFA1R >> bank) & 1U) == obj_idx)  &&                   // If bank has same FIFO assignment as requested
-             (ptr_CAN->sFilterRegister[bank].FR1 == frx) &&
-             (ptr_CAN->sFilterRegister[bank].FR2 == fry)) {
-            ptr_CAN->FA1R &= ~msk;                                              // Put filter in inactive mode
-            ptr_CAN->sFilterRegister[bank].FR1 = 0U;
-            ptr_CAN->sFilterRegister[bank].FR2 = 0U;
+          if (((fa1r & msk) != 0U) &&                                   // If filter is active
+              ((CAN1->FM1R & msk) == 0U) &&                             // If identifier mask mode
+              ((CAN1->FS1R & msk) != 0U) &&                             // If single 32-bit scale configuration
+             (((CAN1->FFA1R >> bank) & 1U) == obj_idx)  &&              // If bank has same FIFO assignment as requested
+             (CAN1->sFilterRegister[bank].FR1 == frx) &&
+             (CAN1->sFilterRegister[bank].FR2 == fry)) {
+            CAN1->FA1R &= ~msk;                                         // Put filter in inactive mode
+            CAN1->sFilterRegister[bank].FR1 = 0U;
+            CAN1->sFilterRegister[bank].FR2 = 0U;
             break;
           }
           msk <<= 1U;
@@ -504,27 +489,27 @@ static int32_t CANx_RemoveFilter (uint32_t obj_idx, CAN_FILTER_TYPE filter_type,
         status = ARM_DRIVER_ERROR_PARAMETER;
         break;
     }
-  } else {                                                                      // Standard Identifier
+  } else {                                                              // Standard Identifier
     switch (filter_type) {
       case CAN_FILTER_TYPE_EXACT_ID:
-        frx = ((id & 0xFFFFU) <<  5) |                                          // Low 16 bits = id
-              ((id & 0xFFFFU) << 21) | CAN_FRx_16BIT_H_RTR;                     // High 16 bits = id + RTR
-        while (bank <= bank_end) {                                              // Find empty place for id
-          if (bank == bank_end) {                                               // If no free found exit
+        frx = ((id & 0xFFFFU) <<  5) |                                  // Low 16 bits = id
+              ((id & 0xFFFFU) << 21) | CAN_FRx_16BIT_H_RTR;             // High 16 bits = id + RTR
+        while (bank <= bank_end) {                                      // Find empty place for id
+          if (bank == bank_end) {                                       // If no free found exit
             status = ARM_DRIVER_ERROR;
             break;
           }
-          if (((fa1r & msk) != 0U)&&                                            // If filter is active
-              ((ptr_CAN->FM1R & msk) != 0U) &&                                  // If identifier list mode
-              ((ptr_CAN->FS1R & msk) == 0U) &&                                  // If dual 16-bit scale configuration
-             (((ptr_CAN->FFA1R >> bank) & 1U) == obj_idx)) {                    // If bank has same FIFO assignment as requested
-            if        (ptr_CAN->sFilterRegister[bank].FR1 == frx) {
-              ptr_CAN->FA1R &= ~msk;                                            // Put filter in inactive mode
-              ptr_CAN->sFilterRegister[bank].FR1 = 0U;
+          if (((fa1r & msk) != 0U)&&                                    // If filter is active
+              ((CAN1->FM1R & msk) != 0U) &&                             // If identifier list mode
+              ((CAN1->FS1R & msk) == 0U) &&                             // If dual 16-bit scale configuration
+             (((CAN1->FFA1R >> bank) & 1U) == obj_idx)) {               // If bank has same FIFO assignment as requested
+            if        (CAN1->sFilterRegister[bank].FR1 == frx) {
+              CAN1->FA1R &= ~msk;                                       // Put filter in inactive mode
+              CAN1->sFilterRegister[bank].FR1 = 0U;
               break;
-            } else if (ptr_CAN->sFilterRegister[bank].FR2 == frx) {
-              ptr_CAN->FA1R &= ~msk;                                            // Put filter in inactive mode
-              ptr_CAN->sFilterRegister[bank].FR2 = 0U;
+            } else if (CAN1->sFilterRegister[bank].FR2 == frx) {
+              CAN1->FA1R &= ~msk;                                       // Put filter in inactive mode
+              CAN1->sFilterRegister[bank].FR2 = 0U;
               break;
             }
           }
@@ -533,26 +518,26 @@ static int32_t CANx_RemoveFilter (uint32_t obj_idx, CAN_FILTER_TYPE filter_type,
         }
         break;
       case CAN_FILTER_TYPE_MASKABLE_ID:
-        frx = ((id   & 0xFFFFU) <<  5) |                                        // Low 16 bits = id
-              ((mask & 0xFFFFU) << 21) ;                                        // High 16 bits = mask
-        if ((mask & ARM_CAN_ID_IDE_Msk) != 0U) {                                // If IDE masking enabled
-          frx |= CAN_FRx_16BIT_H_IDE;                                           // High 16 bits = mask + IDE
+        frx = ((id   & 0xFFFFU) <<  5) |                                // Low 16 bits = id
+              ((mask & 0xFFFFU) << 21) ;                                // High 16 bits = mask
+        if ((mask & ARM_CAN_ID_IDE_Msk) != 0U) {                        // If IDE masking enabled
+          frx |= CAN_FRx_16BIT_H_IDE;                                   // High 16 bits = mask + IDE
         }
-        while (bank <= bank_end) {                                              // Find empty place for id
-          if (bank == bank_end) {                                               // If no free found exit
+        while (bank <= bank_end) {                                      // Find empty place for id
+          if (bank == bank_end) {                                       // If no free found exit
             status = ARM_DRIVER_ERROR;
             break;
           }
-          if (((fa1r & msk) != 0U) &&                                           // If filter is active
-             (((ptr_CAN->FM1R | ptr_CAN->FS1R) & msk) == 0U) &&                 // If identifier mask mode and dual 16-bit scale configuration
-             (((ptr_CAN->FFA1R >> bank) & 1U) == obj_idx)) {                    // If bank has same FIFO assignment as requested
-            if        (ptr_CAN->sFilterRegister[bank].FR1 == frx) {
-              ptr_CAN->FA1R &= ~msk;                                            // Put filter in inactive mode
-              ptr_CAN->sFilterRegister[bank].FR1 = 0U;
+          if (((fa1r & msk) != 0U) &&                                   // If filter is active
+             (((CAN1->FM1R | CAN1->FS1R) & msk) == 0U) &&               // If identifier mask mode and dual 16-bit scale configuration
+             (((CAN1->FFA1R >> bank) & 1U) == obj_idx)) {               // If bank has same FIFO assignment as requested
+            if        (CAN1->sFilterRegister[bank].FR1 == frx) {
+              CAN1->FA1R &= ~msk;                                       // Put filter in inactive mode
+              CAN1->sFilterRegister[bank].FR1 = 0U;
               break;
-            } else if (ptr_CAN->sFilterRegister[bank].FR2 == frx) {
-              ptr_CAN->FA1R &= ~msk;                                            // Put filter in inactive mode
-              ptr_CAN->sFilterRegister[bank].FR2 = 0U;
+            } else if (CAN1->sFilterRegister[bank].FR2 == frx) {
+              CAN1->FA1R &= ~msk;                                       // Put filter in inactive mode
+              CAN1->sFilterRegister[bank].FR2 = 0U;
               break;
             }
           }
@@ -567,11 +552,11 @@ static int32_t CANx_RemoveFilter (uint32_t obj_idx, CAN_FILTER_TYPE filter_type,
   }
 
   if ((status == ARM_DRIVER_OK)                   && 
-     ((ptr_CAN->sFilterRegister[bank].FR1 != 0U)  || 
-      (ptr_CAN->sFilterRegister[bank].FR2 != 0U))) {
-    ptr_CAN->FA1R |= msk;                                                       // Put filter in active mode
+     ((CAN1->sFilterRegister[bank].FR1 != 0U)  || 
+      (CAN1->sFilterRegister[bank].FR2 != 0U))) {
+    CAN1->FA1R |= msk;                                                  // Put filter in active mode
   }
-  ptr_CAN->FMR  &= ~CAN_FMR_FINIT;                                              // Exit filter initialization mode
+  CAN1->FMR  &= ~CAN_FMR_FINIT;                                         // Exit filter initialization mode
 
   return status;
 }
@@ -586,13 +571,11 @@ static int32_t CANx_RemoveFilter (uint32_t obj_idx, CAN_FILTER_TYPE filter_type,
 static ARM_DRIVER_VERSION CAN_GetVersion (void) { return can_driver_version; }
 
 /**
-  \fn          ARM_CAN_CAPABILITIES CAN1_GetCapabilities (void)
-  \fn          ARM_CAN_CAPABILITIES CAN2_GetCapabilities (void)
+  \fn          ARM_CAN_CAPABILITIES CAN_GetCapabilities (void)
   \brief       Get driver capabilities.
   \return      ARM_CAN_CAPABILITIES
 */
-static ARM_CAN_CAPABILITIES CAN1_GetCapabilities (void) { return can_driver_capabilities[0]; }
-static ARM_CAN_CAPABILITIES CAN2_GetCapabilities (void) { return can_driver_capabilities[0]; }
+static ARM_CAN_CAPABILITIES CAN_GetCapabilities (void) { return can_driver_capabilities; }
 
 /**
   \fn          int32_t CANx_Initialize (ARM_CAN_SignalUnitEvent_t   cb_unit_event,
@@ -611,76 +594,75 @@ static int32_t CANx_Initialize (ARM_CAN_SignalUnitEvent_t   cb_unit_event,
   GPIO_InitTypeDef GPIO_InitStruct;
 #endif
 
-  if (can_driver_initialized[x] == true) { return ARM_DRIVER_OK;    }
-  if (x >= CAN_CTRL_NUM)                 { return ARM_DRIVER_ERROR; }
+  if (x >= CAN_CTRL_NUM)               { return ARM_DRIVER_ERROR; }
+  if (can_driver_initialized[x] != 0U) { return ARM_DRIVER_OK;    }
 
-  switch (x) {
-    case 0:
-      CAN1_SignalUnitEvent      = cb_unit_event;
-      CAN1_SignalObjectEvent    = cb_object_event;
+  CAN_SignalUnitEvent  [x] = cb_unit_event;
+  CAN_SignalObjectEvent[x] = cb_object_event;
 
-#ifdef MX_CAN1
+#if (MX_CAN1 == 1U)
+  if (x == 0U) {
 #if defined (RTE_DEVICE_FRAMEWORK_CLASSIC)
 #if defined (MX_CAN1_RX_Pin)
-      Enable_GPIO_Clock          (MX_CAN1_RX_GPIOx);
-      GPIO_InitStruct.Pin       = MX_CAN1_RX_GPIO_Pin;
-      GPIO_InitStruct.Mode      = MX_CAN1_RX_GPIO_Mode;
-      GPIO_InitStruct.Pull      = MX_CAN1_RX_GPIO_PuPd;
-      GPIO_InitStruct.Speed     = MX_CAN1_RX_GPIO_Speed;
-      GPIO_InitStruct.Alternate = MX_CAN1_RX_GPIO_AF;
-      HAL_GPIO_Init              (MX_CAN1_RX_GPIOx, &GPIO_InitStruct);
+    Enable_GPIO_Clock          (MX_CAN1_RX_GPIOx);
+    GPIO_InitStruct.Pin       = MX_CAN1_RX_GPIO_Pin;
+    GPIO_InitStruct.Mode      = MX_CAN1_RX_GPIO_Mode;
+    GPIO_InitStruct.Pull      = MX_CAN1_RX_GPIO_PuPd;
+    GPIO_InitStruct.Speed     = MX_CAN1_RX_GPIO_Speed;
+    GPIO_InitStruct.Alternate = MX_CAN1_RX_GPIO_AF;
+    HAL_GPIO_Init              (MX_CAN1_RX_GPIOx, &GPIO_InitStruct);
 #endif
 #if defined (MX_CAN1_TX_Pin)
-      Enable_GPIO_Clock          (MX_CAN1_TX_GPIOx);
-      GPIO_InitStruct.Pin       = MX_CAN1_TX_GPIO_Pin;
-      GPIO_InitStruct.Mode      = MX_CAN1_TX_GPIO_Mode;
-      GPIO_InitStruct.Pull      = MX_CAN1_TX_GPIO_PuPd;
-      GPIO_InitStruct.Speed     = MX_CAN1_TX_GPIO_Speed;
-      GPIO_InitStruct.Alternate = MX_CAN1_TX_GPIO_AF;
-      HAL_GPIO_Init              (MX_CAN1_TX_GPIOx, &GPIO_InitStruct);
+    Enable_GPIO_Clock          (MX_CAN1_TX_GPIOx);
+    GPIO_InitStruct.Pin       = MX_CAN1_TX_GPIO_Pin;
+    GPIO_InitStruct.Mode      = MX_CAN1_TX_GPIO_Mode;
+    GPIO_InitStruct.Pull      = MX_CAN1_TX_GPIO_PuPd;
+    GPIO_InitStruct.Speed     = MX_CAN1_TX_GPIO_Speed;
+    GPIO_InitStruct.Alternate = MX_CAN1_TX_GPIO_AF;
+    HAL_GPIO_Init              (MX_CAN1_TX_GPIOx, &GPIO_InitStruct);
 #endif
 #else
-      hcan1.Instance = CAN1;
+    hcan1.Instance = CAN1;
 #endif
+  }
 #endif
-      break;
-    case 1:
-      CAN2_SignalUnitEvent      = cb_unit_event;
-      CAN2_SignalObjectEvent    = cb_object_event;
-
-#ifdef MX_CAN2
+#if (MX_CAN2 == 1U)
+  if (x == 1U) {
 #if defined (RTE_DEVICE_FRAMEWORK_CLASSIC)
 #if defined (MX_CAN2_RX_Pin)
-      Enable_GPIO_Clock          (MX_CAN2_RX_GPIOx);
-      GPIO_InitStruct.Pin       = MX_CAN2_RX_GPIO_Pin;
-      GPIO_InitStruct.Mode      = MX_CAN2_RX_GPIO_Mode;
-      GPIO_InitStruct.Pull      = MX_CAN2_RX_GPIO_PuPd;
-      GPIO_InitStruct.Speed     = MX_CAN2_RX_GPIO_Speed;
-      GPIO_InitStruct.Alternate = MX_CAN2_RX_GPIO_AF;
-      HAL_GPIO_Init              (MX_CAN2_RX_GPIOx, &GPIO_InitStruct);
+    Enable_GPIO_Clock          (MX_CAN2_RX_GPIOx);
+    GPIO_InitStruct.Pin       = MX_CAN2_RX_GPIO_Pin;
+    GPIO_InitStruct.Mode      = MX_CAN2_RX_GPIO_Mode;
+    GPIO_InitStruct.Pull      = MX_CAN2_RX_GPIO_PuPd;
+    GPIO_InitStruct.Speed     = MX_CAN2_RX_GPIO_Speed;
+    GPIO_InitStruct.Alternate = MX_CAN2_RX_GPIO_AF;
+    HAL_GPIO_Init              (MX_CAN2_RX_GPIOx, &GPIO_InitStruct);
 #endif
 #if defined (MX_CAN2_TX_Pin)
-      Enable_GPIO_Clock          (MX_CAN2_TX_GPIOx);
-      GPIO_InitStruct.Pin       = MX_CAN2_TX_GPIO_Pin;
-      GPIO_InitStruct.Mode      = MX_CAN2_TX_GPIO_Mode;
-      GPIO_InitStruct.Pull      = MX_CAN2_TX_GPIO_PuPd;
-      GPIO_InitStruct.Speed     = MX_CAN2_TX_GPIO_Speed;
-      GPIO_InitStruct.Alternate = MX_CAN2_TX_GPIO_AF;
-      HAL_GPIO_Init              (MX_CAN2_TX_GPIOx, &GPIO_InitStruct);
+    Enable_GPIO_Clock          (MX_CAN2_TX_GPIOx);
+    GPIO_InitStruct.Pin       = MX_CAN2_TX_GPIO_Pin;
+    GPIO_InitStruct.Mode      = MX_CAN2_TX_GPIO_Mode;
+    GPIO_InitStruct.Pull      = MX_CAN2_TX_GPIO_PuPd;
+    GPIO_InitStruct.Speed     = MX_CAN2_TX_GPIO_Speed;
+    GPIO_InitStruct.Alternate = MX_CAN2_TX_GPIO_AF;
+    HAL_GPIO_Init              (MX_CAN2_TX_GPIOx, &GPIO_InitStruct);
 #endif
 #else
-      hcan2.Instance = CAN2;
+    hcan2.Instance = CAN2;
 #endif
-#endif
-      break;
   }
+#endif
 
-  can_driver_initialized[x] = true;
+  can_driver_initialized[x] = 1U;
 
   return ARM_DRIVER_OK;
 }
+#if (MX_CAN1 == 1U)
 static int32_t CAN1_Initialize (ARM_CAN_SignalUnitEvent_t cb_unit_event, ARM_CAN_SignalObjectEvent_t cb_object_event) { return CANx_Initialize (cb_unit_event, cb_object_event, 0U); }
+#endif
+#if (MX_CAN2 == 1U)
 static int32_t CAN2_Initialize (ARM_CAN_SignalUnitEvent_t cb_unit_event, ARM_CAN_SignalObjectEvent_t cb_object_event) { return CANx_Initialize (cb_unit_event, cb_object_event, 1U); }
+#endif
 
 /**
   \fn          int32_t CANx_Uninitialize (uint8_t x)
@@ -695,65 +677,65 @@ static int32_t CANx_Uninitialize (uint8_t x) {
 
   if (x >= CAN_CTRL_NUM) { return ARM_DRIVER_ERROR; }
 
-  switch (x) {
-#ifdef MX_CAN1
-    case 0:
+#if (MX_CAN1 == 1U)
+  if (x == 0U) {
 #if defined (RTE_DEVICE_FRAMEWORK_CLASSIC)
 #if defined (MX_CAN1_RX_Pin)
-      GPIO_InitStruct.Pin       = MX_CAN1_RX_GPIO_Pin;
-      GPIO_InitStruct.Mode      = GPIO_MODE_INPUT;
-      GPIO_InitStruct.Pull      = GPIO_NOPULL;
-      GPIO_InitStruct.Speed     = GPIO_SPEED_LOW;
-      GPIO_InitStruct.Alternate = 0U;
-      HAL_GPIO_Init              (MX_CAN1_RX_GPIOx, &GPIO_InitStruct);
+    GPIO_InitStruct.Pin       = MX_CAN1_RX_GPIO_Pin;
+    GPIO_InitStruct.Mode      = GPIO_MODE_INPUT;
+    GPIO_InitStruct.Pull      = GPIO_NOPULL;
+    GPIO_InitStruct.Speed     = GPIO_SPEED_LOW;
+    GPIO_InitStruct.Alternate = 0U;
+    HAL_GPIO_Init              (MX_CAN1_RX_GPIOx, &GPIO_InitStruct);
 #endif
 #if defined (MX_CAN1_TX_Pin)
-      GPIO_InitStruct.Pin       = MX_CAN1_TX_GPIO_Pin;
-      GPIO_InitStruct.Mode      = GPIO_MODE_INPUT;
-      GPIO_InitStruct.Pull      = GPIO_NOPULL;
-      GPIO_InitStruct.Speed     = GPIO_SPEED_LOW;
-      GPIO_InitStruct.Alternate = 0U;
-      HAL_GPIO_Init              (MX_CAN1_TX_GPIOx, &GPIO_InitStruct);
+    GPIO_InitStruct.Pin       = MX_CAN1_TX_GPIO_Pin;
+    GPIO_InitStruct.Mode      = GPIO_MODE_INPUT;
+    GPIO_InitStruct.Pull      = GPIO_NOPULL;
+    GPIO_InitStruct.Speed     = GPIO_SPEED_LOW;
+    GPIO_InitStruct.Alternate = 0U;
+    HAL_GPIO_Init              (MX_CAN1_TX_GPIOx, &GPIO_InitStruct);
 #endif
 #else
-      hcan1.Instance            = NULL;
+    hcan1.Instance            = NULL;
 #endif
-      break;
+  }
 #endif
-#ifdef MX_CAN2
-    case 1:
+#if (MX_CAN2 == 1U)
+  if (x == 1U) {
 #if defined (RTE_DEVICE_FRAMEWORK_CLASSIC)
 #if defined (MX_CAN2_RX_Pin)
-      GPIO_InitStruct.Pin       = MX_CAN2_RX_GPIO_Pin;
-      GPIO_InitStruct.Mode      = GPIO_MODE_INPUT;
-      GPIO_InitStruct.Pull      = GPIO_NOPULL;
-      GPIO_InitStruct.Speed     = GPIO_SPEED_LOW;
-      GPIO_InitStruct.Alternate = 0U;
-      HAL_GPIO_Init              (MX_CAN2_RX_GPIOx, &GPIO_InitStruct);
+    GPIO_InitStruct.Pin       = MX_CAN2_RX_GPIO_Pin;
+    GPIO_InitStruct.Mode      = GPIO_MODE_INPUT;
+    GPIO_InitStruct.Pull      = GPIO_NOPULL;
+    GPIO_InitStruct.Speed     = GPIO_SPEED_LOW;
+    GPIO_InitStruct.Alternate = 0U;
+    HAL_GPIO_Init              (MX_CAN2_RX_GPIOx, &GPIO_InitStruct);
 #endif
 #if defined (MX_CAN2_TX_Pin)
-      GPIO_InitStruct.Pin       = MX_CAN2_TX_GPIO_Pin;
-      GPIO_InitStruct.Mode      = GPIO_MODE_INPUT;
-      GPIO_InitStruct.Pull      = GPIO_NOPULL;
-      GPIO_InitStruct.Speed     = GPIO_SPEED_LOW;
-      GPIO_InitStruct.Alternate = 0U;
-      HAL_GPIO_Init              (MX_CAN2_TX_GPIOx, &GPIO_InitStruct);
+    GPIO_InitStruct.Pin       = MX_CAN2_TX_GPIO_Pin;
+    GPIO_InitStruct.Mode      = GPIO_MODE_INPUT;
+    GPIO_InitStruct.Pull      = GPIO_NOPULL;
+    GPIO_InitStruct.Speed     = GPIO_SPEED_LOW;
+    GPIO_InitStruct.Alternate = 0U;
+    HAL_GPIO_Init              (MX_CAN2_TX_GPIOx, &GPIO_InitStruct);
 #endif
 #else
-      hcan2.Instance            = NULL;
+    hcan2.Instance            = NULL;
 #endif
-      break;
-#endif
-    default:
-      break;
   }
+#endif
 
-  can_driver_initialized[x] = false;
+  can_driver_initialized[x] = 0U;
 
   return ARM_DRIVER_OK;
 }
-static int32_t CAN1_Uninitialize (void) { return CANx_Uninitialize (0); }
-static int32_t CAN2_Uninitialize (void) { return CANx_Uninitialize (1); }
+#if (MX_CAN1 == 1U)
+static int32_t CAN1_Uninitialize (void) { return CANx_Uninitialize (0U); }
+#endif
+#if (MX_CAN2 == 1U)
+static int32_t CAN2_Uninitialize (void) { return CANx_Uninitialize (1U); }
+#endif
 
 /**
   \fn          int32_t CANx_PowerControl (ARM_POWER_STATE state, uint8_t x)
@@ -770,55 +752,48 @@ static int32_t CANx_PowerControl (ARM_POWER_STATE state, uint8_t x) {
   uint32_t     msk;
   uint8_t      bank, bank_end;
 
-  if (x >= CAN_CTRL_NUM) { return ARM_DRIVER_ERROR;           }
+  if (x >= CAN_CTRL_NUM) { return ARM_DRIVER_ERROR; }
   if (x == 1U)           { bank = CAN1_FILTER_BANK_NUM; bank_end = CAN1_FILTER_BANK_NUM + CAN2_FILTER_BANK_NUM; }
   else                   { bank = 0U;                   bank_end = CAN1_FILTER_BANK_NUM;                        }
-  if (bank >= bank_end)  { return ARM_DRIVER_ERROR;           }
+  if (bank >= bank_end)  { return ARM_DRIVER_ERROR; }
 
-  ptr_CAN = (CAN_TypeDef *)((x) ? CAN2 : CAN1);
+  ptr_CAN = ptr_CANx[x];
 
   switch (state) {
     case ARM_POWER_OFF:
       can_driver_powered[x] = 0U;
 #if defined(RTE_DEVICE_FRAMEWORK_CLASSIC)
-      switch (x) {
-#ifdef MX_CAN1
-        case 0:
-          NVIC_DisableIRQ (CAN1_TX_IRQn);
-          NVIC_DisableIRQ (CAN1_RX0_IRQn);
-          NVIC_DisableIRQ (CAN1_RX1_IRQn);
-          NVIC_DisableIRQ (CAN1_SCE_IRQn);
-          break;
-#endif
-#ifdef MX_CAN2
-        case 1:
-          NVIC_DisableIRQ (CAN2_TX_IRQn);
-          NVIC_DisableIRQ (CAN2_RX0_IRQn);
-          NVIC_DisableIRQ (CAN2_RX1_IRQn);
-          NVIC_DisableIRQ (CAN2_SCE_IRQn);
-          break;
-#endif
-        default:
-          break;
+#if (MX_CAN1 == 1U)
+      if (x == 0U) {
+        NVIC_DisableIRQ (CAN1_TX_IRQn);
+        NVIC_DisableIRQ (CAN1_RX0_IRQn);
+        NVIC_DisableIRQ (CAN1_RX1_IRQn);
+        NVIC_DisableIRQ (CAN1_SCE_IRQn);
       }
+#endif
+#if (MX_CAN2 == 1U)
+      if (x == 1U) {
+        NVIC_DisableIRQ (CAN2_TX_IRQn);
+        NVIC_DisableIRQ (CAN2_RX0_IRQn);
+        NVIC_DisableIRQ (CAN2_RX1_IRQn);
+        NVIC_DisableIRQ (CAN2_SCE_IRQn);
+      }
+#endif
 #endif
 
-      switch (x) {
-#ifdef MX_CAN1
-        case 0:
-          // Enable clock for CAN1 peripheral
-          RCC->APB1ENR  |=  RCC_APB1ENR_CAN1EN;
-          break;
-#endif
-#ifdef MX_CAN2
-        case 1:
-          // Enable clock for CAN2 peripheral
-          RCC->APB1ENR  |=  RCC_APB1ENR_CAN2EN;
-          break;
-#endif
-        default:
-          break;
+#if (MX_CAN1 == 1U)
+      if (x == 0U) {
+        // Enable clock for CAN1 peripheral
+        RCC->APB1ENR  |=  RCC_APB1ENR_CAN1EN;
       }
+#endif
+#if (MX_CAN2 == 1U)
+      if (x == 1U) {
+        // Enable clock for CAN1 and CAN2 peripheral
+        RCC->APB1ENR  |=  RCC_APB1ENR_CAN1EN;
+        RCC->APB1ENR  |=  RCC_APB1ENR_CAN2EN;
+      }
+#endif
 
       ptr_CAN->IER = 0U;                        // Disable Interrupts
 
@@ -827,82 +802,85 @@ static int32_t CANx_PowerControl (ARM_POWER_STATE state, uint8_t x) {
 
       memset(&can_obj_cfg[x][0], 0, CAN_TOT_OBJ_NUM);
 
-      switch (x) {
-        case 0:
-#ifdef MX_CAN1
+#if (MX_CAN1 == 1U)
+      if (x == 0U) {
 #if defined(RTE_DEVICE_FRAMEWORK_CLASSIC)
-          RCC->APB1RSTR |=  RCC_APB1RSTR_CAN1RST;
-          __NOP(); __NOP(); __NOP(); __NOP(); 
-          RCC->APB1ENR  &= ~RCC_APB1ENR_CAN1EN;
+        RCC->APB1RSTR |=  RCC_APB1RSTR_CAN1RST;
+        __NOP(); __NOP(); __NOP(); __NOP(); 
+        RCC->APB1ENR  &= ~RCC_APB1ENR_CAN1EN;
 #else
-          if (hcan1.Instance != NULL) { HAL_CAN_DeInit (&hcan1); }
+        if (hcan1.Instance != NULL) { HAL_CAN_DeInit (&hcan1); }
 #endif
-          break;
-#endif
-#ifdef MX_CAN2
-        case 1:
-#if defined(RTE_DEVICE_FRAMEWORK_CLASSIC)
-          RCC->APB1RSTR |=  RCC_APB1RSTR_CAN2RST;
-          __NOP(); __NOP(); __NOP(); __NOP(); 
-          RCC->APB1ENR  &= ~RCC_APB1ENR_CAN2EN;
-#else
-          if (hcan2.Instance != NULL) { HAL_CAN_DeInit (&hcan2); }
-#endif
-          break;
-#endif
-        default:
-          break;
       }
+#endif
+#if (MX_CAN2 == 1U)
+      if (x == 1U) {
+#if defined(RTE_DEVICE_FRAMEWORK_CLASSIC)
+        RCC->APB1RSTR |=  RCC_APB1RSTR_CAN2RST;
+        __NOP(); __NOP(); __NOP(); __NOP(); 
+        RCC->APB1ENR  &= ~RCC_APB1ENR_CAN2EN;
+#else
+        if (hcan2.Instance != NULL) { HAL_CAN_DeInit (&hcan2); }
+#endif
+#if (MX_CAN1 == 0U)
+        RCC->APB1RSTR |=  RCC_APB1RSTR_CAN1RST;
+        __NOP(); __NOP(); __NOP(); __NOP(); 
+        RCC->APB1ENR  &= ~RCC_APB1ENR_CAN1EN;
+#endif
+      }
+#endif
       break;
 
     case ARM_POWER_FULL:
       if (can_driver_initialized[x] == 0U) { return ARM_DRIVER_ERROR; }
-      if (can_driver_powered[x]     != 0U) { return ARM_DRIVER_OK; }
-      can_driver_powered[x] = 1U;
+      if (can_driver_powered[x]     != 0U) { return ARM_DRIVER_OK;    }
 
-      switch (x) {
-#ifdef MX_CAN1
-        case 0:
+#if (MX_CAN1 == 1U)
+      if (x == 0U) {
 #if defined(RTE_DEVICE_FRAMEWORK_CLASSIC)
+        RCC->APB1ENR  |=  RCC_APB1ENR_CAN1EN;
+        RCC->APB1RSTR |=  RCC_APB1RSTR_CAN1RST;
+        __NOP(); __NOP(); __NOP(); __NOP(); 
+        RCC->APB1RSTR &= ~RCC_APB1RSTR_CAN1RST;
+#else
+        HAL_CAN_MspInit(&hcan1);
+#endif
+      }
+#endif
+#if (MX_CAN2 == 1U)
+      if (x == 1U) {
+#if defined(RTE_DEVICE_FRAMEWORK_CLASSIC)
+        RCC->APB1ENR  |=  RCC_APB1ENR_CAN2EN;
+        RCC->APB1RSTR |=  RCC_APB1RSTR_CAN2RST;
+        __NOP(); __NOP(); __NOP(); __NOP(); 
+        RCC->APB1RSTR &= ~RCC_APB1RSTR_CAN2RST;
+#else
+        HAL_CAN_MspInit(&hcan2);
+#endif
+        if ((RCC->APB1ENR & RCC_APB1ENR_CAN1EN) == 0U) {
+          // If CAN1 (master) clock is not enabled, enable it as it is necessary for filter operation
           RCC->APB1ENR  |=  RCC_APB1ENR_CAN1EN;
           RCC->APB1RSTR |=  RCC_APB1RSTR_CAN1RST;
           __NOP(); __NOP(); __NOP(); __NOP(); 
           RCC->APB1RSTR &= ~RCC_APB1RSTR_CAN1RST;
-#else
-          HAL_CAN_MspInit(&hcan1);
-#endif
-          break;
-#endif
-#ifdef MX_CAN2
-        case 1:
-#if defined(RTE_DEVICE_FRAMEWORK_CLASSIC)
-          RCC->APB1ENR  |=  RCC_APB1ENR_CAN2EN;
-          RCC->APB1RSTR |=  RCC_APB1RSTR_CAN2RST;
-          __NOP(); __NOP(); __NOP(); __NOP(); 
-          RCC->APB1RSTR &= ~RCC_APB1RSTR_CAN2RST;
-#else
-          HAL_CAN_MspInit(&hcan2);
-#endif
-          break;
-#endif
-        default:
-          break;
+        }
       }
+#endif
 
       ptr_CAN->MCR = CAN_MCR_RESET;             // Reset CAN controller
       while ((ptr_CAN->MCR & CAN_MCR_RESET) != 0U);
 
       // Initialize filter banks
-      ptr_CAN->FMR   =  CAN_FMR_FINIT | ((CAN1_FILTER_BANK_NUM << 8) & CAN_FMR_CAN2SB);
+      CAN1->FMR   =  CAN_FMR_FINIT | ((CAN1_FILTER_BANK_NUM << 8) & CAN_FMR_CAN2SB);
       msk            = ((uint32_t)1U << bank_end) - 1U;
-      ptr_CAN->FMR  |=  CAN_FMR_FINIT;          // Enter filter initialization mode
-      ptr_CAN->FA1R &= ~msk;                    // Put all filters in inactive mode
-      ptr_CAN->FM1R &= ~msk;                    // Initialize all filters mode
-      ptr_CAN->FS1R &= ~msk;                    // Initialize all filters scale configuration
+      CAN1->FMR  |=  CAN_FMR_FINIT;             // Enter filter initialization mode
+      CAN1->FA1R &= ~msk;                       // Put all filters in inactive mode
+      CAN1->FM1R &= ~msk;                       // Initialize all filters mode
+      CAN1->FS1R &= ~msk;                       // Initialize all filters scale configuration
       while (bank <= bank_end) {                // Go through all banks
         if (bank == bank_end) { break; }
-        ptr_CAN->sFilterRegister[bank].FR1 = 0U;
-        ptr_CAN->sFilterRegister[bank].FR2 = 0U;
+        CAN1->sFilterRegister[bank].FR1 = 0U;
+        CAN1->sFilterRegister[bank].FR2 = 0U;
         bank++;
       }
 
@@ -918,35 +896,33 @@ static int32_t CANx_PowerControl (ARM_POWER_STATE state, uint8_t x) {
                        CAN_IER_BOFIE  |
                        CAN_IER_ERRIE  ;
 
+      can_driver_powered[x] = 1U;
+
 #if defined(RTE_DEVICE_FRAMEWORK_CLASSIC)
-      switch (x) {
-#ifdef MX_CAN1
-        case 0:
-          NVIC_ClearPendingIRQ (CAN1_TX_IRQn);
-          NVIC_EnableIRQ       (CAN1_TX_IRQn);
-          NVIC_ClearPendingIRQ (CAN1_RX0_IRQn);
-          NVIC_EnableIRQ       (CAN1_RX0_IRQn);
-          NVIC_ClearPendingIRQ (CAN1_RX1_IRQn);
-          NVIC_EnableIRQ       (CAN1_RX1_IRQn);
-          NVIC_ClearPendingIRQ (CAN1_SCE_IRQn);
-          NVIC_EnableIRQ       (CAN1_SCE_IRQn);
-          break;
-#endif
-#ifdef MX_CAN2
-        case 1:
-          NVIC_ClearPendingIRQ (CAN2_TX_IRQn);
-          NVIC_EnableIRQ       (CAN2_TX_IRQn);
-          NVIC_ClearPendingIRQ (CAN2_RX0_IRQn);
-          NVIC_EnableIRQ       (CAN2_RX0_IRQn);
-          NVIC_ClearPendingIRQ (CAN2_RX1_IRQn);
-          NVIC_EnableIRQ       (CAN2_RX1_IRQn);
-          NVIC_ClearPendingIRQ (CAN2_SCE_IRQn);
-          NVIC_EnableIRQ       (CAN2_SCE_IRQn);
-          break;
-#endif
-        default:
-          break;
+#if (MX_CAN1 == 1U)
+      if (x == 0U) {
+        NVIC_ClearPendingIRQ (CAN1_TX_IRQn);
+        NVIC_EnableIRQ       (CAN1_TX_IRQn);
+        NVIC_ClearPendingIRQ (CAN1_RX0_IRQn);
+        NVIC_EnableIRQ       (CAN1_RX0_IRQn);
+        NVIC_ClearPendingIRQ (CAN1_RX1_IRQn);
+        NVIC_EnableIRQ       (CAN1_RX1_IRQn);
+        NVIC_ClearPendingIRQ (CAN1_SCE_IRQn);
+        NVIC_EnableIRQ       (CAN1_SCE_IRQn);
       }
+#endif
+#if (MX_CAN2 == 1U)
+      if (x == 1U) {
+        NVIC_ClearPendingIRQ (CAN2_TX_IRQn);
+        NVIC_EnableIRQ       (CAN2_TX_IRQn);
+        NVIC_ClearPendingIRQ (CAN2_RX0_IRQn);
+        NVIC_EnableIRQ       (CAN2_RX0_IRQn);
+        NVIC_ClearPendingIRQ (CAN2_RX1_IRQn);
+        NVIC_EnableIRQ       (CAN2_RX1_IRQn);
+        NVIC_ClearPendingIRQ (CAN2_SCE_IRQn);
+        NVIC_EnableIRQ       (CAN2_SCE_IRQn);
+      }
+#endif
 #endif
       break;
 
@@ -956,8 +932,12 @@ static int32_t CANx_PowerControl (ARM_POWER_STATE state, uint8_t x) {
 
   return ARM_DRIVER_OK;
 }
+#if (MX_CAN1 == 1U)
 static int32_t CAN1_PowerControl (ARM_POWER_STATE state) { return CANx_PowerControl (state, 0U); }
+#endif
+#if (MX_CAN2 == 1U)
 static int32_t CAN2_PowerControl (ARM_POWER_STATE state) { return CANx_PowerControl (state, 1U); }
+#endif
 
 /**
   \fn          uint32_t CAN_GetClock (void)
@@ -984,8 +964,8 @@ static int32_t CANx_SetBitrate (ARM_CAN_BITRATE_SELECT select, uint32_t bitrate,
   CAN_TypeDef *ptr_CAN;
   uint32_t     mcr, sjw, prop_seg, phase_seg1, phase_seg2, pclk, brp, tq_num;
 
-  if (select != ARM_CAN_BITRATE_NOMINAL) { return ARM_CAN_INVALID_BITRATE_SELECT; }
   if (x >= CAN_CTRL_NUM)                 { return ARM_DRIVER_ERROR;               }
+  if (select != ARM_CAN_BITRATE_NOMINAL) { return ARM_CAN_INVALID_BITRATE_SELECT; }
   if (can_driver_powered[x] == 0U)       { return ARM_DRIVER_ERROR;               }
 
   prop_seg   = (bit_segments & ARM_CAN_BIT_PROP_SEG_Msk  ) >> ARM_CAN_BIT_PROP_SEG_Pos;
@@ -997,12 +977,11 @@ static int32_t CANx_SetBitrate (ARM_CAN_BITRATE_SELECT select, uint32_t bitrate,
   if (( phase_seg2             < 1U) || ( phase_seg2             >  8U)) { return ARM_CAN_INVALID_BIT_PHASE_SEG2; }
   if (( sjw                    < 1U) || ( sjw                    >  4U)) { return ARM_CAN_INVALID_BIT_SJW;        }
 
-  ptr_CAN = (CAN_TypeDef *)((x) ? CAN2 : CAN1);
+  ptr_CAN = ptr_CANx[x];
 
   tq_num = 1U + prop_seg + phase_seg1 + phase_seg2;
-  pclk   = HAL_RCC_GetPCLK1Freq();
-  brp    = pclk / (tq_num * bitrate);
-  if (brp > 1024U) { return ARM_CAN_INVALID_BITRATE; }
+  pclk   = CAN_GetClock ();           if (pclk == 0U)  { return ARM_DRIVER_ERROR;        }
+  brp    = pclk / (tq_num * bitrate); if (brp > 1024U) { return ARM_CAN_INVALID_BITRATE; }
   if (pclk > (brp * tq_num * bitrate)) {
     if (((pclk - (brp * tq_num * bitrate)) * 1024U) > CAN_CLOCK_TOLERANCE) { return ARM_CAN_INVALID_BITRATE; }
   } else if (pclk < (brp * tq_num * bitrate)) {
@@ -1018,8 +997,12 @@ static int32_t CANx_SetBitrate (ARM_CAN_BITRATE_SELECT select, uint32_t bitrate,
 
   return ARM_DRIVER_OK;
 }
+#if (MX_CAN1 == 1U)
 static int32_t CAN1_SetBitrate (ARM_CAN_BITRATE_SELECT select, uint32_t bitrate, uint32_t bit_segments) { return CANx_SetBitrate (select, bitrate, bit_segments, 0U); }
+#endif
+#if (MX_CAN2 == 1U)
 static int32_t CAN2_SetBitrate (ARM_CAN_BITRATE_SELECT select, uint32_t bitrate, uint32_t bit_segments) { return CANx_SetBitrate (select, bitrate, bit_segments, 1U); }
+#endif
 
 /**
   \fn          int32_t CANx_SetMode (ARM_CAN_MODE mode, uint8_t x)
@@ -1039,24 +1022,22 @@ static int32_t CANx_SetMode (ARM_CAN_MODE mode, uint8_t x) {
 
   if (x >= CAN_CTRL_NUM) { return ARM_DRIVER_ERROR; }
 
-  ptr_CAN = (CAN_TypeDef *)((x) ? CAN2 : CAN1);
+  ptr_CAN = ptr_CANx[x];
 
   switch (mode) {
     case ARM_CAN_MODE_INITIALIZATION:
-      ptr_CAN->FMR |=  CAN_FMR_FINIT;           // Filter initialization mode
+      CAN1->FMR    |=  CAN_FMR_FINIT;           // Filter initialization mode
       ptr_CAN->MCR  =  CAN_MCR_INRQ;            // Enter initialization mode
       while ((ptr_CAN->MSR&CAN_MSR_INAK)==0U);  // Wait to enter initialization mode
-      if (x == 0U) { CAN1_SignalUnitEvent(ARM_CAN_EVENT_UNIT_BUS_OFF); }
-      else         { CAN2_SignalUnitEvent(ARM_CAN_EVENT_UNIT_BUS_OFF); }
+      CAN_SignalUnitEvent[x](ARM_CAN_EVENT_UNIT_BUS_OFF);
       break;
     case ARM_CAN_MODE_NORMAL:
       ptr_CAN->BTR &=~(CAN_BTR_LBKM | CAN_BTR_SILM);
       ptr_CAN->MCR  =  CAN_MCR_ABOM |           // Activate automatic bus-off
                        CAN_MCR_AWUM ;           // Enable automatic wakeup mode
       while ((ptr_CAN->MSR&CAN_MSR_INAK)!=0U);  // Wait to exit initialization mode
-      if (x == 0U) { CAN1_SignalUnitEvent(ARM_CAN_EVENT_UNIT_ACTIVE); }
-      else         { CAN2_SignalUnitEvent(ARM_CAN_EVENT_UNIT_ACTIVE); }
-      ptr_CAN->FMR &= ~CAN_FMR_FINIT;           // Filter active mode
+      CAN_SignalUnitEvent[x](ARM_CAN_EVENT_UNIT_ACTIVE);
+      CAN1->FMR    &= ~CAN_FMR_FINIT;           // Filter active mode
       break;
     case ARM_CAN_MODE_RESTRICTED:
       return ARM_DRIVER_ERROR_UNSUPPORTED;
@@ -1067,8 +1048,7 @@ static int32_t CANx_SetMode (ARM_CAN_MODE mode, uint8_t x) {
       ptr_CAN->BTR |=  CAN_BTR_SILM;            // Activate silent
       ptr_CAN->MCR &= ~CAN_MCR_INRQ;            // Deactivate initialization mode
       while ((ptr_CAN->MSR&CAN_MSR_INAK)!=0U);  // Wait to exit initialization mode
-      if (x == 0U) { CAN1_SignalUnitEvent(ARM_CAN_EVENT_UNIT_PASSIVE); }
-      else         { CAN2_SignalUnitEvent(ARM_CAN_EVENT_UNIT_PASSIVE); }
+      CAN_SignalUnitEvent[x](ARM_CAN_EVENT_UNIT_PASSIVE);
       break;
     case ARM_CAN_MODE_LOOPBACK_INTERNAL:
       ptr_CAN->MCR |=  CAN_MCR_INRQ;            // Enter initialization mode
@@ -1077,8 +1057,7 @@ static int32_t CANx_SetMode (ARM_CAN_MODE mode, uint8_t x) {
       ptr_CAN->BTR |=  CAN_BTR_SILM;            // Activate silent
       ptr_CAN->MCR &= ~CAN_MCR_INRQ;            // Deactivate initialization mode
       while ((ptr_CAN->MSR&CAN_MSR_INAK)!=0U);  // Wait to exit initialization mode
-      if (x == 0U) { CAN1_SignalUnitEvent(ARM_CAN_EVENT_UNIT_PASSIVE); }
-      else         { CAN2_SignalUnitEvent(ARM_CAN_EVENT_UNIT_PASSIVE); }
+      CAN_SignalUnitEvent[x](ARM_CAN_EVENT_UNIT_PASSIVE);
       break;
     case ARM_CAN_MODE_LOOPBACK_EXTERNAL:
       ptr_CAN->MCR |=  CAN_MCR_INRQ;            // Enter initialization mode
@@ -1087,8 +1066,7 @@ static int32_t CANx_SetMode (ARM_CAN_MODE mode, uint8_t x) {
       ptr_CAN->BTR |=  CAN_BTR_LBKM;            // Activate loopback
       ptr_CAN->MCR &= ~CAN_MCR_INRQ;            // Deactivate initialization mode
       while ((ptr_CAN->MSR&CAN_MSR_INAK)!=0U);  // Wait to exit initialization mode
-      if (x == 0U) { CAN1_SignalUnitEvent(ARM_CAN_EVENT_UNIT_PASSIVE); }
-      else         { CAN2_SignalUnitEvent(ARM_CAN_EVENT_UNIT_PASSIVE); }
+      CAN_SignalUnitEvent[x](ARM_CAN_EVENT_UNIT_PASSIVE);
       break;
     default:
       return ARM_DRIVER_ERROR_PARAMETER;
@@ -1096,8 +1074,12 @@ static int32_t CANx_SetMode (ARM_CAN_MODE mode, uint8_t x) {
 
   return ARM_DRIVER_OK;
 }
+#if (MX_CAN1 == 1U)
 static int32_t CAN1_SetMode (ARM_CAN_MODE mode) { return CANx_SetMode (mode, 0U); }
+#endif
+#if (MX_CAN2 == 1U)
 static int32_t CAN2_SetMode (ARM_CAN_MODE mode) { return CANx_SetMode (mode, 1U); }
+#endif
 
 /**
   \fn          ARM_CAN_OBJ_CAPABILITIES CANx_ObjectGetCapabilities (uint32_t obj_idx, uint8_t x)
@@ -1109,10 +1091,10 @@ static int32_t CAN2_SetMode (ARM_CAN_MODE mode) { return CANx_SetMode (mode, 1U)
 ARM_CAN_OBJ_CAPABILITIES CANx_ObjectGetCapabilities (uint32_t obj_idx, uint8_t x) {
   ARM_CAN_OBJ_CAPABILITIES obj_cap_null;
 
-  memset (&obj_cap_null, 0, sizeof(ARM_CAN_OBJ_CAPABILITIES));
-
-  if (obj_idx >= CAN_TOT_OBJ_NUM) { return obj_cap_null; }
-  if (x >= CAN_CTRL_NUM)          { return obj_cap_null; }
+  if ((x >= CAN_CTRL_NUM) || (obj_idx >= CAN_TOT_OBJ_NUM)) {
+    memset (&obj_cap_null, 0U, sizeof(ARM_CAN_OBJ_CAPABILITIES));
+    return obj_cap_null;
+  }
 
   if (obj_idx >= CAN_RX_OBJ_NUM) {
     return can_object_capabilities_tx;
@@ -1120,8 +1102,12 @@ ARM_CAN_OBJ_CAPABILITIES CANx_ObjectGetCapabilities (uint32_t obj_idx, uint8_t x
     return can_object_capabilities_rx;
   }
 }
+#if (MX_CAN1 == 1U)
 ARM_CAN_OBJ_CAPABILITIES CAN1_ObjectGetCapabilities (uint32_t obj_idx) { return CANx_ObjectGetCapabilities (obj_idx, 0U); }
+#endif
+#if (MX_CAN2 == 1U)
 ARM_CAN_OBJ_CAPABILITIES CAN2_ObjectGetCapabilities (uint32_t obj_idx) { return CANx_ObjectGetCapabilities (obj_idx, 1U); }
+#endif
 
 /**
   \fn          int32_t CANx_ObjectSetFilter (uint32_t obj_idx, ARM_CAN_FILTER_OPERATION operation, uint32_t id, uint32_t arg, uint8_t x)
@@ -1140,42 +1126,43 @@ ARM_CAN_OBJ_CAPABILITIES CAN2_ObjectGetCapabilities (uint32_t obj_idx) { return 
   \return      execution status
 */
 static int32_t CANx_ObjectSetFilter (uint32_t obj_idx, ARM_CAN_FILTER_OPERATION operation, uint32_t id, uint32_t arg, uint8_t x) {
-  CAN_TypeDef *ptr_CAN;
-  int32_t      ret;
+  int32_t status;
 
-  if (obj_idx >= CAN_RX_OBJ_NUM)   { return ARM_DRIVER_ERROR_PARAMETER; }
   if (x >= CAN_CTRL_NUM)           { return ARM_DRIVER_ERROR;           }
+  if (obj_idx >= CAN_RX_OBJ_NUM)   { return ARM_DRIVER_ERROR_PARAMETER; }
   if (can_driver_powered[x] == 0U) { return ARM_DRIVER_ERROR;           }
 
-  ptr_CAN = (CAN_TypeDef *)((x) ? CAN2 : CAN1);
+  CAN1->FMR |=  CAN_FMR_FINIT;          // Filter initialization mode
 
-  ptr_CAN->FMR |=  CAN_FMR_FINIT;               // Filter initialization mode
   switch (operation) {
     case ARM_CAN_FILTER_ID_EXACT_ADD:
-      ret = CANx_AddFilter   (obj_idx, CAN_FILTER_TYPE_EXACT_ID,    id,  0U, x);
+      status = CANx_AddFilter   (obj_idx, CAN_FILTER_TYPE_EXACT_ID,    id,  0U, x);
       break;
     case ARM_CAN_FILTER_ID_MASKABLE_ADD:
-      ret = CANx_AddFilter   (obj_idx, CAN_FILTER_TYPE_MASKABLE_ID, id, arg, x);
+      status = CANx_AddFilter   (obj_idx, CAN_FILTER_TYPE_MASKABLE_ID, id, arg, x);
       break;
     case ARM_CAN_FILTER_ID_EXACT_REMOVE:
-      ret = CANx_RemoveFilter(obj_idx, CAN_FILTER_TYPE_EXACT_ID,    id,  0U, x);
+      status = CANx_RemoveFilter(obj_idx, CAN_FILTER_TYPE_EXACT_ID,    id,  0U, x);
       break;
     case ARM_CAN_FILTER_ID_MASKABLE_REMOVE:
-      ret = CANx_RemoveFilter(obj_idx, CAN_FILTER_TYPE_MASKABLE_ID, id, arg, x);
+      status = CANx_RemoveFilter(obj_idx, CAN_FILTER_TYPE_MASKABLE_ID, id, arg, x);
       break;
     case ARM_CAN_FILTER_ID_RANGE_ADD:
     case ARM_CAN_FILTER_ID_RANGE_REMOVE:
     default:
-      ret = ARM_DRIVER_ERROR_UNSUPPORTED;
+      status = ARM_DRIVER_ERROR_UNSUPPORTED;
       break;
   }
-  ptr_CAN->FMR &= ~CAN_FMR_FINIT;               // Filter active mode
+  CAN1->FMR &= ~CAN_FMR_FINIT;          // Filter active mode
 
-  return ret;
+  return status;
 }
-
+#if (MX_CAN1 == 1U)
 static int32_t CAN1_ObjectSetFilter (uint32_t obj_idx, ARM_CAN_FILTER_OPERATION operation, uint32_t id, uint32_t arg) { return CANx_ObjectSetFilter (obj_idx, operation, id, arg, 0U); }
+#endif
+#if (MX_CAN2 == 1U)
 static int32_t CAN2_ObjectSetFilter (uint32_t obj_idx, ARM_CAN_FILTER_OPERATION operation, uint32_t id, uint32_t arg) { return CANx_ObjectSetFilter (obj_idx, operation, id, arg, 1U); }
+#endif
 
 /**
   \fn          int32_t CANx_ObjectConfigure (uint32_t obj_idx, ARM_CAN_OBJ_CONFIG obj_cfg, uint8_t x)
@@ -1192,8 +1179,8 @@ static int32_t CAN2_ObjectSetFilter (uint32_t obj_idx, ARM_CAN_FILTER_OPERATION 
 */
 static int32_t CANx_ObjectConfigure (uint32_t obj_idx, ARM_CAN_OBJ_CONFIG obj_cfg, uint8_t x) {
 
-  if (obj_idx >= CAN_TOT_OBJ_NUM)  { return ARM_DRIVER_ERROR_PARAMETER; }
   if (x >= CAN_CTRL_NUM)           { return ARM_DRIVER_ERROR;           }
+  if (obj_idx >= CAN_TOT_OBJ_NUM)  { return ARM_DRIVER_ERROR_PARAMETER; }
   if (can_driver_powered[x] == 0U) { return ARM_DRIVER_ERROR;           }
 
   switch (obj_cfg) {
@@ -1218,8 +1205,12 @@ static int32_t CANx_ObjectConfigure (uint32_t obj_idx, ARM_CAN_OBJ_CONFIG obj_cf
 
   return ARM_DRIVER_OK;
 }
+#if (MX_CAN1 == 1U)
 static int32_t CAN1_ObjectConfigure (uint32_t obj_idx, ARM_CAN_OBJ_CONFIG obj_cfg) { return CANx_ObjectConfigure (obj_idx, obj_cfg, 0U); }
+#endif
+#if (MX_CAN2 == 1U)
 static int32_t CAN2_ObjectConfigure (uint32_t obj_idx, ARM_CAN_OBJ_CONFIG obj_cfg) { return CANx_ObjectConfigure (obj_idx, obj_cfg, 1U); }
+#endif
 
 /**
   \fn          int32_t CANx_MessageSend (uint32_t obj_idx, ARM_CAN_MSG_INFO *msg_info, const uint8_t *data, uint8_t size, uint8_t x)
@@ -1236,14 +1227,14 @@ static int32_t CANx_MessageSend (uint32_t obj_idx, ARM_CAN_MSG_INFO *msg_info, c
   CAN_TypeDef *ptr_CAN;
   uint32_t     tir;
 
-  if ((obj_idx < CAN_RX_OBJ_NUM) || (obj_idx >= CAN_TOT_OBJ_NUM)) { return ARM_DRIVER_ERROR_PARAMETER; }
   if (x >= CAN_CTRL_NUM)                                          { return ARM_DRIVER_ERROR;           }
+  if ((obj_idx < CAN_RX_OBJ_NUM) || (obj_idx >= CAN_TOT_OBJ_NUM)) { return ARM_DRIVER_ERROR_PARAMETER; }
   if (can_driver_powered[x] == 0U)                                { return ARM_DRIVER_ERROR;           }
   if (can_obj_cfg[x][obj_idx] != ARM_CAN_OBJ_TX)                  { return ARM_DRIVER_ERROR;           }
 
   obj_idx -= CAN_RX_OBJ_NUM;                            // obj_idx origin to 0
 
-  ptr_CAN = (CAN_TypeDef *)((x) ? CAN2 : CAN1);
+  ptr_CAN  = ptr_CANx[x];
 
   if ((ptr_CAN->sTxMailBox[obj_idx].TIR & CAN_TI0R_TXRQ) != 0U) { return ARM_DRIVER_ERROR_BUSY; }
 
@@ -1273,8 +1264,12 @@ static int32_t CANx_MessageSend (uint32_t obj_idx, ARM_CAN_MSG_INFO *msg_info, c
 
   return ((int32_t)size);
 }
+#if (MX_CAN1 == 1U)
 static int32_t CAN1_MessageSend (uint32_t obj_idx, ARM_CAN_MSG_INFO *msg_info, const uint8_t *data, uint8_t size) { return CANx_MessageSend (obj_idx, msg_info, data, size, 0U); }
+#endif
+#if (MX_CAN2 == 1U)
 static int32_t CAN2_MessageSend (uint32_t obj_idx, ARM_CAN_MSG_INFO *msg_info, const uint8_t *data, uint8_t size) { return CANx_MessageSend (obj_idx, msg_info, data, size, 1U); }
+#endif
 
 /**
   \fn          int32_t CANx_MessageRead (uint32_t obj_idx, ARM_CAN_MSG_INFO *msg_info, uint8_t *data, uint8_t size, uint8_t x)
@@ -1291,12 +1286,12 @@ static int32_t CANx_MessageRead (uint32_t obj_idx, ARM_CAN_MSG_INFO *msg_info, u
   CAN_TypeDef *ptr_CAN;
   uint32_t     data_rx[2][2];
 
-  if (obj_idx >= CAN_RX_OBJ_NUM)                 { return ARM_DRIVER_ERROR_PARAMETER; }
   if (x >= CAN_CTRL_NUM)                         { return ARM_DRIVER_ERROR;           }
+  if (obj_idx >= CAN_RX_OBJ_NUM)                 { return ARM_DRIVER_ERROR_PARAMETER; }
   if (can_driver_powered[x] == 0U)               { return ARM_DRIVER_ERROR;           }
   if (can_obj_cfg[x][obj_idx] != ARM_CAN_OBJ_RX) { return ARM_DRIVER_ERROR;           }
 
-  ptr_CAN = (CAN_TypeDef *)((x) ? CAN2 : CAN1);
+  ptr_CAN = ptr_CANx[x];
 
   if (size > 8U) { size = 8U; }
 
@@ -1330,8 +1325,12 @@ static int32_t CANx_MessageRead (uint32_t obj_idx, ARM_CAN_MSG_INFO *msg_info, u
 
   return ((int32_t)size);
 }
+#if (MX_CAN1 == 1U)
 static int32_t CAN1_MessageRead (uint32_t obj_idx, ARM_CAN_MSG_INFO *msg_info, uint8_t *data, uint8_t size) { return CANx_MessageRead (obj_idx, msg_info, data, size, 0U); }
+#endif
+#if (MX_CAN2 == 1U)
 static int32_t CAN2_MessageRead (uint32_t obj_idx, ARM_CAN_MSG_INFO *msg_info, uint8_t *data, uint8_t size) { return CANx_MessageRead (obj_idx, msg_info, data, size, 1U); }
+#endif
 
 /**
   \fn          int32_t CANx_Control (uint32_t control, uint32_t arg, uint8_t x)
@@ -1351,7 +1350,7 @@ static int32_t CANx_Control (uint32_t control, uint32_t arg, uint8_t x) {
   if (x >= CAN_CTRL_NUM)           { return ARM_DRIVER_ERROR; }
   if (can_driver_powered[x] == 0U) { return ARM_DRIVER_ERROR; }
 
-  ptr_CAN = (CAN_TypeDef *)((x) ? CAN2 : CAN1);
+  ptr_CAN = ptr_CANx[x];
 
   switch (control & ARM_CAN_CONTROL_Msk) {
     case ARM_CAN_ABORT_MESSAGE_SEND:
@@ -1391,8 +1390,12 @@ static int32_t CANx_Control (uint32_t control, uint32_t arg, uint8_t x) {
 
   return ARM_DRIVER_OK;
 }
+#if (MX_CAN1 == 1U)
 static int32_t CAN1_Control (uint32_t control, uint32_t arg) { return CANx_Control (control, arg, 0U); }
+#endif
+#if (MX_CAN2 == 1U)
 static int32_t CAN2_Control (uint32_t control, uint32_t arg) { return CANx_Control (control, arg, 1U); }
+#endif
 
 /**
   \fn          ARM_CAN_STATUS CANx_GetStatus (uint8_t x)
@@ -1405,7 +1408,7 @@ static ARM_CAN_STATUS CANx_GetStatus (uint8_t x) {
   ARM_CAN_STATUS  can_status;
   uint32_t        esr;
 
-  ptr_CAN      = (CAN_TypeDef *)((x) ? CAN2 : CAN1);
+  ptr_CAN      = ptr_CANx[x];
   esr          = ptr_CAN->ESR;
   ptr_CAN->ESR = CAN_ESR_LEC;           // Software set last error code to unused value
 
@@ -1446,10 +1449,15 @@ static ARM_CAN_STATUS CANx_GetStatus (uint8_t x) {
 
   return can_status;
 }
+#if (MX_CAN1 == 1U)
 static ARM_CAN_STATUS CAN1_GetStatus (void) { return CANx_GetStatus (0); }
+#endif
+#if (MX_CAN2 == 1U)
 static ARM_CAN_STATUS CAN2_GetStatus (void) { return CANx_GetStatus (1); }
+#endif
 
 
+#if (MX_CAN1 == 1U)
 /**
   \fn          void CAN1_TX_IRQHandler (void)
   \brief       CAN1 Transmit Interrupt Routine (IRQ).
@@ -1459,19 +1467,19 @@ void CAN1_TX_IRQHandler (void) {
 
   if ((CAN1->TSR & CAN_TSR_TXOK0) != 0U) {
     if (can_obj_cfg[0][CAN_RX_OBJ_NUM] == ARM_CAN_OBJ_TX) {
-      CAN1_SignalObjectEvent(CAN_RX_OBJ_NUM, ARM_CAN_EVENT_SEND_COMPLETE);
+      CAN_SignalObjectEvent[0](CAN_RX_OBJ_NUM, ARM_CAN_EVENT_SEND_COMPLETE);
     }
     CAN1->TSR = CAN_TSR_RQCP0;          // Request completed on transmit mailbox 0
   }
   if ((CAN1->TSR & CAN_TSR_TXOK1) != 0U) {
     if (can_obj_cfg[0][CAN_RX_OBJ_NUM+1U] == ARM_CAN_OBJ_TX) {
-      CAN1_SignalObjectEvent(CAN_RX_OBJ_NUM+1U, ARM_CAN_EVENT_SEND_COMPLETE);
+      CAN_SignalObjectEvent[0](CAN_RX_OBJ_NUM+1U, ARM_CAN_EVENT_SEND_COMPLETE);
     }
     CAN1->TSR = CAN_TSR_RQCP1;          // Request completed on transmit mailbox 1
   }
   if ((CAN1->TSR & CAN_TSR_TXOK2) != 0U) {
     if (can_obj_cfg[0][CAN_RX_OBJ_NUM+2U] == ARM_CAN_OBJ_TX) {
-      CAN1_SignalObjectEvent(CAN_RX_OBJ_NUM+2U, ARM_CAN_EVENT_SEND_COMPLETE);
+      CAN_SignalObjectEvent[0](CAN_RX_OBJ_NUM+2U, ARM_CAN_EVENT_SEND_COMPLETE);
     }
     CAN1->TSR = CAN_TSR_RQCP2;          // Request completed on transmit mailbox 2
   }
@@ -1480,10 +1488,10 @@ void CAN1_TX_IRQHandler (void) {
   esr = CAN1->ESR;
   ier = CAN1->IER;
   if (((esr & CAN_ESR_BOFF) == 0U) && ((ier & CAN_IER_BOFIE) == 0U)) { 
-    CAN1->IER |= CAN_IER_BOFIE; CAN1_SignalUnitEvent(ARM_CAN_EVENT_UNIT_PASSIVE);
+    CAN1->IER |= CAN_IER_BOFIE; CAN_SignalUnitEvent[0](ARM_CAN_EVENT_UNIT_PASSIVE);
   }
   if (((esr & CAN_ESR_EPVF) == 0U) && ((ier & CAN_IER_EPVIE) == 0U)) {
-    CAN1->IER |= CAN_IER_EPVIE; CAN1_SignalUnitEvent(ARM_CAN_EVENT_UNIT_ACTIVE);
+    CAN1->IER |= CAN_IER_EPVIE; CAN_SignalUnitEvent[0](ARM_CAN_EVENT_UNIT_ACTIVE);
   }
   if (((esr & CAN_ESR_EWGF) == 0U) && ((ier & CAN_IER_EWGIE) == 0U) && (((esr & CAN_ESR_TEC) >> 16) == 95U) && (((esr & CAN_ESR_REC) >> 24) < 95U)) {
     CAN1->IER |= CAN_IER_EWGIE;
@@ -1499,14 +1507,14 @@ void CAN1_RX0_IRQHandler (void) {
 
   if ((CAN1->RF0R & CAN_RF0R_FMP0) != 0U) {
     if (can_obj_cfg[0][0] == ARM_CAN_OBJ_RX) {
-      CAN1_SignalObjectEvent(0U, ARM_CAN_EVENT_RECEIVE);
+      CAN_SignalObjectEvent[0](0U, ARM_CAN_EVENT_RECEIVE);
     } else {
       CAN1->RF0R = CAN_RF0R_RFOM0;      // Release FIFO 0 output mailbox if object not enabled for reception
     }
   }
   if ((CAN1->RF0R & CAN_RF0R_FOVR0) != 0U) {
     if (can_obj_cfg[0][0] == ARM_CAN_OBJ_RX) {
-      CAN1_SignalObjectEvent(0U, ARM_CAN_EVENT_RECEIVE_OVERRUN);
+      CAN_SignalObjectEvent[0](0U, ARM_CAN_EVENT_RECEIVE_OVERRUN);
     }
   }
 
@@ -1514,10 +1522,10 @@ void CAN1_RX0_IRQHandler (void) {
   esr = CAN1->ESR;
   ier = CAN1->IER;
   if (((esr & CAN_ESR_BOFF) == 0U) && ((ier & CAN_IER_BOFIE) == 0U)) { 
-    CAN1->IER |= CAN_IER_BOFIE; CAN1_SignalUnitEvent(ARM_CAN_EVENT_UNIT_PASSIVE);
+    CAN1->IER |= CAN_IER_BOFIE; CAN_SignalUnitEvent[0](ARM_CAN_EVENT_UNIT_PASSIVE);
   }
   if (((esr & CAN_ESR_EPVF) == 0U) && ((ier & CAN_IER_EPVIE) == 0U)) {
-    CAN1->IER |= CAN_IER_EPVIE; CAN1_SignalUnitEvent(ARM_CAN_EVENT_UNIT_ACTIVE);
+    CAN1->IER |= CAN_IER_EPVIE; CAN_SignalUnitEvent[0](ARM_CAN_EVENT_UNIT_ACTIVE);
   }
   if (((esr & CAN_ESR_EWGF) == 0U) && ((ier & CAN_IER_EWGIE) == 0U) && (((esr & CAN_ESR_TEC) >> 16) < 95U) && (((esr & CAN_ESR_REC) >> 24) == 95U)) {
     CAN1->IER |= CAN_IER_EWGIE;
@@ -1533,14 +1541,14 @@ void CAN1_RX1_IRQHandler (void) {
 
   if ((CAN1->RF1R & CAN_RF1R_FMP1) != 0U) {
     if (can_obj_cfg[0][1] == ARM_CAN_OBJ_RX) {
-      CAN1_SignalObjectEvent(1U, ARM_CAN_EVENT_RECEIVE);
+      CAN_SignalObjectEvent[0](1U, ARM_CAN_EVENT_RECEIVE);
     } else {
       CAN1->RF1R = CAN_RF1R_RFOM1;      // Release FIFO 1 output mailbox if object not enabled for reception
     }
   }
   if ((CAN1->RF1R & CAN_RF1R_FOVR1) != 0U) {
     if (can_obj_cfg[0][1] == ARM_CAN_OBJ_RX) {
-      CAN1_SignalObjectEvent(1U, ARM_CAN_EVENT_RECEIVE_OVERRUN);
+      CAN_SignalObjectEvent[0](1U, ARM_CAN_EVENT_RECEIVE_OVERRUN);
     }
   }
 
@@ -1548,10 +1556,10 @@ void CAN1_RX1_IRQHandler (void) {
   esr = CAN1->ESR;
   ier = CAN1->IER;
   if (((esr & CAN_ESR_BOFF) == 0U) && ((ier & CAN_IER_BOFIE) == 0U)) { 
-    CAN1->IER |= CAN_IER_BOFIE; CAN1_SignalUnitEvent(ARM_CAN_EVENT_UNIT_PASSIVE);
+    CAN1->IER |= CAN_IER_BOFIE; CAN_SignalUnitEvent[0](ARM_CAN_EVENT_UNIT_PASSIVE);
   }
   if (((esr & CAN_ESR_EPVF) == 0U) && ((ier & CAN_IER_EPVIE) == 0U)) {
-    CAN1->IER |= CAN_IER_EPVIE; CAN1_SignalUnitEvent(ARM_CAN_EVENT_UNIT_ACTIVE);
+    CAN1->IER |= CAN_IER_EPVIE; CAN_SignalUnitEvent[0](ARM_CAN_EVENT_UNIT_ACTIVE);
   }
   if (((esr & CAN_ESR_EWGF) == 0U) && ((ier & CAN_IER_EWGIE) == 0U) && (((esr & CAN_ESR_TEC) >> 16) < 95U) && (((esr & CAN_ESR_REC) >> 24) == 95U)) {
     CAN1->IER |= CAN_IER_EWGIE;
@@ -1568,11 +1576,13 @@ void CAN1_SCE_IRQHandler (void) {
   esr = CAN1->ESR;
   ier = CAN1->IER;
   CAN1->MSR = CAN_MSR_ERRI;             // Clear error interrupt
-  if      (((esr & CAN_ESR_BOFF) != 0U) && ((ier & CAN_IER_BOFIE) != 0U)) { CAN1->IER &= ~CAN_IER_BOFIE; CAN1_SignalUnitEvent(ARM_CAN_EVENT_UNIT_BUS_OFF); }
-  else if (((esr & CAN_ESR_EPVF) != 0U) && ((ier & CAN_IER_EPVIE) != 0U)) { CAN1->IER &= ~CAN_IER_EPVIE; CAN1_SignalUnitEvent(ARM_CAN_EVENT_UNIT_PASSIVE); }
-  else if (((esr & CAN_ESR_EWGF) != 0U) && ((ier & CAN_IER_EWGIE) != 0U)) { CAN1->IER &= ~CAN_IER_EWGIE; CAN1_SignalUnitEvent(ARM_CAN_EVENT_UNIT_WARNING); }
+  if      (((esr & CAN_ESR_BOFF) != 0U) && ((ier & CAN_IER_BOFIE) != 0U)) { CAN1->IER &= ~CAN_IER_BOFIE; CAN_SignalUnitEvent[0](ARM_CAN_EVENT_UNIT_BUS_OFF); }
+  else if (((esr & CAN_ESR_EPVF) != 0U) && ((ier & CAN_IER_EPVIE) != 0U)) { CAN1->IER &= ~CAN_IER_EPVIE; CAN_SignalUnitEvent[0](ARM_CAN_EVENT_UNIT_PASSIVE); }
+  else if (((esr & CAN_ESR_EWGF) != 0U) && ((ier & CAN_IER_EWGIE) != 0U)) { CAN1->IER &= ~CAN_IER_EWGIE; CAN_SignalUnitEvent[0](ARM_CAN_EVENT_UNIT_WARNING); }
 }
+#endif
 
+#if (MX_CAN2 == 1U)
 /**
   \fn          void CAN2_TX_IRQHandler (void)
   \brief       CAN2 Transmit Interrupt Routine (IRQ).
@@ -1582,19 +1592,19 @@ void CAN2_TX_IRQHandler (void) {
 
   if ((CAN2->TSR & CAN_TSR_TXOK0) != 0U) {
     if (can_obj_cfg[1][CAN_RX_OBJ_NUM] == ARM_CAN_OBJ_TX) {
-      CAN2_SignalObjectEvent(CAN_RX_OBJ_NUM, ARM_CAN_EVENT_SEND_COMPLETE);
+      CAN_SignalObjectEvent[1](CAN_RX_OBJ_NUM, ARM_CAN_EVENT_SEND_COMPLETE);
     }
     CAN2->TSR = CAN_TSR_RQCP0;          // Request completed on transmit mailbox 0
   }
   if ((CAN2->TSR & CAN_TSR_TXOK1) != 0U) {
     if (can_obj_cfg[1][CAN_RX_OBJ_NUM+1U] == ARM_CAN_OBJ_TX) {
-      CAN2_SignalObjectEvent(CAN_RX_OBJ_NUM+1U, ARM_CAN_EVENT_SEND_COMPLETE);
+      CAN_SignalObjectEvent[1](CAN_RX_OBJ_NUM+1U, ARM_CAN_EVENT_SEND_COMPLETE);
     }
     CAN2->TSR = CAN_TSR_RQCP1;          // Request completed on transmit mailbox 1
   }
   if ((CAN2->TSR & CAN_TSR_TXOK2) != 0U) {
     if (can_obj_cfg[1][CAN_RX_OBJ_NUM+2U] == ARM_CAN_OBJ_TX) {
-      CAN2_SignalObjectEvent(CAN_RX_OBJ_NUM+2U, ARM_CAN_EVENT_SEND_COMPLETE);
+      CAN_SignalObjectEvent[1](CAN_RX_OBJ_NUM+2U, ARM_CAN_EVENT_SEND_COMPLETE);
     }
     CAN2->TSR = CAN_TSR_RQCP2;          // Request completed on transmit mailbox 2
   }
@@ -1603,10 +1613,10 @@ void CAN2_TX_IRQHandler (void) {
   esr = CAN2->ESR;
   ier = CAN2->IER;
   if (((esr & CAN_ESR_BOFF) == 0U) && ((ier & CAN_IER_BOFIE) == 0U)) { 
-    CAN2->IER |= CAN_IER_BOFIE; CAN2_SignalUnitEvent(ARM_CAN_EVENT_UNIT_PASSIVE);
+    CAN2->IER |= CAN_IER_BOFIE; CAN_SignalUnitEvent[1](ARM_CAN_EVENT_UNIT_PASSIVE);
   }
   if (((esr & CAN_ESR_EPVF) == 0U) && ((ier & CAN_IER_EPVIE) == 0U)) {
-    CAN2->IER |= CAN_IER_EPVIE; CAN2_SignalUnitEvent(ARM_CAN_EVENT_UNIT_ACTIVE);
+    CAN2->IER |= CAN_IER_EPVIE; CAN_SignalUnitEvent[1](ARM_CAN_EVENT_UNIT_ACTIVE);
   }
   if (((esr & CAN_ESR_EWGF) == 0U) && ((ier & CAN_IER_EWGIE) == 0U) && (((esr & CAN_ESR_TEC) >> 16) == 95U) && (((esr & CAN_ESR_REC) >> 24) < 95U)) {
     CAN2->IER |= CAN_IER_EWGIE;
@@ -1622,14 +1632,14 @@ void CAN2_RX0_IRQHandler (void) {
 
   if ((CAN2->RF0R & CAN_RF0R_FMP0) != 0U) {
     if (can_obj_cfg[1][0] == ARM_CAN_OBJ_RX) {
-      CAN2_SignalObjectEvent(0U, ARM_CAN_EVENT_RECEIVE);
+      CAN_SignalObjectEvent[1](0U, ARM_CAN_EVENT_RECEIVE);
     } else {
       CAN2->RF0R = CAN_RF0R_RFOM0;      // Release FIFO 0 output mailbox if object not enabled for reception
     }
   }
   if ((CAN2->RF0R & CAN_RF0R_FOVR0) != 0U) {
     if (can_obj_cfg[1][0] == ARM_CAN_OBJ_RX) {
-      CAN2_SignalObjectEvent(0U, ARM_CAN_EVENT_RECEIVE_OVERRUN);
+      CAN_SignalObjectEvent[1](0U, ARM_CAN_EVENT_RECEIVE_OVERRUN);
     }
   }
 
@@ -1637,10 +1647,10 @@ void CAN2_RX0_IRQHandler (void) {
   esr = CAN2->ESR;
   ier = CAN2->IER;
   if (((esr & CAN_ESR_BOFF) == 0U) && ((ier & CAN_IER_BOFIE) == 0U)) { 
-    CAN2->IER |= CAN_IER_BOFIE; CAN2_SignalUnitEvent(ARM_CAN_EVENT_UNIT_PASSIVE);
+    CAN2->IER |= CAN_IER_BOFIE; CAN_SignalUnitEvent[1](ARM_CAN_EVENT_UNIT_PASSIVE);
   }
   if (((esr & CAN_ESR_EPVF) == 0U) && ((ier & CAN_IER_EPVIE) == 0U)) {
-    CAN2->IER |= CAN_IER_EPVIE; CAN2_SignalUnitEvent(ARM_CAN_EVENT_UNIT_ACTIVE);
+    CAN2->IER |= CAN_IER_EPVIE; CAN_SignalUnitEvent[1](ARM_CAN_EVENT_UNIT_ACTIVE);
   }
   if (((esr & CAN_ESR_EWGF) == 0U) && ((ier & CAN_IER_EWGIE) == 0U) && (((esr & CAN_ESR_TEC) >> 16) < 95U) && (((esr & CAN_ESR_REC) >> 24) == 95U)) {
     CAN2->IER |= CAN_IER_EWGIE;
@@ -1656,14 +1666,14 @@ void CAN2_RX1_IRQHandler (void) {
 
   if ((CAN2->RF1R & CAN_RF1R_FMP1) != 0U) {
     if (can_obj_cfg[1][1] == ARM_CAN_OBJ_RX) {
-      CAN2_SignalObjectEvent(1U, ARM_CAN_EVENT_RECEIVE);
+      CAN_SignalObjectEvent[1](1U, ARM_CAN_EVENT_RECEIVE);
     } else {
       CAN2->RF1R = CAN_RF1R_RFOM1;      // Release FIFO 1 output mailbox if object not enabled for reception
     }
   }
   if ((CAN2->RF1R & CAN_RF1R_FOVR1) != 0U) {
     if (can_obj_cfg[1][1] == ARM_CAN_OBJ_RX) {
-      CAN2_SignalObjectEvent(1U, ARM_CAN_EVENT_RECEIVE_OVERRUN);
+      CAN_SignalObjectEvent[1](1U, ARM_CAN_EVENT_RECEIVE_OVERRUN);
     }
   }
 
@@ -1671,10 +1681,10 @@ void CAN2_RX1_IRQHandler (void) {
   esr = CAN2->ESR;
   ier = CAN2->IER;
   if (((esr & CAN_ESR_BOFF) == 0U) && ((ier & CAN_IER_BOFIE) == 0U)) { 
-    CAN2->IER |= CAN_IER_BOFIE; CAN2_SignalUnitEvent(ARM_CAN_EVENT_UNIT_PASSIVE);
+    CAN2->IER |= CAN_IER_BOFIE; CAN_SignalUnitEvent[1](ARM_CAN_EVENT_UNIT_PASSIVE);
   }
   if (((esr & CAN_ESR_EPVF) == 0U) && ((ier & CAN_IER_EPVIE) == 0U)) {
-    CAN2->IER |= CAN_IER_EPVIE; CAN2_SignalUnitEvent(ARM_CAN_EVENT_UNIT_ACTIVE);
+    CAN2->IER |= CAN_IER_EPVIE; CAN_SignalUnitEvent[1](ARM_CAN_EVENT_UNIT_ACTIVE);
   }
   if (((esr & CAN_ESR_EWGF) == 0U) && ((ier & CAN_IER_EWGIE) == 0U) && (((esr & CAN_ESR_TEC) >> 16) < 95U) && (((esr & CAN_ESR_REC) >> 24) == 95U)) {
     CAN2->IER |= CAN_IER_EWGIE;
@@ -1691,15 +1701,17 @@ void CAN2_SCE_IRQHandler (void) {
   esr = CAN2->ESR;
   ier = CAN2->IER;
   CAN2->MSR = CAN_MSR_ERRI;             // Clear error interrupt
-  if      (((esr & CAN_ESR_BOFF) != 0U) && ((ier & CAN_IER_BOFIE) != 0U)) { CAN2->IER &= ~CAN_IER_BOFIE; CAN2_SignalUnitEvent(ARM_CAN_EVENT_UNIT_BUS_OFF); }
-  else if (((esr & CAN_ESR_EPVF) != 0U) && ((ier & CAN_IER_EPVIE) != 0U)) { CAN2->IER &= ~CAN_IER_EPVIE; CAN2_SignalUnitEvent(ARM_CAN_EVENT_UNIT_PASSIVE); }
-  else if (((esr & CAN_ESR_EWGF) != 0U) && ((ier & CAN_IER_EWGIE) != 0U)) { CAN2->IER &= ~CAN_IER_EWGIE; CAN2_SignalUnitEvent(ARM_CAN_EVENT_UNIT_WARNING); }
+  if      (((esr & CAN_ESR_BOFF) != 0U) && ((ier & CAN_IER_BOFIE) != 0U)) { CAN2->IER &= ~CAN_IER_BOFIE; CAN_SignalUnitEvent[1](ARM_CAN_EVENT_UNIT_BUS_OFF); }
+  else if (((esr & CAN_ESR_EPVF) != 0U) && ((ier & CAN_IER_EPVIE) != 0U)) { CAN2->IER &= ~CAN_IER_EPVIE; CAN_SignalUnitEvent[1](ARM_CAN_EVENT_UNIT_PASSIVE); }
+  else if (((esr & CAN_ESR_EWGF) != 0U) && ((ier & CAN_IER_EWGIE) != 0U)) { CAN2->IER &= ~CAN_IER_EWGIE; CAN_SignalUnitEvent[1](ARM_CAN_EVENT_UNIT_WARNING); }
 }
+#endif
 
 
+#if (MX_CAN1 == 1U)
 ARM_DRIVER_CAN Driver_CAN1 = {
   CAN_GetVersion,
-  CAN1_GetCapabilities,
+  CAN_GetCapabilities,
   CAN1_Initialize,
   CAN1_Uninitialize,
   CAN1_PowerControl,
@@ -1714,10 +1726,12 @@ ARM_DRIVER_CAN Driver_CAN1 = {
   CAN1_Control,
   CAN1_GetStatus
 };
+#endif
 
+#if (MX_CAN2 == 1U)
 ARM_DRIVER_CAN Driver_CAN2 = {
   CAN_GetVersion,
-  CAN2_GetCapabilities,
+  CAN_GetCapabilities,
   CAN2_Initialize,
   CAN2_Uninitialize,
   CAN2_PowerControl,
@@ -1732,5 +1746,6 @@ ARM_DRIVER_CAN Driver_CAN2 = {
   CAN2_Control,
   CAN2_GetStatus
 };
+#endif
 
 /*! \endcond */

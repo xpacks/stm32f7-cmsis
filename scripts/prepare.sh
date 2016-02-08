@@ -8,7 +8,8 @@ IFS=$'\n\t'
 # RELEASE_VERSION="2.0.0"
 # RELEASE_VERSION="2.1.0"
 # RELEASE_VERSION="2.2.0"
-RELEASE_VERSION="2.3.0"
+# RELEASE_VERSION="2.3.0"
+RELEASE_VERSION="2.4.0"
 
 FAMILY="STM32F7"
 GITHUB_PROJECT="xpacks/stm32f7-cmsis"
@@ -79,6 +80,8 @@ includes the ${FAMILY} CMSIS files.
 The latest CMSIS documentation is available from
 [keil.com](http://www.keil.com/cmsis).
 
+The list of latest packs is available from [keil.com](https://www.keil.com/dd2/pack/).
+
 ## Original files
 
 The original files are available from the \`originals\` branch.
@@ -110,4 +113,5 @@ To save space, the following folders/files were removed:
 
 EOF
 
-echo "Done."
+echo
+echo Check if ok and when ready, issue: \`git commit -m ${ARCHIVE_NAME}\`

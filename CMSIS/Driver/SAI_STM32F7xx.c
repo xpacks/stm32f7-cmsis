@@ -18,8 +18,8 @@
  * 3. This notice may not be removed or altered from any source distribution.
  *
  *
- * $Date:        15. October 2015
- * $Revision:    V1.1
+ * $Date:        14. December 2015
+ * $Revision:    V1.2
  *
  * Driver:       Driver_SAI1, Driver_SAI2
  * Configured:   via RTE_Device.h configuration file
@@ -35,6 +35,10 @@
  * -------------------------------------------------------------------------- */
 
 /* History:
+ *  Version 1.2
+ *      - Corrected receive DMA configuration
+ *      - Corrected synchronization configuration
+ *      - Corrected FRC register configuration
  *  Version 1.1
  *    Corrected PowerControl function for:
  *      - Unconditional Power Off
@@ -50,7 +54,7 @@
 
 #include "SAI_STM32F7xx.h"
 
-#define ARM_SAI_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,1)
+#define ARM_SAI_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,2)
 // Driver Version
 static const ARM_DRIVER_VERSION DriverVersion = { ARM_SAI_API_VERSION, ARM_SAI_DRV_VERSION };
 
@@ -685,6 +689,8 @@ static int32_t SAI_Initialize (ARM_SAI_SignalEvent_t  cb_event,
       sai->rx->dma->hdma->Instance             = sai->rx->dma->stream;
       sai->rx->dma->hdma->Init.Channel         = sai->rx->dma->channel;
       sai->rx->dma->hdma->Init.Direction       = DMA_PERIPH_TO_MEMORY;
+      sai->rx->dma->hdma->Init.PeriphInc       = DMA_PINC_DISABLE;
+      sai->rx->dma->hdma->Init.MemInc          = DMA_MINC_ENABLE;
       sai->rx->dma->hdma->Init.Mode            = DMA_NORMAL;
       sai->rx->dma->hdma->Init.Priority        = sai->rx->dma->priority;
       sai->rx->dma->hdma->Init.FIFOMode        = DMA_FIFOMODE_DISABLE;
@@ -892,18 +898,19 @@ static int32_t SAI_PowerControl (ARM_POWER_STATE  state,
       sai->reg->GCR = sai->sync_out << 4;
 
       // Synchronization input
-      if (sai->reg == SAI1) { sai->reg->GCR |= 0x02U; }
-      if (sai->reg == SAI2) { sai->reg->GCR |= 0x01U; }
+      if (sai->reg == SAI1) { sai->reg->GCR |= 0x01U; }
+      if (sai->reg == SAI2) { sai->reg->GCR |= 0x00U; }
 
       // Activate all slots (default)
-      sai->rx->reg->SLOTR = 0xFFFF0F00U;
-      sai->tx->reg->SLOTR = 0xFFFF0F00U;
+      sai->rx->reg->SLOTR = 0xFFFF0000U;
+      sai->tx->reg->SLOTR = 0xFFFF0000U;
 
       break;
 
     case ARM_POWER_LOW:
     default: return ARM_DRIVER_ERROR_UNSUPPORTED;
   }
+
   return ARM_DRIVER_OK;
 
 }
@@ -971,8 +978,10 @@ static int32_t SAI_Send (const void *data, uint32_t num, SAI_RESOURCES *sai) {
   } else
 #endif
   {
-    // FIFO request interrupt enable
-    sai->tx->reg->IMR |= SAI_xIMR_FREQIE;
+    if ((sai->tx->reg->CR1 & SAI_xCR1_SAIEN) != 0) {
+      // FIFO request interrupt enable
+      sai->tx->reg->IMR |= SAI_xIMR_FREQIE;
+    }
   }
 
   return ARM_DRIVER_OK;
@@ -1041,8 +1050,10 @@ static int32_t SAI_Receive (void *data, uint32_t num, SAI_RESOURCES *sai) {
   } else
 #endif
   {
-    // FIFO request interrupt enable
-    sai->rx->reg->IMR |= SAI_xIMR_FREQIE;
+    if ((sai->rx->reg->CR1 & SAI_xCR1_SAIEN) != 0U) {
+      // FIFO request interrupt enable
+      sai->rx->reg->IMR |= SAI_xIMR_FREQIE;
+    }
   }
 
   return ARM_DRIVER_OK;
@@ -1093,8 +1104,8 @@ static uint32_t SAI_GetRxCount (SAI_RESOURCES *sai) {
 */
 static int32_t SAI_Control (uint32_t control, uint32_t arg1, uint32_t arg2, SAI_RESOURCES *sai) {
   uint8_t  master, mclk_pin, stream_en;
-  uint32_t i, val, freq;
-  uint32_t cr1, cr2, slotr, frcr;
+  uint32_t val, freq;
+  uint32_t cr1, cr2, slotr, frcr, imr;
   uint32_t frame_len, frame_sync_width, frame_sync_pol;
   uint32_t bit_order, clock_pol, frame_sync_early, slot_count, slot_sz, slot_offset; 
   SAI_STREAM * stream;
@@ -1104,7 +1115,7 @@ static int32_t SAI_Control (uint32_t control, uint32_t arg1, uint32_t arg2, SAI_
     return ARM_DRIVER_ERROR;
   }
 
-  // Clear lokal register variables
+  // Clear local register variables
   cr1 = cr2 = slotr = frcr = 0U;
 
   switch (control & ARM_SAI_CONTROL_Msk) {
@@ -1123,11 +1134,31 @@ static int32_t SAI_Control (uint32_t control, uint32_t arg1, uint32_t arg2, SAI_
       else                   { stream->reg->CR2 &= ~SAI_xCR2_MUTE; }
 
       if ((arg1 & 1U) == 0U) {
+        // Disable FREQ interrupt
+        stream->reg->IMR &= ~SAI_xIMR_FREQIE;
+
         // Disable transmitter
         stream->reg->CR1 &= ~SAI_xCR1_SAIEN;
+        while ((stream->reg->CR1 & SAI_xCR1_SAIEN) != 0);
       } else {
         // Enable transmitter
         stream->reg->CR1 |=  SAI_xCR1_SAIEN;
+
+#ifdef __SAI_DMA
+        if (stream->dma == NULL) {
+#endif
+          if (sai->info->status.tx_busy != 0U) {
+            // Enable FREQ interrupt
+            stream->reg->IMR |= SAI_xIMR_FREQIE;
+          }
+#ifdef __SAI_DMA
+        }
+#endif
+
+        if ((stream->reg->CR1 & SAI_xCR1_MODE) == 0U) {
+          // Master transmitter mode: send dummy value to start generating clocks
+          stream->reg->DR = 0U;
+        }
 
         // Enable transmit underflow interrupt
         stream->reg->IMR |= SAI_xIMR_OVRUDRIE;
@@ -1138,11 +1169,28 @@ static int32_t SAI_Control (uint32_t control, uint32_t arg1, uint32_t arg2, SAI_
     case ARM_SAI_CONTROL_RX:
       stream = sai->rx;
       if ((arg1 & 1U) == 0U) {
+        // Disable FREQ interrupt
+        stream->reg->IMR &= ~SAI_xIMR_FREQIE;
+
         // Disable receiver
-        stream->reg->CR1 &= ~SAI_xCR1_SAIEN;
+        while ((stream->reg->CR1 & SAI_xCR1_SAIEN) != 0) {
+          stream->reg->CR1 &= ~SAI_xCR1_SAIEN;
+        }
       } else {
+
         // Enable receiver
         stream->reg->CR1 |=  SAI_xCR1_SAIEN;
+
+#ifdef __SAI_DMA
+        if (stream->dma == NULL) {
+#endif
+          if (sai->info->status.rx_busy != 0U) {
+            // Enable FREQ interrupt
+            stream->reg->IMR |= SAI_xIMR_FREQIE;
+          }
+#ifdef __SAI_DMA
+        }
+#endif
 
         // Enable receive overflow interrupt
         stream->reg->IMR |= SAI_xIMR_OVRUDRIE;
@@ -1158,26 +1206,25 @@ static int32_t SAI_Control (uint32_t control, uint32_t arg1, uint32_t arg2, SAI_
       // Max slot number is 16
       if ((arg1 & 0xFFFF0000) != 0U) { return ARM_DRIVER_ERROR; }
 
-      // Get number of masked slots
-      val = 0;
-      for (i = 1; i < 0x10000U; i <<= 1) {
-        if (arg1 & i) { val++; }
-      }
-
-      slotr &= ~(SAI_xSLOTR_NBSLOT | SAI_xSLOTR_SLOTEN);
-      slotr |=  ((arg1 << 16) | (val << 8));
-
       if (stream->reg->CR1 & SAI_xCR1_SAIEN) {
         stream_en = 1U;
+
+        imr = (stream->reg->IMR & SAI_xIMR_FREQIE);
+        stream->reg->IMR &= ~ SAI_xIMR_FREQIE;
+
         // Disable SAI block
         stream->reg->CR1 &= ~SAI_xCR1_SAIEN;
+        while ((stream->reg->CR1 & SAI_xCR1_SAIEN) != 0);
       } else {
         stream_en = 0U;
       }
 
-      stream->reg->SLOTR = slotr;
+      stream->reg->SLOTR = (stream->reg->SLOTR & 0x0FFFF) | (arg1 << 16);
 
-      if (stream_en == 1U) { stream->reg->CR1 |= SAI_xCR1_SAIEN; }
+      if (stream_en == 1U) {
+        stream->reg->CR1 |= SAI_xCR1_SAIEN;
+        stream->reg->IMR |= imr;
+      }
 
       return ARM_DRIVER_OK;
     case ARM_SAI_MASK_SLOTS_RX:
@@ -1189,26 +1236,25 @@ static int32_t SAI_Control (uint32_t control, uint32_t arg1, uint32_t arg2, SAI_
       // Max slot number is 16
       if ((arg1 & 0xFFFF0000) != 0U) { return ARM_DRIVER_ERROR; }
 
-      // Get number of masked slots
-      val = 0;
-      for (i = 1; i < 0x10000U; i <<= 1) {
-        if (arg1 & i) { val++; }
-      }
-
-      slotr &= ~(SAI_xSLOTR_NBSLOT | SAI_xSLOTR_SLOTEN);
-      slotr |=  ((arg1 << 16) | (val << 8));
-
       if (stream->reg->CR1 & SAI_xCR1_SAIEN) {
         stream_en = 1U;
+
+        imr = (stream->reg->IMR & SAI_xIMR_FREQIE);
+        stream->reg->IMR &= ~ SAI_xIMR_FREQIE;
+
         // Disable SAI block
         stream->reg->CR1 &= ~SAI_xCR1_SAIEN;
+        while ((stream->reg->CR1 & SAI_xCR1_SAIEN) != 0);
       } else {
         stream_en = 0U;
       }
 
-      stream->reg->SLOTR = slotr;
+      stream->reg->SLOTR = (stream->reg->SLOTR & 0x0FFFF) | (arg1 << 16);
 
-      if (stream_en == 1U) { stream->reg->CR1 |= SAI_xCR1_SAIEN; }
+      if (stream_en == 1U) {
+        stream->reg->CR1 |= SAI_xCR1_SAIEN;
+        stream->reg->IMR |= imr;
+      }
 
       return ARM_DRIVER_OK;
 
@@ -1221,6 +1267,7 @@ static int32_t SAI_Control (uint32_t control, uint32_t arg1, uint32_t arg2, SAI_
 #ifdef __SAI_DMA
       // Disable DMA
       stream->reg->CR1 &= ~(SAI_xCR1_DMAEN);
+      while ((stream->reg->CR1 & SAI_xCR1_DMAEN) != 0);
 
       // If DMA mode - disable DMA channel
       if (stream->dma != NULL) {
@@ -1249,6 +1296,7 @@ static int32_t SAI_Control (uint32_t control, uint32_t arg1, uint32_t arg2, SAI_
 #ifdef __SAI_DMA
       // Disable DMA
       stream->reg->CR1 &= ~(SAI_xCR1_DMAEN);
+      while ((stream->reg->CR1 & SAI_xCR1_DMAEN) != 0);
 
       // If DMA mode - disable DMA channel
       if (stream->dma != NULL) {
@@ -1288,6 +1336,7 @@ static int32_t SAI_Control (uint32_t control, uint32_t arg1, uint32_t arg2, SAI_
         // Slave receiver
         cr1 |= SAI_xCR1_MODE;
       }
+      cr1 |= SAI_xCR1_NODIV;
       break;
     default: return ARM_DRIVER_ERROR;
   }
@@ -1302,7 +1351,7 @@ static int32_t SAI_Control (uint32_t control, uint32_t arg1, uint32_t arg2, SAI_
         // Stream synchronous with the other internal sub-block
         cr1 |= SAI_xCR1_SYNCEN_0;
       } else {
-        // Stream synchronous with an external SAI emmbedded peripheral
+        // Stream synchronous with an external SAI embedded peripheral
         cr1 |= SAI_xCR1_SYNCEN_1;
       }
       break;
@@ -1310,7 +1359,7 @@ static int32_t SAI_Control (uint32_t control, uint32_t arg1, uint32_t arg2, SAI_
   }
 
   // Get Data size
-  stream->info->data_bits = ((control & ARM_SAI_DATA_SIZE_Msk) >> ARM_SAI_DATA_SIZE_Pos) + 1;
+  stream->info->data_bits = ((control & ARM_SAI_DATA_SIZE_Msk) >> ARM_SAI_DATA_SIZE_Pos) + 1U;
   switch (stream->info->data_bits) {
     case 8:  cr1 |= (2U << 5); break;
     case 10: cr1 |= (3U << 5); break;
@@ -1343,7 +1392,7 @@ static int32_t SAI_Control (uint32_t control, uint32_t arg1, uint32_t arg2, SAI_
   if (slot_sz < stream->info->data_bits) {return ARM_SAI_ERROR_SLOT_SIZE; }
 
   // Get Agument1 values
-  frame_sync_width = ((arg1 & ARM_SAI_FRAME_SYNC_WIDTH_Msk) >> ARM_SAI_FRAME_SYNC_WIDTH_Pos) + 1;
+  frame_sync_width = ((arg1 & ARM_SAI_FRAME_SYNC_WIDTH_Msk) >> ARM_SAI_FRAME_SYNC_WIDTH_Pos) + 1U;
   frame_sync_pol   =   arg1 & ARM_SAI_FRAME_SYNC_POLARITY_Msk;
   frame_sync_early = ((arg1 & ARM_SAI_FRAME_SYNC_EARLY) == 0) ? false : true;
   slot_count       = ((arg1 & ARM_SAI_SLOT_COUNT_Msk) >> ARM_SAI_SLOT_COUNT_Pos) + 1;
@@ -1357,10 +1406,6 @@ static int32_t SAI_Control (uint32_t control, uint32_t arg1, uint32_t arg2, SAI_
     case ARM_SAI_PROTOCOL_USER:
       if (frame_len < 8U)     { return ARM_SAI_ERROR_FRAME_LENGHT; }
       if (frame_len > 1024U)  { return ARM_SAI_ERROR_FRAME_LENGHT; }
-
-      if (slot_offset > (slot_sz - stream->info->data_bits)) { 
-        return ARM_SAI_ERROR_SLOT_OFFESET;
-      }
       break;
 
     // I2S
@@ -1381,6 +1426,7 @@ static int32_t SAI_Control (uint32_t control, uint32_t arg1, uint32_t arg2, SAI_
       slot_count       = 2U;
       slot_sz          = stream->info->data_bits;
       slot_offset      = 0U;
+      frcr            |= SAI_xFRCR_FSDEF;
       break;
 
     // MSB Justified
@@ -1402,6 +1448,7 @@ static int32_t SAI_Control (uint32_t control, uint32_t arg1, uint32_t arg2, SAI_
       frame_sync_early = false;
       slot_count       = 2U;
       slot_offset      = 0U;
+      frcr            |= SAI_xFRCR_FSDEF;
       break;
 
     // LSB Justified
@@ -1423,6 +1470,7 @@ static int32_t SAI_Control (uint32_t control, uint32_t arg1, uint32_t arg2, SAI_
       frame_sync_early = false;
       slot_count       = 2U;
       slot_offset      = slot_sz - stream->info->data_bits;
+      frcr            |= SAI_xFRCR_FSDEF;
       break;
 
     // PCM Short
@@ -1531,8 +1579,10 @@ static int32_t SAI_Control (uint32_t control, uint32_t arg1, uint32_t arg2, SAI_
   slotr |= (slot_count - 1) << 8;
 
   // Slot size
-  if (slot_sz == 16) { slotr |= SAI_xSLOTR_SLOTSZ_0; }
-  if (slot_sz == 32) { slotr |= SAI_xSLOTR_SLOTSZ_1; }
+  if ((arg1 & ARM_SAI_SLOT_SIZE_Msk) != ARM_SAI_SLOT_SIZE_DEFAULT) {
+    if (slot_sz == 16) { slotr |= SAI_xSLOTR_SLOTSZ_0; }
+    if (slot_sz == 32) { slotr |= SAI_xSLOTR_SLOTSZ_1; }
+  }
 
   // Slot offset
   slotr |= slot_offset;
@@ -1553,8 +1603,8 @@ static int32_t SAI_Control (uint32_t control, uint32_t arg1, uint32_t arg2, SAI_
 
     if (mclk_pin == 1U) {
       // MCLK Prescaler
-      val = (((arg2 & ARM_SAI_MCLK_PRESCALER_Msk) >> ARM_SAI_MCLK_PRESCALER_Pos) + 1U) / frame_len;
-      if (val != 255U) {return ARM_SAI_ERROR_MCLK_PRESCALER;}
+      val = (((arg2 & ARM_SAI_MCLK_PRESCALER_Msk) >> ARM_SAI_MCLK_PRESCALER_Pos) + 1U);
+      if (val != 256U) {return ARM_SAI_ERROR_MCLK_PRESCALER;}
     }
   }
 
@@ -1564,14 +1614,31 @@ static int32_t SAI_Control (uint32_t control, uint32_t arg1, uint32_t arg2, SAI_
 
   if (stream->reg->CR1 & SAI_xCR1_SAIEN) {
     cr1 |= SAI_xCR1_SAIEN;
+    imr  = (stream->reg->IMR & SAI_xIMR_FREQIE) ;
+
+    // Disable FREQ interrupt
+    stream->reg->IMR &= ~SAI_xIMR_FREQIE;
+
     // Disable SAI block
     stream->reg->CR1 &= ~SAI_xCR1_SAIEN;
+    while ((stream->reg->CR1 & SAI_xCR1_SAIEN) != 0U);
   }
 
   stream->reg->CR2   = cr2;
   stream->reg->FRCR  = frcr;
   stream->reg->SLOTR = slotr;
-  stream->reg->CR1   = cr1;
+  stream->reg->CR1   = (cr1 & ~(SAI_xCR1_SAIEN));
+
+  if (cr1 & SAI_xCR1_SAIEN) {
+    stream->reg->CR1 |= SAI_xCR1_SAIEN;
+    while ((stream->reg->CR1 & SAI_xCR1_SAIEN) == 0U);
+    stream->reg->IMR |= imr;
+
+    if ((stream->reg->CR1 & SAI_xCR1_MODE) == 0U) {
+       // Master transmitter mode: send dummy value to start generating clocks
+      stream->reg->DR = 0U;
+    }
+  }
 
   sai->info->flags |= SAI_FLAG_CONFIGURED;
 
@@ -1606,7 +1673,7 @@ void SAI_IRQHandler (SAI_RESOURCES *sai) {
   // Receive
   stream = sai->rx;
   if (stream->reg->CR1 & SAI_xCR1_SAIEN) {
-    // SAI transmit blok is enabled
+    // SAI transmit block is enabled
 
     // Read status register
     sr = stream->reg->SR;
@@ -1675,7 +1742,7 @@ void SAI_IRQHandler (SAI_RESOURCES *sai) {
   // Transmit
   stream = sai->tx;
   if (stream->reg->CR1 & SAI_xCR1_SAIEN) {
-    // SAI transmit blok is enabled
+    // SAI transmit block is enabled
 
     // Read status register
     sr = stream->reg->SR;
@@ -1711,7 +1778,7 @@ void SAI_IRQHandler (SAI_RESOURCES *sai) {
       }
     }
 
-    // Transmit Underrun
+    // Transmit Under-run
     if (sr & SAI_xSR_OVRUDR) {
       // Set underflow flag
       sai->info->status.tx_underflow = 1U;
@@ -1748,6 +1815,10 @@ void SAI_IRQHandler (SAI_RESOURCES *sai) {
   }
 }
 
+#if ((defined(MX_SAI1_A_DMA_Instance) && (SAI1_RX_BLOCK == SAI_BLOCK_A)) || \
+     (defined(MX_SAI1_B_DMA_Instance) && (SAI1_RX_BLOCK == SAI_BLOCK_B)) || \
+     (defined(MX_SAI2_A_DMA_Instance) && (SAI2_RX_BLOCK == SAI_BLOCK_A)) || \
+     (defined(MX_SAI2_B_DMA_Instance) && (SAI2_RX_BLOCK == SAI_BLOCK_B)))
 /* SAI RX DMA Handler */
 void SAI_RX_DMA_Complete (SAI_RESOURCES *sai) {
 
@@ -1763,7 +1834,13 @@ void SAI_RX_DMA_Complete (SAI_RESOURCES *sai) {
     sai->info->cb_event(ARM_SAI_EVENT_RECEIVE_COMPLETE);
   }
 }
+#endif
 
+
+#if ((defined(MX_SAI1_A_DMA_Instance) && (SAI1_TX_BLOCK == SAI_BLOCK_A)) || \
+     (defined(MX_SAI1_B_DMA_Instance) && (SAI1_TX_BLOCK == SAI_BLOCK_B)) || \
+     (defined(MX_SAI2_A_DMA_Instance) && (SAI2_TX_BLOCK == SAI_BLOCK_A)) || \
+     (defined(MX_SAI2_B_DMA_Instance) && (SAI2_TX_BLOCK == SAI_BLOCK_B)))
 /* SAI TX DMA Handler */
 void SAI_TX_DMA_Complete (SAI_RESOURCES *sai) {
 
@@ -1779,6 +1856,7 @@ void SAI_TX_DMA_Complete (SAI_RESOURCES *sai) {
     sai->info->cb_event(ARM_SAI_EVENT_SEND_COMPLETE);
   }
 }
+#endif
 
 
 // SAI1

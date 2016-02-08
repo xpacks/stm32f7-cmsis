@@ -18,8 +18,8 @@
  * 3. This notice may not be removed or altered from any source distribution.
  *
  *
- * $Date:        15. October 2015
- * $Revision:    V1.3
+ * $Date:        19. November 2015
+ * $Revision:    V1.4
  *
  * Driver:       Driver_USART1, Driver_USART2, Driver_USART3, Driver_USART4,
  *               Driver_USART5, Driver_USART6, Driver_USART7, Driver_USART8,
@@ -42,6 +42,8 @@
  * -------------------------------------------------------------------------- */
 
 /* History:
+ *  Version 1.4
+ *    Added Clearing of Noise detection flag
  *  Version 1.3
  *    Corrected PowerControl function for:
  *      - Unconditional Power Off
@@ -107,7 +109,7 @@ Configuration tab
  
 #include "USART_STM32F7xx.h"
 
-#define ARM_USART_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,3)
+#define ARM_USART_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,4)
 
 // Driver Version
 static const ARM_DRIVER_VERSION usart_driver_version = { ARM_USART_API_VERSION, ARM_USART_DRV_VERSION };
@@ -3049,7 +3051,7 @@ void USART_IRQHandler (const USART_RESOURCES *usart) {
   // Framing error
   if ((sr & USART_ISR_FE) != 0U) {
     // Dummy data read to clear the FE flag
-    usart->reg->ICR |= USART_ICR_FECF;
+    usart->reg->ICR = USART_ICR_FECF;
     usart->info->status.rx_framing_error = 1U;
     event |= ARM_USART_EVENT_RX_FRAMING_ERROR;
   }
@@ -3057,15 +3059,21 @@ void USART_IRQHandler (const USART_RESOURCES *usart) {
   // Parity error
   if ((sr & USART_ISR_PE) != 0U) {
     // Clear the PE flag
-    usart->reg->ICR |= USART_ICR_PECF;
+    usart->reg->ICR = USART_ICR_PECF;
     usart->info->status.rx_parity_error = 1U;
     event |= ARM_USART_EVENT_RX_PARITY_ERROR;
+  }
+
+  // Noise error
+  if ((sr & USART_ISR_NE) != 0U) {
+    // Clear the NE flag
+    usart->reg->ICR = USART_ICR_NCF;
   }
 
   // Break Detection
   if ((sr & USART_ISR_LBD) != 0U) {
     // Clear Break detection flag
-    usart->reg->ISR &= ~USART_ISR_LBD;
+    usart->reg->ICR = USART_ICR_LBDCF;
 
     usart->info->status.rx_break = 1U;
     event |= ARM_USART_EVENT_RX_BREAK;

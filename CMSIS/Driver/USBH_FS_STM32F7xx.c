@@ -1,5 +1,5 @@
 /* -----------------------------------------------------------------------------
- * Copyright (c) 2013-2015 ARM Ltd.
+ * Copyright (c) 2013-2016 ARM Ltd.
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from
@@ -18,8 +18,8 @@
  * 3. This notice may not be removed or altered from any source distribution.
  *
  *
- * $Date:        21. October 2015
- * $Revision:    V1.3
+ * $Date:        4. January 2016
+ * $Revision:    V1.5
  *
  * Driver:       Driver_USBH0
  * Configured:   via RTE_Device.h configuration file
@@ -35,14 +35,19 @@
  * --------------------------------------------------------------------------
  * Defines used for driver configuration (at compile time):
  *
- *   USBH_MAX_PIPE_NUM: defines maximum number of Pipes that driver will
- *                      support, this value impacts driver memory
- *                      requirements
- *     - default value: 12
- *     - maximum value: 12
+ *   USBH0_MAX_PIPE_NUM: defines maximum number of Pipes that driver will
+ *                       support, this value impacts driver memory
+ *                       requirements
+ *     - default value : 12
+ *     - maximum value : 12
  * -------------------------------------------------------------------------- */
 
 /* History:
+ *  Version 1.5
+ *    Removed interrupt priority handling
+ *  Version 1.4
+ *    Renamed externally overridable setting for maximum number of pipes used
+ *    from USBH_MAX_PIPE_NUM to USBH0_MAX_PIPE_NUM.
  *  Version 1.3
  *    Corrected multiple packet sending.
  *  Version 1.2
@@ -106,10 +111,10 @@ Configuration tab
      - Click \b OK to close the USB_OTG_FS Configuration dialog
   2. Under System open \b GPIO Pin Configuration
      - Enter user label for USB_OTG_FS_VBUS_Power and USB_OTG_FS_Overcurrent pin
-          Pin Name | Signal on Pin | GPIO mode       | GPIO Pull-up/Pull..| Maximum out | User Label
-          :--------|:--------------|:----------------|:-------------------|:------------|:----------
-          PD5      | n/a           | Output Push pull| No pull-up and no..| n/a         |\b USB_OTG_FS_VBUS_Power
-          PD4      | n/a           | Input mode      | No pull-up and no..| n/a         |\b USB_OTG_FS_Overcurrent
+          Pin Name | Signal on Pin | GPIO mode        | GPIO Pull-up/Pull..| Maximum out | User Label
+          :--------|:--------------|:-----------------|:-------------------|:------------|:----------
+          PD5      | n/a           | Output Push Pull | No pull-up and no..| n/a         |\b USB_OTG_FS_VBUS_Power
+          PD4      | n/a           | Input mode       | No pull-up and no..| n/a         |\b USB_OTG_FS_Overcurrent
  
      - Click \b OK to close the Pin Configuration dialog
 */
@@ -124,19 +129,19 @@ Configuration tab
 
 #include "OTG_FS_STM32F7xx.h"
 
-#ifndef USBH_MAX_PIPE_NUM
-#define USBH_MAX_PIPE_NUM               12U
+#ifndef USBH0_MAX_PIPE_NUM
+#define USBH0_MAX_PIPE_NUM             (12U)
 #endif
-#if    (USBH_MAX_PIPE_NUM > 12)
+#if    (USBH0_MAX_PIPE_NUM > 12U)
 #error  Too many Pipes, maximum Pipes that this driver supports is 12 !!!
 #endif
 
 extern uint8_t otg_fs_role;
 
-extern void OTG_FS_PinsConfigure   (uint8_t pins_mask);
-extern void OTG_FS_PinsUnconfigure (uint8_t pins_mask);
-extern void OTG_FS_PinVbusOnOff    (bool state);
-extern bool OTG_FS_PinGetOC        (void);
+extern void OTG_FS_PinsConfigure       (uint8_t pins_mask);
+extern void OTG_FS_PinsUnconfigure     (uint8_t pins_mask);
+extern void OTG_FS_PinVbusOnOff        (bool state);
+extern bool OTG_FS_PinGetOC            (void);
 
 #ifdef RTE_DEVICE_FRAMEWORK_CUBE_MX
 #ifdef MX_USB_OTG_FS_HOST
@@ -147,7 +152,7 @@ extern HCD_HandleTypeDef hhcd_USB_OTG_FS;
 
 // USBH Driver *****************************************************************
 
-#define ARM_USBH_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,3)
+#define ARM_USBH_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,5)
 
 // Driver Version
 static const ARM_DRIVER_VERSION usbh_driver_version = { ARM_USBH_API_VERSION, ARM_USBH_DRV_VERSION };
@@ -161,22 +166,22 @@ static const ARM_USBH_CAPABILITIES usbh_driver_capabilities = {
   0U            // Signal Overcurrent event
 };
 
-#define OTG                     OTG_FS
+#define OTG                    (OTG_FS)
 
 // FIFO sizes in bytes (total available memory for FIFOs is 1.25 kB)
-#define RX_FIFO_SIZE            640U    // RxFIFO depth is half of max 1.25 kB
-#define TX_FIFO_SIZE_NON_PERI   512U    // Non-periodic Tx FIFO size
-#define TX_FIFO_SIZE_PERI       128U    // Periodic Tx FIFO size
+#define RX_FIFO_SIZE           (640U)   // RxFIFO depth is half of max 1.25 kB
+#define TX_FIFO_SIZE_NON_PERI  (512U)   // Non-periodic Tx FIFO size
+#define TX_FIFO_SIZE_PERI      (128U)   // Periodic Tx FIFO size
 
-static volatile uint32_t *OTG_DFIFO[] = { OTG_FS_DFIFO0,
-                                          OTG_FS_DFIFO1,
-                                          OTG_FS_DFIFO2,
-                                          OTG_FS_DFIFO3,
-                                          OTG_FS_DFIFO4,
-                                          OTG_FS_DFIFO5,
-                                          OTG_FS_DFIFO6,
-                                          OTG_FS_DFIFO7
-                                        };
+static const uint32_t *OTG_DFIFO[] = { OTG_FS_DFIFO0,
+                                       OTG_FS_DFIFO1,
+                                       OTG_FS_DFIFO2,
+                                       OTG_FS_DFIFO3,
+                                       OTG_FS_DFIFO4,
+                                       OTG_FS_DFIFO5,
+                                       OTG_FS_DFIFO6,
+                                       OTG_FS_DFIFO7
+                                     };
 
 typedef struct {                        // Pipe structure definition
   uint32_t  packet;
@@ -196,20 +201,20 @@ typedef struct {                        // Pipe structure definition
 static ARM_USBH_SignalPortEvent_t SignalPortEvent;
 static ARM_USBH_SignalPipeEvent_t SignalPipeEvent;
 
-static bool            hw_initialized = false;
-static bool            hw_powered     = false;
-static bool            port_reset;
+static bool hw_initialized = false;
+static bool hw_powered     = false;
+static bool port_reset;
 
 // Pipes runtime information
-static volatile PIPE_t pipe[USBH_MAX_PIPE_NUM];
+static volatile PIPE_t pipe[USBH0_MAX_PIPE_NUM];
 
 
 // Auxiliary functions
 
 /**
   \fn          uint32_t USBH_CH_GetIndexFromAddress (OTG_FS_HC *ptr_ch)
-  \brief       Get the Index of Channel from it's Address.
-  \param[in]   ptr_ch   Pointer to the Channel
+  \brief       Get Index of Channel from it's Address.
+  \param[in]   ptr_ch   Pointer to Channel
   \return      Index of the Channel
 */
 __INLINE static uint32_t USBH_CH_GetIndexFromAddress (OTG_FS_HC *ptr_ch) {
@@ -218,8 +223,8 @@ __INLINE static uint32_t USBH_CH_GetIndexFromAddress (OTG_FS_HC *ptr_ch) {
 
 /**
   \fn          OTG_FS_HC *USBH_CH_GetAddressFromIndex (uint32_t index)
-  \brief       Get the Channel Address from it's Index.
-  \param[in]   index    Index of the Channel
+  \brief       Get Channel Address from it's Index.
+  \param[in]   index    Index of Channel
   \return      Address of the Channel
 */
 __INLINE static OTG_FS_HC *USBH_CH_GetAddressFromIndex (uint32_t index) {
@@ -229,7 +234,7 @@ __INLINE static OTG_FS_HC *USBH_CH_GetAddressFromIndex (uint32_t index) {
 /**
   \fn          OTG_FS_HC *USBH_CH_FindFree (void)
   \brief       Find a free Channel.
-  \return      Pointer to the first free Channel (NULL = no free Channel is available)
+  \return      Pointer to first free Channel (NULL = no free Channel is available)
 */
 __INLINE static OTG_FS_HC *USBH_CH_FindFree (void) {
   OTG_FS_HC *ptr_ch;
@@ -237,7 +242,7 @@ __INLINE static OTG_FS_HC *USBH_CH_FindFree (void) {
 
   ptr_ch = (OTG_FS_HC *)(&(OTG->HCCHAR0));
 
-  for (i = 0U; i < USBH_MAX_PIPE_NUM; i++) {
+  for (i = 0U; i < USBH0_MAX_PIPE_NUM; i++) {
     if ((ptr_ch->HCCHAR & 0x3FFFFFFFU) == 0U) { return ptr_ch; }
     ptr_ch++;
   }
@@ -247,8 +252,8 @@ __INLINE static OTG_FS_HC *USBH_CH_FindFree (void) {
 
 /**
   \fn          bool USBH_CH_Disable (OTG_FS_HC *ptr_ch)
-  \brief       Disable the Channel.
-  \param[in]   ptr_ch   Pointer to the Channel
+  \brief       Disable Channel.
+  \param[in]   ptr_ch   Pointer to Channel
   \return      true = success, false = fail
 */
 __INLINE static bool USBH_CH_Disable (OTG_FS_HC *ptr_ch) {
@@ -287,20 +292,20 @@ __INLINE static bool USBH_CH_Disable (OTG_FS_HC *ptr_ch) {
   \return      true = success, false = fail
 */
 static bool USBH_HW_StartTransfer (PIPE_t *ptr_pipe, OTG_FS_HC *ptr_ch) {
-  uint32_t           hcchar;
-  uint32_t           hctsiz;
-  uint32_t           hcintmsk;
-  uint32_t           txsts;
-  uint32_t           pckt_num;
-  uint32_t           data_num;
-  uint32_t           max_pckt_size;
-  uint32_t           max_data;
-  uint32_t           max_num_pckt;
-  uint32_t           num_to_transfer;
-  uint8_t           *ptr_src;
-  volatile uint32_t *ptr_dest;
-  uint16_t           cnt;
-  uint8_t            out;
+  uint32_t  hcchar;
+  uint32_t  hctsiz;
+  uint32_t  hcintmsk;
+  uint32_t  num_to_transfer;
+  uint32_t  txsts;
+  uint32_t  pckt_num;
+  uint32_t  data_num;
+  uint32_t  max_pckt_size;
+  uint32_t  max_data;
+  uint32_t  max_num_pckt;
+  uint8_t  *ptr_src;
+  uint32_t *ptr_dest;
+  uint16_t  cnt;
+  uint8_t   out;
 
   if (ptr_pipe == 0U)                        { return false; }
   if (ptr_ch   == 0U)                        { return false; }
@@ -336,7 +341,7 @@ static bool USBH_HW_StartTransfer (PIPE_t *ptr_pipe, OTG_FS_HC *ptr_ch) {
     case ARM_USBH_PACKET_OUT:
       hcchar   &= ~OTG_FS_HCCHARx_EPDIR;
       hcintmsk  = (OTG_FS_HCINTMSKx_TXERRM  |
-//                 OTG_FS_HCINTMSKx_ACKM    |         // After ACK there must be other relevant interrupt so ACK is ignorred
+//                 OTG_FS_HCINTMSKx_ACKM    |   // After ACK there must be other relevant interrupt so ACK is ignorred
                    OTG_FS_HCINTMSKx_NAKM    |
                    OTG_FS_HCINTMSKx_STALLM  |
                    OTG_FS_HCINTMSKx_XFRCM)  ;
@@ -346,7 +351,7 @@ static bool USBH_HW_StartTransfer (PIPE_t *ptr_pipe, OTG_FS_HC *ptr_ch) {
       hcchar   &= ~OTG_FS_HCCHARx_EPDIR;
       hcintmsk  = (OTG_FS_HCINTMSKx_TXERRM  |
                    OTG_FS_HCINTMSKx_XFRCM)  ;
-      hctsiz   &= ~OTG_FS_HCTSIZx_DPID_MSK;
+      hctsiz   &= ~OTG_FS_HCTSIZx_DPID_MSK  ;
       hctsiz   |=  OTG_FS_HCTSIZx_DPID_MDATA;
       out       =  1U;
       break;
@@ -359,13 +364,13 @@ static bool USBH_HW_StartTransfer (PIPE_t *ptr_pipe, OTG_FS_HC *ptr_ch) {
     case ARM_USB_ENDPOINT_CONTROL:
     case ARM_USB_ENDPOINT_BULK:
       if (out != 0U) {
-        txsts = OTG->HNPTXSTS;          // Read non-periodic FIFO status
+        txsts = OTG->HNPTXSTS;                  // Read non-periodic FIFO status
       }
       break;
     case ARM_USB_ENDPOINT_ISOCHRONOUS:
     case ARM_USB_ENDPOINT_INTERRUPT:
       if (out != 0U) {
-        txsts = OTG->HPTXSTS;           // Read non-periodic FIFO status
+        txsts = OTG->HPTXSTS;                   // Read non-periodic FIFO status
       }
       if ((OTG->HFNUM & 1U) != 0U) {
         hcchar &= ~OTG_FS_HCCHARx_ODDFRM;
@@ -400,7 +405,7 @@ static bool USBH_HW_StartTransfer (PIPE_t *ptr_pipe, OTG_FS_HC *ptr_ch) {
   hcchar &= ~OTG_FS_HCCHARx_CHDIS;
   hcchar |=  OTG_FS_HCCHARx_CHENA;
 
-                                                  // Prepare HCTSIZ register
+                                                // Prepare HCTSIZ register
   switch (ptr_pipe->packet & ARM_USBH_PACKET_DATA_Msk) {
     case ARM_USBH_PACKET_DATA0:
       hctsiz   &= ~OTG_FS_HCTSIZx_DPID_MSK;
@@ -414,19 +419,19 @@ static bool USBH_HW_StartTransfer (PIPE_t *ptr_pipe, OTG_FS_HC *ptr_ch) {
       break;
   }
 
-                                                  // Prepare HCTSIZ register
-  if (num_to_transfer != 0U) {                    // Normal packet
-                                                  // Prepare PKTCNT field
+                                                // Prepare HCTSIZ register
+  if (num_to_transfer != 0U) {                  // Normal packet
+                                                // Prepare PKTCNT field
     hctsiz |= ((num_to_transfer + ptr_pipe->ep_max_packet_size - 1U) / ptr_pipe->ep_max_packet_size) << 19;
-    hctsiz |=   num_to_transfer;                  // Prepare XFRSIZ field
-  } else {                                        // Zero length packet
-    hctsiz |=   1U << 19;                         // Prepare PKTCNT field
-    hctsiz |=   0U;                               // Prepare XFRSIZ field
+    hctsiz |=   num_to_transfer;                // Prepare XFRSIZ field
+  } else {                                      // Zero length packet
+    hctsiz |=   1U << 19;                       // Prepare PKTCNT field
+    hctsiz |=   0U;                             // Prepare XFRSIZ field
   }
 
   if (cnt != 0U) {
     ptr_src  = ptr_pipe->data + ptr_pipe->num_transferred_total;
-    ptr_dest = OTG_DFIFO[USBH_CH_GetIndexFromAddress (ptr_ch)];
+    ptr_dest = (uint32_t *)OTG_DFIFO[USBH_CH_GetIndexFromAddress (ptr_ch)];
   }
   if (out != 0U) {
     // For OUT/SETUP transfer num_transferring represents num of bytes to be sent
@@ -435,16 +440,16 @@ static bool USBH_HW_StartTransfer (PIPE_t *ptr_pipe, OTG_FS_HC *ptr_ch) {
     // For IN transfer num_transferring represents num of bytes received (handled in IRQ)
     ptr_pipe->num_transferring = 0U;
   }
-  NVIC_DisableIRQ (OTG_FS_IRQn);                  // Disable OTG interrupt
-  ptr_ch->HCINTMSK = hcintmsk;                    // Enable channel interrupts
-  ptr_ch->HCTSIZ   = hctsiz;                      // Write ch transfer size
-  ptr_ch->HCCHAR   = hcchar;                      // Write ch characteristics
-  while (cnt != 0U) {                             // Load data
+  NVIC_DisableIRQ (OTG_FS_IRQn);                // Disable OTG interrupt
+  ptr_ch->HCINTMSK = hcintmsk;                  // Enable channel interrupts
+  ptr_ch->HCTSIZ   = hctsiz;                    // Write ch transfer size
+  ptr_ch->HCCHAR   = hcchar;                    // Write ch characteristics
+  while (cnt != 0U) {                           // Load data
     *ptr_dest = *((__packed uint32_t *)ptr_src);
     ptr_src  += 4U;
     cnt--;
   }
-  NVIC_EnableIRQ  (OTG_FS_IRQn);                  // Enable OTG interrupt
+  NVIC_EnableIRQ  (OTG_FS_IRQn);                // Enable OTG interrupt
 
   return true;
 }
@@ -603,7 +608,7 @@ static int32_t USBH_PowerControl (ARM_POWER_STATE state) {
       // Periodic Tx FIFO setting
       OTG->HPTXFSIZ  = ((TX_FIFO_SIZE_PERI    /4U) << 16) | ((RX_FIFO_SIZE + TX_FIFO_SIZE_NON_PERI) / 4U);
 
-      OTG->HAINTMSK  = (1U << USBH_MAX_PIPE_NUM) - 1U;  // Enable channel interrupts
+      OTG->HAINTMSK  = (1U << USBH0_MAX_PIPE_NUM) - 1U; // Enable channel interrupts
       OTG->GINTMSK   = (OTG_FS_GINTMSK_DISCINT |        // Unmask interrupts
                         OTG_FS_GINTMSK_HCIM    |
                         OTG_FS_GINTMSK_PRTIM   |
@@ -611,7 +616,6 @@ static int32_t USBH_PowerControl (ARM_POWER_STATE state) {
                         OTG_FS_GINTMSK_SOFM)   ;
 
       OTG->GAHBCFG  |=  OTG_FS_GAHBCFG_GINTMSK;         // Enable interrupts
-      NVIC_SetPriority (OTG_FS_IRQn, 0);                // Set highest interrupt priority
 
       hw_powered     = true;                            // Set powered flag
 #ifdef RTE_DEVICE_FRAMEWORK_CLASSIC
@@ -668,7 +672,7 @@ static int32_t USBH_PortReset (uint8_t port) {
   hprt &= ~OTG_FS_HPRT_PENA;                            // Disable port
   hprt |=  OTG_FS_HPRT_PRST;                            // Port reset
   OTG->HPRT = hprt;
-  osDelay (18U);
+  osDelay (17U);
   hprt &= ~OTG_FS_HPRT_PRST;                            // Clear port reset
   OTG->HPRT = hprt;
   osDelay (50U);
@@ -775,15 +779,12 @@ static ARM_USBH_PIPE_HANDLE USBH_PipeCreate (uint8_t dev_addr, uint8_t dev_speed
   PIPE_t    *ptr_pipe;
   OTG_FS_HC *ptr_ch;
 
-  // [LNP]
-  if (hw_powered == false) { return 0; }
+  if (hw_powered == false) { return 0U; }
 
-  ptr_ch = USBH_CH_FindFree ();              // Find free Channel
+  ptr_ch = USBH_CH_FindFree ();                 // Find free Channel
+  if (ptr_ch == 0U) { return 0U; }              // If no free
 
-  // [LNP]
-  if (ptr_ch == 0U) { return 0; }            // If no free
-
-  ptr_pipe = (PIPE_t *)(&pipe[USBH_CH_GetIndexFromAddress (ptr_ch)]);
+   ptr_pipe = (PIPE_t *)(&pipe[USBH_CH_GetIndexFromAddress (ptr_ch)]);
 
   memset((void *)ptr_pipe, 0, sizeof(PIPE_t));  // Clear Pipes runtime information
 
@@ -1015,13 +1016,14 @@ static uint16_t USBH_GetFrameNumber (void) {
   \brief       USB Host Interrupt Routine (IRQ).
 */
 void USBH_FS_IRQ (uint32_t gintsts) {
-  PIPE_t            *ptr_pipe;
-  OTG_FS_HC         *ptr_ch;
-  uint8_t           *ptr_data;
-  volatile uint32_t *dfifo;
-  uint32_t           hprt, haint, hcint, pktcnt, mpsiz;
-  uint32_t           grxsts, bcnt, ch, dat, len, len_rest;
-  uint8_t            hchalt;
+  PIPE_t    *ptr_pipe;
+  OTG_FS_HC *ptr_ch;
+  uint32_t   hprt, haint, hcint, pktcnt, mpsiz;
+  uint32_t   ch;
+  uint8_t    hchalt;
+  uint8_t   *ptr_data;
+  uint32_t  *dfifo;
+  uint32_t   grxsts, bcnt, dat, len, len_rest;
 
   if ((gintsts & OTG_FS_GINTSTS_HPRTINT) != 0U) {       // If host port interrupt
     hprt = OTG->HPRT;
@@ -1031,9 +1033,11 @@ void USBH_FS_IRQ (uint32_t gintsts) {
         case 0:                                         // High-speed detected
           break;
         case 1:                                         // Full-speed detected
+          OTG->HFIR = 48000U;                           // Number of clocks for SOF
           OTG->HCFG = OTG_FS_HCFG_FSLSPCS(1U);
           break;
         case 2:                                         // Low-speed detected
+          OTG->HFIR = 6000U;                            // Number of clocks for SOF
           OTG->HCFG = OTG_FS_HCFG_FSLSPCS(2U);
           break;
         default:
@@ -1057,9 +1061,12 @@ void USBH_FS_IRQ (uint32_t gintsts) {
     if (port_reset == false) {                          // Ignore disconnect under reset
       ptr_ch   = (OTG_FS_HC *)(&OTG->HCCHAR0);
       ptr_pipe = (PIPE_t    *)(pipe);
-      for (ch = 0U; ch < USBH_MAX_PIPE_NUM; ch++) {
+      for (ch = 0U; ch < USBH0_MAX_PIPE_NUM; ch++) {
         if (ptr_pipe->active != 0U) {
           ptr_pipe->active = 0U;
+          ptr_ch->HCINT    = 0x7BBU;                    // Clear all interrupts
+          ptr_ch->HCINTMSK = OTG_FS_HCINTx_CHH;         // Enable halt interrupt
+          ptr_ch->HCCHAR  |= OTG_FS_HCCHARx_CHENA | OTG_FS_HCCHARx_CHDIS;       // Activate Halt
           SignalPipeEvent((ARM_USBH_EP_HANDLE)ptr_ch, ARM_USBH_EVENT_BUS_ERROR);
         }
         ptr_ch++;
@@ -1076,7 +1083,7 @@ void USBH_FS_IRQ (uint32_t gintsts) {
       grxsts     = (OTG->GRXSTSP);
       ch         = (grxsts     ) & 0x00FU;
       bcnt       = (grxsts >> 4) & 0x7FFU;
-      dfifo      =  OTG_DFIFO[ch];
+      dfifo      = (uint32_t *)OTG_DFIFO[ch];
       ptr_data   =  pipe[ch].data + pipe[ch].num_transferred_total;
       len        =  bcnt / 4U;                          // Received number of 32-bit data
       len_rest   =  bcnt & 3U;                          // Number of bytes left
@@ -1103,7 +1110,7 @@ void USBH_FS_IRQ (uint32_t gintsts) {
                                                         // Handle host ctrl interrupt
   if ((gintsts & OTG_FS_GINTSTS_HCINT) != 0U) {         // If host channel interrupt
     haint = OTG->HAINT;
-    for (ch = 0U; ch < USBH_MAX_PIPE_NUM; ch++) {
+    for (ch = 0U; ch < USBH0_MAX_PIPE_NUM; ch++) {
       if (haint == 0U) { break; }
       if ((haint & (1U << ch)) != 0U) {                 // If channels interrupt active
         haint     &= ~(1U << ch);
@@ -1112,22 +1119,29 @@ void USBH_FS_IRQ (uint32_t gintsts) {
         hcint      =   ptr_ch->HCINT & ptr_ch->HCINTMSK;
         hchalt     =   0U;
         if ((hcint & OTG_FS_HCINTx_CHH) != 0U) {        // If channel halted
-          ptr_ch->HCINT    = OTG_FS_HCINTx_CHH;         // Clear halt interrupt
           ptr_ch->HCINTMSK = 0U;                        // Disable all channel interrupts
           ptr_ch->HCINT    = 0x7BBU;                    // Clear all interrupts
           ptr_pipe->in_progress = 0U;                   // Transfer not in progress
         } else if ((hcint & OTG_FS_HCINTx_XFRC) != 0U) {// If data transfer finished
+          if ((ptr_ch->HCCHAR & (1U << 15)) == 0U) {    // If endpoint OUT
+            ptr_ch->HCINTMSK = 0U;                      // Disable all channel interrupts
+            ptr_pipe->in_progress = 0U;                 // Transfer not in progress
+          }
           ptr_ch->HCINT   = 0x7BBU;                     // Clear all interrupts
           if ((ptr_ch->HCCHAR & (1U << 15)) != 0U) {    // If endpoint IN
+            ptr_pipe->active = 0U;                      // Transfer not active any more
             ptr_pipe->event = ARM_USBH_EVENT_TRANSFER_COMPLETE;
           } else {                                      // If endpoint OUT
             ptr_pipe->num_transferred_total += ptr_pipe->num_transferring;
             ptr_pipe->num_transferring       = 0U;
             if (ptr_pipe->num_transferred_total == ptr_pipe->num) {
+              ptr_pipe->active = 0U;                    // Transfer not active any more
               ptr_pipe->event = ARM_USBH_EVENT_TRANSFER_COMPLETE;
             }
           }
-          hchalt = 1U;
+          if ((ptr_ch->HCCHAR & (1U << 15)) != 0U) {    // If endpoint IN
+            hchalt = 1U;
+          }
         } else {
           if ((hcint & OTG_FS_HCINTx_ACK) != 0U) {      // If ACK received
             ptr_ch->HCINT = OTG_FS_HCINTx_ACK;          // Clear ACK interrupt
@@ -1153,7 +1167,7 @@ void USBH_FS_IRQ (uint32_t gintsts) {
               if ((ptr_pipe->num_transferring >= mpsiz) && (pktcnt > 0U)) {
                 ptr_pipe->num_transferred_total += ptr_pipe->num_transferring - mpsiz * pktcnt;
               }
-              ptr_pipe->num_transferring       = 0U;
+              ptr_pipe->num_transferring = 0U;
             }
             if ((hcint & OTG_FS_HCINTx_NAK)!=0U){       // If NAK received
               ptr_ch->HCINT = OTG_FS_HCINTx_NAK;        // Clear NAK interrupt
@@ -1172,10 +1186,12 @@ void USBH_FS_IRQ (uint32_t gintsts) {
               }
             } else if ((hcint&OTG_FS_HCINTx_STALL)!=0U){// If STALL received
               ptr_ch->HCINT   = OTG_FS_HCINTx_STALL;    // Clear STALL interrupt
+              ptr_pipe->active = 0U;                    // Transfer not active any more
               ptr_pipe->event = ARM_USBH_EVENT_HANDSHAKE_STALL;
               hchalt = 1U;
             } else {
               ptr_ch->HCINT   = OTG_FS_HCINTx_ERR;      // Clear all error interrupts
+              ptr_pipe->active = 0U;                    // Transfer not active any more
               ptr_pipe->event = ARM_USBH_EVENT_BUS_ERROR;
               hchalt = 1U;
             }
@@ -1185,9 +1201,9 @@ void USBH_FS_IRQ (uint32_t gintsts) {
           ptr_ch->HCINTMSK = OTG_FS_HCINTx_CHH;         // Enable halt interrupt
           ptr_ch->HCCHAR  |= OTG_FS_HCCHARx_CHENA | OTG_FS_HCCHARx_CHDIS;
         }
-        if ((ptr_pipe->in_progress == 0U) && (ptr_pipe->event != 0U)) {
-          ptr_pipe->active = 0U;
+        if ((ptr_pipe->in_progress == 0U) && (ptr_pipe->active == 0U) && (ptr_pipe->event != 0U)) {
           SignalPipeEvent((ARM_USBH_EP_HANDLE)ptr_ch, ptr_pipe->event);
+          ptr_pipe->event  = 0U;
         }
       }
     }
@@ -1197,7 +1213,7 @@ void USBH_FS_IRQ (uint32_t gintsts) {
   if ((gintsts & OTG_FS_GINTSTS_SOF) != 0U) {           // If start of frame interrupt
     OTG->GINTSTS =  OTG_FS_GINTSTS_SOF;                 // Clear SOF interrupt
     ptr_pipe     = (PIPE_t *)(pipe);
-    for (ch = 0U; ch < USBH_MAX_PIPE_NUM; ch++) {
+    for (ch = 0U; ch < USBH0_MAX_PIPE_NUM; ch++) {
       // If interrupt transfer is active handle period (interval)
       if ((ptr_pipe->ep_type == ARM_USB_ENDPOINT_INTERRUPT) && (ptr_pipe->active != 0U) && (ptr_pipe->interval != 0U)) {
         ptr_pipe->interval--;
@@ -1208,7 +1224,7 @@ void USBH_FS_IRQ (uint32_t gintsts) {
 
   // Handle restarts of unfinished transfers (due to NAK or ACK)
   ptr_pipe = (PIPE_t *)(pipe);
-  for (ch = 0U; ch < USBH_MAX_PIPE_NUM; ch++) {
+  for (ch = 0U; ch < USBH0_MAX_PIPE_NUM; ch++) {
     if ((ptr_pipe->active != 0U) && (ptr_pipe->in_progress == 0U)) {
       // Restart periodic transfer if not in progress and interval expired
       if (ptr_pipe->ep_type == ARM_USB_ENDPOINT_INTERRUPT) {
