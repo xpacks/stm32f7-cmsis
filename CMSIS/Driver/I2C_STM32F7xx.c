@@ -18,8 +18,8 @@
  * 3. This notice may not be removed or altered from any source distribution.
  *
  *
- * $Date:        15. October 2015
- * $Revision:    V1.3
+ * $Date:        24. November 2015
+ * $Revision:    V1.4
  *
  * Driver:       Driver_I2C1, Driver_I2C2, Driver_I2C3, Driver_I2C4
  * Configured:   via RTE_Device.h configuration file
@@ -37,6 +37,9 @@
  * -------------------------------------------------------------------------- */
 
 /* History:
+ *  Version 1.4
+      Corrected event signaling and data counter value when stop condition is detected
+ *    Corrected register CR2 handling in MasterReceive function (AUTOEND/RELOAD)
  *  Version 1.3
  *    Corrected PowerControl function for:
  *      - Unconditional Power Off
@@ -117,7 +120,7 @@ Configuration tab
 
 #include "I2C_STM32F7xx.h"
 
-#define ARM_I2C_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,3)    /* driver version */
+#define ARM_I2C_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,4)    /* driver version */
 
 
 #if defined(MX_I2C1_RX_DMA_Instance)
@@ -906,7 +909,7 @@ static int32_t I2C_MasterTransmit (uint32_t       addr,
   i2c->info->status.arbitration_lost = 0U;
 
   i2c->info->xfer.num  = num;
-  i2c->info->xfer.cnt  = 0U;
+  i2c->info->xfer.cnt  = 0;
   i2c->info->xfer.data = (uint8_t *)data;
   i2c->info->xfer.ctrl = 0U;
 
@@ -945,7 +948,7 @@ static int32_t I2C_MasterTransmit (uint32_t       addr,
       return ARM_DRIVER_ERROR;
     }
   }
-  
+
   /* Generate start */
   i2c->reg->CR2 |= I2C_CR2_START;
   /* Enable transfer complete interrupt */
@@ -1004,7 +1007,7 @@ static int32_t I2C_MasterReceive (uint32_t       addr,
   i2c->info->status.arbitration_lost = 0U;
 
   i2c->info->xfer.num  = num;
-  i2c->info->xfer.cnt  = 0U;
+  i2c->info->xfer.cnt  = 0;
   i2c->info->xfer.data = (uint8_t *)data;
   i2c->info->xfer.ctrl = 0U;
 
@@ -1025,13 +1028,13 @@ static int32_t I2C_MasterReceive (uint32_t       addr,
     cnt = num;
     /* Send all data bytes and enable automatic STOP */
     if (!xfer_pending && !restart) {
-      cr2 = I2C_CR2_AUTOEND;
+      cr2 |= I2C_CR2_AUTOEND;
     }
   }
   else {
     cnt = 255;
     /* Send 255 data bytes and enable NBYTES reload */
-    cr2 = I2C_CR2_RELOAD;
+    cr2 |= I2C_CR2_RELOAD;
   }
 
   /* Apply transfer setup */
@@ -1075,7 +1078,7 @@ static int32_t I2C_SlaveTransmit (const uint8_t *data, uint32_t num, I2C_RESOURC
   i2c->info->status.general_call = 0U;
 
   i2c->info->xfer.num  = num;
-  i2c->info->xfer.cnt  = 0U;
+  i2c->info->xfer.cnt  = -1;
   i2c->info->xfer.data = (uint8_t *)data;
   i2c->info->xfer.ctrl = 0U;
 
@@ -1121,7 +1124,7 @@ static int32_t I2C_SlaveReceive (uint8_t *data, uint32_t num, I2C_RESOURCES *i2c
   i2c->info->status.general_call = 0U;
 
   i2c->info->xfer.num  = num;
-  i2c->info->xfer.cnt  = 0U;
+  i2c->info->xfer.cnt  = -1;
   i2c->info->xfer.data = data;
   i2c->info->xfer.ctrl = 0U;
 
@@ -1151,12 +1154,7 @@ static int32_t I2C_SlaveReceive (uint8_t *data, uint32_t num, I2C_RESOURCES *i2c
   \return      number of data bytes transferred; -1 when Slave is not addressed by Master
 */
 static int32_t I2C_GetDataCount (I2C_RESOURCES *i2c) {
-  if (i2c->info->status.mode == 0U) {
-    if ((i2c->info->xfer.ctrl & XFER_CTRL_ADDR_DONE) == 0U) {
-      return (-1);
-    }
-  }
-  return ((int32_t)i2c->info->xfer.cnt);
+  return (i2c->info->xfer.cnt);
 }
 
 
@@ -1390,11 +1388,11 @@ static ARM_I2C_STATUS I2C_GetStatus (I2C_RESOURCES *i2c) {
 static void I2C_EV_IRQHandler (I2C_RESOURCES *i2c) {
   I2C_TRANSFER_INFO *tr = &i2c->info->xfer;
   ARM_I2C_STATUS    *st = &i2c->info->status;
-  
+
   uint32_t event;
   uint32_t isr, icr;
   uint32_t cnt, cr;
-  
+
   event = 0U;
   icr   = 0U;
   isr   = i2c->reg->ISR;
@@ -1415,9 +1413,7 @@ static void I2C_EV_IRQHandler (I2C_RESOURCES *i2c) {
       /* Wait for pending transfer */
       i2c->reg->CR1 &= ~I2C_CR1_TCIE;
 
-      if (i2c->info->cb_event) {
-        i2c->info->cb_event (ARM_I2C_EVENT_TRANSFER_DONE);
-      }
+      event = ARM_I2C_EVENT_TRANSFER_DONE;
     }
     else {
       /* Send stop */
@@ -1431,7 +1427,7 @@ static void I2C_EV_IRQHandler (I2C_RESOURCES *i2c) {
 
       if (tr->ctrl & XFER_CTRL_ADDR_NACK) {
         /* Slave address not acknowledged */
-        event = ARM_I2C_EVENT_ADDRESS_NACK | ARM_I2C_EVENT_TRANSFER_DONE;
+        event = ARM_I2C_EVENT_TRANSFER_DONE | ARM_I2C_EVENT_ADDRESS_NACK;
       }
       else {
         event = ARM_I2C_EVENT_TRANSFER_DONE;
@@ -1449,7 +1445,6 @@ static void I2C_EV_IRQHandler (I2C_RESOURCES *i2c) {
 
       st->busy = 0U;
       st->mode = 0U;
-
     }
     else if (isr & I2C_ISR_ADDR) {
       /* Address matched (slave mode) */
@@ -1461,7 +1456,7 @@ static void I2C_EV_IRQHandler (I2C_RESOURCES *i2c) {
         /* General call */
         st->general_call = 1U;
 
-        event |= ARM_I2C_EVENT_GENERAL_CALL;
+        event = ARM_I2C_EVENT_GENERAL_CALL;
       }
 
       /* Set transfer direction */
@@ -1480,9 +1475,11 @@ static void I2C_EV_IRQHandler (I2C_RESOURCES *i2c) {
         if (i2c->info->cb_event != NULL) {
           i2c->info->cb_event (event);
         }
+        event = 0U;
       }
 
       st->busy  = 1U;
+      tr->cnt   = 0;
       tr->ctrl |= XFER_CTRL_ADDR_DONE;
     }
     else {
@@ -1490,8 +1487,8 @@ static void I2C_EV_IRQHandler (I2C_RESOURCES *i2c) {
         /* NACK received */
         icr |= I2C_ICR_NACKCF;
 
-        /* Master send STOP after slave NACK */
-        /* Slave already released the lines  */
+        /* Master sends STOP after slave NACK */
+        /* Slave already released the lines   */
         if (st->mode != 0U) {
           i2c->reg->CR2 |= I2C_CR2_STOP;
 
@@ -1505,7 +1502,7 @@ static void I2C_EV_IRQHandler (I2C_RESOURCES *i2c) {
   else {
     if ((isr & I2C_ISR_TCR) != 0) {
       /* Transfer Complete Reload */
-      cr  = i2c->reg->CR2;
+      cr = i2c->reg->CR2;
 
       tr->cnt += (cr >> 16) & 0xFF;
 
@@ -1527,6 +1524,10 @@ static void I2C_EV_IRQHandler (I2C_RESOURCES *i2c) {
     }
   }
   i2c->reg->ICR = icr;
+
+  if ((event != 0U) && (i2c->info->cb_event != NULL)) {
+    i2c->info->cb_event (event);
+  }
 }
 
 

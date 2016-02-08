@@ -18,8 +18,8 @@
  * 3. This notice may not be removed or altered from any source distribution.
  *
  *
- * $Date:        24. August 2015
- * $Revision:    V1.1
+ * $Date:        24. November 2015
+ * $Revision:    V1.4
  *
  * Project:      I2C Driver definitions for ST STM32F7xx
  * -------------------------------------------------------------------------- */
@@ -272,7 +272,7 @@ typedef const struct _I2C_IO {
 /* I2C Transfer Information (Run-Time) */
 typedef struct _I2C_TRANSFER_INFO {
   uint32_t              num;                  // Number of data to transfer
-  uint32_t              cnt;                  // Data transfer counter
+  int32_t               cnt;                  // Data transfer counter
   uint8_t              *data;                 // Data pointer
   uint8_t               ctrl;                 // Transfer control flags
 } I2C_TRANSFER_INFO;

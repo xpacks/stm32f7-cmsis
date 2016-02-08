@@ -8,7 +8,8 @@ IFS=$'\n\t'
 # RELEASE_VERSION="2.0.0"
 # RELEASE_VERSION="2.1.0"
 # RELEASE_VERSION="2.2.0"
-RELEASE_VERSION="2.3.0"
+# RELEASE_VERSION="2.3.0"
+RELEASE_VERSION="2.4.0"
 
 FAMILY="STM32F7"
 GITHUB_PROJECT="xpacks/stm32f7-cmsis"
@@ -18,6 +19,7 @@ ARCHIVE_URL="http://www.keil.com/pack/${ARCHIVE_NAME}"
 
 LOCAL_ARCHIVE_FILE="/tmp/xpacks/${ARCHIVE_NAME}"
 
+echo "Cleaning previous files..."
 for f in *
 do
   if [ "${f}" == "scripts" ]
@@ -34,8 +36,10 @@ then
   curl -o "${LOCAL_ARCHIVE_FILE}" -L "${ARCHIVE_URL}"
 fi
 
+echo "Unpacking '${ARCHIVE_NAME}'..."
 unzip -q "${LOCAL_ARCHIVE_FILE}"
 
+echo "Removing unnecessary files..."
 rm -rf \
 _htmresc \
 CMSIS/Flash \
@@ -60,6 +64,7 @@ package.xml
 
 find . -name '*.exe' -exec rm \{} \;
 
+echo "Creating README.md..."
 cat <<EOF >README.md
 # ${FAMILY} CMSIS
 
@@ -74,6 +79,8 @@ includes the ${FAMILY} CMSIS files.
 
 The latest CMSIS documentation is available from
 [keil.com](http://www.keil.com/cmsis).
+
+The list of latest packs is available from [keil.com](https://www.keil.com/dd2/pack/).
 
 ## Original files
 
@@ -105,3 +112,6 @@ To save space, the following folders/files were removed:
 * package.xml
 
 EOF
+
+echo
+echo Check if ok and when ready, issue: \`git commit -m ${ARCHIVE_NAME}\`
