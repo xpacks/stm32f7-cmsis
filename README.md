@@ -60,3 +60,9 @@ startup_stm32f746xx.s -> vectors_stm32f746xx.c
 startup_stm32f756xx.s -> vectors_stm32f756xx.c
 ```
 
+## Tests
+
+```
+export PATH=/usr/local/gcc-arm-none-eabi-5_2-2015q4/bin:$PATH
+bash ../../../scripts/run-tests.sh
+```
