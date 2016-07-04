@@ -18,8 +18,8 @@
  * 3. This notice may not be removed or altered from any source distribution.
  *
  *
- * $Date:        4. January 2016
- * $Revision:    V1.5
+ * $Date:        2. February 2016
+ * $Revision:    V1.6
  *
  * Driver:       Driver_USBH0
  * Configured:   via RTE_Device.h configuration file
@@ -35,6 +35,12 @@
  * --------------------------------------------------------------------------
  * Defines used for driver configuration (at compile time):
  *
+ *   USB_OTG_FS_VBUS_Power_Pin_Active:  specifies VBUS pin polarity
+ *                      (0 = active low, 1 = active high)
+ *     - default value : 0 = active low
+ *   USB_OTG_FS_Overcurrent_Pin_Active: specifies Overcurrent pin polarity
+ *                      (0 = active low, 1 = active high)
+ *     - default value : 0 = active low
  *   USBH0_MAX_PIPE_NUM: defines maximum number of Pipes that driver will
  *                       support, this value impacts driver memory
  *                       requirements
@@ -43,6 +49,8 @@
  * -------------------------------------------------------------------------- */
 
 /* History:
+ *  Version 1.6
+ *    Added comments for external defines regarding VBUS and Overcurrent pin polarity
  *  Version 1.5
  *    Removed interrupt priority handling
  *  Version 1.4
@@ -152,7 +160,7 @@ extern HCD_HandleTypeDef hhcd_USB_OTG_FS;
 
 // USBH Driver *****************************************************************
 
-#define ARM_USBH_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,5)
+#define ARM_USBH_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,6)
 
 // Driver Version
 static const ARM_DRIVER_VERSION usbh_driver_version = { ARM_USBH_API_VERSION, ARM_USBH_DRV_VERSION };

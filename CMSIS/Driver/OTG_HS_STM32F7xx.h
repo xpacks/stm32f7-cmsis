@@ -18,8 +18,8 @@
  * 3. This notice may not be removed or altered from any source distribution.
  *
  *
- * $Date:        14. January 2016
- * $Revision:    V1.2
+ * $Date:        2. February 2016
+ * $Revision:    V1.3
  *
  * Project:      OTG High-Speed Driver Header for ST STM32F7xx
  * -------------------------------------------------------------------------- */
@@ -220,6 +220,12 @@
 #define    USB_OTG_HS_Overcurrent_Pin_Active    RTE_OTG_HS_OC_ACTIVE
 #endif
 
+// USB_OTG_HS DMA usage
+#ifndef    RTE_OTG_HS_DMA
+#define    RTE_OTG_HS_DMA                       0
+#endif
+#define    USB_OTG_HS_DMA                       RTE_OTG_HS_DMA
+
 #elif  (defined(RTE_DEVICE_FRAMEWORK_CUBE_MX))  // #ifdef RTE_DEVICE_FRAMEWORK_CLASSIC
 #include "MX_Device.h"
 
@@ -253,6 +259,10 @@
 #ifndef    USB_OTG_HS_Overcurrent_Pin_Active
 #define    USB_OTG_HS_Overcurrent_Pin_Active    0
 #endif
+#endif
+
+#ifndef    USB_OTG_HS_DMA
+#define    USB_OTG_HS_DMA                       0
 #endif
 
 #endif                                          // #ifdef RTE_DEVICE_FRAMEWORK_CLASSIC

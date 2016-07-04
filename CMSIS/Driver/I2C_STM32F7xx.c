@@ -23,7 +23,7 @@
  *
  * Driver:       Driver_I2C1, Driver_I2C2, Driver_I2C3, Driver_I2C4
  * Configured:   via RTE_Device.h configuration file
- * Project:      I2C Driver for ST STM32F4xx
+ * Project:      I2C Driver for ST STM32F7xx
  * --------------------------------------------------------------------------
  * Use the following configuration settings in the middleware component
  * to connect to this driver.
