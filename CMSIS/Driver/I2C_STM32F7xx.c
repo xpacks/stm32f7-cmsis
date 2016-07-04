@@ -122,7 +122,7 @@ Configuration tab
 
 #include "I2C_STM32F7xx.h"
 
-#define ARM_I2C_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,4)    /* driver version */
+#define ARM_I2C_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,5)    /* driver version */
 
 
 #if defined(MX_I2C1_RX_DMA_Instance)
