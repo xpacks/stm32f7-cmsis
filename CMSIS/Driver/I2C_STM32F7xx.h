@@ -1,5 +1,5 @@
 /* -----------------------------------------------------------------------------
- * Copyright (c) 2013-2015 ARM Ltd.
+ * Copyright (c) 2013-2016 ARM Ltd.
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from
@@ -18,8 +18,8 @@
  * 3. This notice may not be removed or altered from any source distribution.
  *
  *
- * $Date:        24. November 2015
- * $Revision:    V1.4
+ * $Date:        24. May 2016
+ * $Revision:    V1.5
  *
  * Project:      I2C Driver definitions for ST STM32F7xx
  * -------------------------------------------------------------------------- */
@@ -197,12 +197,24 @@
   #define MX_I2C4_SCL_GPIOx         RTE_I2C4_SCL_PORT
   #define MX_I2C4_SCL_GPIO_Pin      (1U << RTE_I2C4_SCL_BIT)
   #define MX_I2C4_SCL_GPIO_PuPdOD   GPIO_NOPULL
-  #define MX_I2C4_SCL_GPIO_AF       GPIO_AF4_I2C4
+  #if   (RTE_I2C4_SCL_PORT_ID == 3)
+    #define MX_I2C4_SCL_GPIO_AF     GPIO_AF11_I2C4
+  #elif (RTE_I2C4_SCL_PORT_ID == 4)
+    #define MX_I2C4_SCL_GPIO_AF     GPIO_AF1_I2C4
+  #else
+    #define MX_I2C4_SCL_GPIO_AF     GPIO_AF4_I2C4
+  #endif
 
   #define MX_I2C4_SDA_GPIOx         RTE_I2C4_SDA_PORT
   #define MX_I2C4_SDA_GPIO_Pin      (1U << RTE_I2C4_SDA_BIT)
   #define MX_I2C4_SDA_GPIO_PuPdOD   GPIO_NOPULL
-  #define MX_I2C4_SDA_GPIO_AF       GPIO_AF4_I2C4
+  #if   (RTE_I2C4_SDA_PORT_ID == 3)
+    #define MX_I2C4_SDA_GPIO_AF     GPIO_AF11_I2C4
+  #elif (RTE_I2C4_SDA_PORT_ID == 4)
+    #define MX_I2C4_SDA_GPIO_AF     GPIO_AF1_I2C4
+  #else
+    #define MX_I2C4_SDA_GPIO_AF     GPIO_AF4_I2C4
+  #endif
 #endif
 
 #endif /* RTE_DEVICE_FRAMEWORK_CLASSIC */

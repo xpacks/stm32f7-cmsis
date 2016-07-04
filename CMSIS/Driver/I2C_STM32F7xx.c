@@ -1,5 +1,5 @@
 /* -----------------------------------------------------------------------------
- * Copyright (c) 2013-2015 ARM Ltd.
+ * Copyright (c) 2013-2016 ARM Ltd.
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from
@@ -18,8 +18,8 @@
  * 3. This notice may not be removed or altered from any source distribution.
  *
  *
- * $Date:        24. November 2015
- * $Revision:    V1.4
+ * $Date:        24. May 2016
+ * $Revision:    V1.5
  *
  * Driver:       Driver_I2C1, Driver_I2C2, Driver_I2C3, Driver_I2C4
  * Configured:   via RTE_Device.h configuration file
@@ -37,8 +37,10 @@
  * -------------------------------------------------------------------------- */
 
 /* History:
+ *  Version 1.5
+ *    Added port configuration for ports supported by new subfamilies.
  *  Version 1.4
-      Corrected event signaling and data counter value when stop condition is detected
+ *    Corrected event signaling and data counter value when stop condition is detected
  *    Corrected register CR2 handling in MasterReceive function (AUTOEND/RELOAD)
  *  Version 1.3
  *    Corrected PowerControl function for:

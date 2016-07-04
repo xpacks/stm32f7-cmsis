@@ -1,5 +1,5 @@
 /* -----------------------------------------------------------------------------
- * Copyright (c) 2013-2015 ARM Ltd.
+ * Copyright (c) 2013-2016 ARM Ltd.
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from
@@ -18,8 +18,8 @@
  * 3. This notice may not be removed or altered from any source distribution.
  *
  *
- * $Date:        25. March 2016
- * $Revision:    V1.6
+ * $Date:        24. May 2016
+ * $Revision:    V1.7
  *
  * Driver:       Driver_USART1, Driver_USART2, Driver_USART3, Driver_USART4,
  *               Driver_USART5, Driver_USART6, Driver_USART7, Driver_USART8,
@@ -42,6 +42,8 @@
  * -------------------------------------------------------------------------- */
 
 /* History:
+ *  Version 1.7
+ *    Added port configuration for ports supported by new subfamilies.
  *  Version 1.6
  *    Corrected CTS handling
  *  Version 1.5

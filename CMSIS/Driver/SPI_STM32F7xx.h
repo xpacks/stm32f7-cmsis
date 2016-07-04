@@ -1,5 +1,5 @@
 /* -----------------------------------------------------------------------------
- * Copyright (c) 2013-2015 ARM Ltd.
+ * Copyright (c) 2013-2016 ARM Ltd.
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from
@@ -18,8 +18,8 @@
  * 3. This notice may not be removed or altered from any source distribution.
  *
  *
- * $Date:        15. October 2015
- * $Revision:    V1.2
+ * $Date:        24. May 2016
+ * $Revision:    V1.3
  *
  * Project:      SPI Driver definitions for ST STM32F7xx
  * -------------------------------------------------------------------------- */
@@ -386,25 +386,43 @@
   #define MX_SPI6_MISO_GPIOx          RTE_SPI6_MISO_PORT
   #define MX_SPI6_MISO_GPIO_Pin      (1U << RTE_SPI6_MISO_BIT)
   #define MX_SPI6_MISO_GPIO_PuPd      GPIO_NOPULL
-  #define MX_SPI6_MISO_GPIO_AF        GPIO_AF5_SPI6
+  #if (RTE_SPI6_MISO_PORT_ID == 0)
+    #define MX_SPI6_MISO_GPIO_AF      GPIO_AF5_SPI6
+  #else
+    #define MX_SPI6_MISO_GPIO_AF      GPIO_AF8_SPI6
+  #endif
 
   #define MX_SPI6_MOSI_Pin            1U
   #define MX_SPI6_MOSI_GPIOx          RTE_SPI6_MOSI_PORT
   #define MX_SPI6_MOSI_GPIO_Pin      (1U << RTE_SPI6_MOSI_BIT)
   #define MX_SPI6_MOSI_GPIO_PuPd      GPIO_NOPULL
-  #define MX_SPI6_MOSI_GPIO_AF        GPIO_AF5_SPI6
+  #if (RTE_SPI6_MOSI_PORT_ID == 0)
+    #define MX_SPI6_MOSI_GPIO_AF      GPIO_AF5_SPI6
+  #else
+    #define MX_SPI6_MOSI_GPIO_AF      GPIO_AF8_SPI6
+  #endif
 
   #define MX_SPI6_SCK_Pin             1U
   #define MX_SPI6_SCK_GPIOx           RTE_SPI6_SCL_PORT
   #define MX_SPI6_SCK_GPIO_Pin       (1U << RTE_SPI6_SCL_BIT)
   #define MX_SPI6_SCK_GPIO_PuPd       GPIO_NOPULL
-  #define MX_SPI6_SCK_GPIO_AF         GPIO_AF5_SPI6
+  #if (RTE_SPI6_SCL_PORT_ID == 0)
+    #define MX_SPI6_SCK_GPIO_AF       GPIO_AF5_SPI6
+  #else
+    #define MX_SPI6_SCK_GPIO_AF       GPIO_AF8_SPI6
+  #endif
 
   #if (RTE_SPI6_NSS_PIN == 1)
     #define MX_SPI6_NSS_Pin           1U
     #define MX_SPI6_NSS_GPIOx         RTE_SPI6_NSS_PORT
     #define MX_SPI6_NSS_GPIO_Pin     (1U << RTE_SPI6_NSS_BIT)
-    #define MX_SPI6_NSS_GPIO_AF       GPIO_AF5_SPI6
+    #if   (RTE_SPI6_NSS_PORT_ID == 1)
+      #define MX_SPI6_NSS_GPIO_AF     GPIO_AF5_SPI6
+    #elif (RTE_SPI6_NSS_PORT_ID == 2)
+      #define MX_SPI6_NSS_GPIO_AF     GPIO_AF8_SPI6
+    #else
+      #define MX_SPI6_NSS_GPIO_AF     GPIO_AF7_SPI6
+    #endif
   #endif
 #endif
 

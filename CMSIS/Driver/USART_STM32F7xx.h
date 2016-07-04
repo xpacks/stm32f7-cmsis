@@ -1,5 +1,5 @@
 /* -----------------------------------------------------------------------------
- * Copyright (c) 2013-2015 ARM Ltd.
+ * Copyright (c) 2013-2016 ARM Ltd.
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from
@@ -18,8 +18,8 @@
  * 3. This notice may not be removed or altered from any source distribution.
  *
  *
- * $Date:        15. October 2015
- * $Revision:    V1.2
+ * $Date:        24. May 2016
+ * $Revision:    V1.3
  *
  * Project:      USART Driver definitions for ST STM32F7xx
  * -------------------------------------------------------------------------- */
@@ -112,13 +112,21 @@
   #define MX_USART1_TX_GPIOx          RTE_USART1_TX_PORT
   #define MX_USART1_TX_GPIO_Pin      (1U << RTE_USART1_TX_BIT)
   #define MX_USART1_TX_GPIO_PuPd      GPIO_NOPULL
-  #define MX_USART1_TX_GPIO_AF        GPIO_AF7_USART1
+  #if   (RTE_USART1_TX_ID == 2)
+    #define MX_USART1_TX_GPIO_AF      GPIO_AF4_USART1
+  #else
+    #define MX_USART1_TX_GPIO_AF      GPIO_AF7_USART1
+  #endif
 
   #define MX_USART1_RX_Pin            1
   #define MX_USART1_RX_GPIOx          RTE_USART1_RX_PORT
   #define MX_USART1_RX_GPIO_Pin      (1U << RTE_USART1_RX_BIT)
   #define MX_USART1_RX_GPIO_PuPd      GPIO_NOPULL
-  #define MX_USART1_RX_GPIO_AF        GPIO_AF7_USART1
+  #if   (RTE_USART1_RX_ID == 2)
+    #define MX_USART1_RX_GPIO_AF      GPIO_AF4_USART1
+  #else
+    #define MX_USART1_RX_GPIO_AF      GPIO_AF7_USART1
+  #endif
 
   #if (RTE_USART1_CK == 1)
     #define MX_USART1_CK_Pin          1
@@ -305,13 +313,21 @@
   #define MX_UART4_TX_GPIOx           RTE_UART4_TX_PORT
   #define MX_UART4_TX_GPIO_Pin       (1U << RTE_UART4_TX_BIT)
   #define MX_UART4_TX_GPIO_PuPd       GPIO_NOPULL
-  #define MX_UART4_TX_GPIO_AF         GPIO_AF8_UART4
+  #if   (RTE_UART4_TX_ID == 2)
+    #define MX_UART4_TX_GPIO_AF       GPIO_AF6_UART4
+  #else
+    #define MX_UART4_TX_GPIO_AF       GPIO_AF8_UART4
+  #endif
 
   #define MX_UART4_RX_Pin             1
   #define MX_UART4_RX_GPIOx           RTE_UART4_RX_PORT
   #define MX_UART4_RX_GPIO_Pin       (1U << RTE_UART4_RX_BIT)
   #define MX_UART4_RX_GPIO_PuPd       GPIO_NOPULL
-  #define MX_UART4_RX_GPIO_AF         GPIO_AF8_UART4
+  #if   (RTE_UART4_RX_ID == 2)
+    #define MX_UART4_RX_GPIO_AF       GPIO_AF6_UART4
+  #else
+    #define MX_UART4_RX_GPIO_AF       GPIO_AF8_UART4
+  #endif
 
   #if (RTE_UART4_RTS == 1)
     #define MX_UART4_RTS_Pin          1
@@ -360,13 +376,25 @@
   #define MX_UART5_TX_GPIOx           RTE_UART5_TX_PORT
   #define MX_UART5_TX_GPIO_Pin       (1U << RTE_UART5_TX_BIT)
   #define MX_UART5_TX_GPIO_PuPd       GPIO_NOPULL
-  #define MX_UART5_TX_GPIO_AF         GPIO_AF8_UART5
+  #if   (RTE_UART5_TX_ID == 1)
+    #define MX_UART5_TX_GPIO_AF       GPIO_AF1_UART5
+  #elif (RTE_UART5_TX_ID == 2)
+    #define MX_UART5_TX_GPIO_AF       GPIO_AF7_UART5
+  #else
+    #define MX_UART5_TX_GPIO_AF       GPIO_AF8_UART5
+  #endif
 
   #define MX_UART5_RX_Pin             1
   #define MX_UART5_RX_GPIOx           RTE_UART5_RX_PORT
   #define MX_UART5_RX_GPIO_Pin       (1U << RTE_UART5_RX_BIT)
   #define MX_UART5_RX_GPIO_PuPd       GPIO_NOPULL
-  #define MX_UART5_RX_GPIO_AF         GPIO_AF8_UART5
+  #if   (RTE_UART5_RX_ID == 1)
+    #define MX_UART5_RX_GPIO_AF       GPIO_AF1_UART5
+  #elif (RTE_UART5_RX_ID == 2)
+    #define MX_UART5_RX_GPIO_AF       GPIO_AF7_UART5
+  #else
+    #define MX_UART5_RX_GPIO_AF       GPIO_AF8_UART5
+  #endif
 
   #if (RTE_UART5_RTS == 1)
     #define MX_UART5_RTS_Pin          1
@@ -473,13 +501,21 @@
   #define MX_UART7_TX_GPIOx           RTE_UART7_TX_PORT
   #define MX_UART7_TX_GPIO_Pin       (1U << RTE_UART7_TX_BIT)
   #define MX_UART7_TX_GPIO_PuPd       GPIO_NOPULL
-  #define MX_UART7_TX_GPIO_AF         GPIO_AF8_UART7
+  #if   (RTE_UART7_TX_ID == 2) || (RTE_UART7_TX_ID == 3)
+    #define MX_UART7_TX_GPIO_AF       GPIO_AF12_UART7
+  #else
+    #define MX_UART7_TX_GPIO_AF       GPIO_AF8_UART7
+  #endif
 
   #define MX_UART7_RX_Pin             1
   #define MX_UART7_RX_GPIOx           RTE_UART7_RX_PORT
   #define MX_UART7_RX_GPIO_Pin       (1U << RTE_UART7_RX_BIT)
   #define MX_UART7_RX_GPIO_PuPd       GPIO_NOPULL
-  #define MX_UART7_RX_GPIO_AF         GPIO_AF8_UART7
+  #if   (RTE_UART7_RX_ID == 2) || (RTE_UART7_RX_ID == 3)
+    #define MX_UART7_RX_GPIO_AF       GPIO_AF12_UART7
+  #else
+    #define MX_UART7_RX_GPIO_AF       GPIO_AF8_UART7
+  #endif
 
   #if (RTE_UART7_RTS == 1)
     #define MX_UART7_RTS_Pin          1

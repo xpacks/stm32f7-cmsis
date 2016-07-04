@@ -167,6 +167,10 @@ void OTG_FS_PinsConfigure (uint8_t pins_mask) {
 #ifdef MX_USB_OTG_FS_VBUS_Pin                   // Device VBUS sensing pin (input)
   if ((pins_mask & ARM_USB_PIN_VBUS) != 0U) {
     if (otg_fs_role == ARM_USB_ROLE_DEVICE) {
+#if  (defined(USE_STM32756G_EVAL))              // Host VBUS power driving pin is on IO expander it needs to be turned off for Device VBUS detection to work
+      BSP_IO_Init();
+      BSP_IO_ConfigPin(IO_PIN_7, IO_MODE_OFF);
+#endif
       Enable_GPIO_Clock           (MX_USB_OTG_FS_VBUS_GPIOx);
       GPIO_InitStruct.Pin       =  MX_USB_OTG_FS_VBUS_GPIO_Pin;
       GPIO_InitStruct.Mode      =  MX_USB_OTG_FS_VBUS_GPIO_Mode;
