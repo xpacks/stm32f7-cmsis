@@ -7,8 +7,8 @@
 	"vendorName": "Keil",
 	"name": "STM32F7xx_DFP",
 	"description": "STMicroelectronics STM32F7 Series Device Support, Drivers and Examples",
-	"version": "2.6.0",
-	"date": "2016-05-25",
+	"version": "2.7.0",
+	"date": "2016-06-17",
 	"devices": [
 		{
 			"name": "STM32F7 Series",
@@ -21,7 +21,6 @@
 			"processor": {
 				"core": "Cortex-M7",
 				"coreVersion": "r0p1",
-				"fpu": "SP_FPU",
 				"mpu": "MPU",
 				"endian": "Little-endian",
 				"clock": 216000000
@@ -64,6 +63,9 @@
 					"compile": {
 						"header": "Drivers/CMSIS/Device/ST/STM32F7xx/Include/stm32f7xx.h",
 						"define": "STM32F745xx"
+					},
+					"processor": {
+						"fpu": "SP_FPU"
 					},
 					"memorySections": [
 						{
@@ -323,6 +325,9 @@
 					"compile": {
 						"header": "Drivers/CMSIS/Device/ST/STM32F7xx/Include/stm32f7xx.h",
 						"define": "STM32F746xx"
+					},
+					"processor": {
+						"fpu": "SP_FPU"
 					},
 					"memorySections": [
 						{
@@ -729,6 +734,9 @@
 						"header": "Drivers/CMSIS/Device/ST/STM32F7xx/Include/stm32f7xx.h",
 						"define": "STM32F756xx"
 					},
+					"processor": {
+						"fpu": "SP_FPU"
+					},
 					"memorySections": [
 						{
 							"id": "IROM1",
@@ -882,11 +890,378 @@
 					]
 				},
 				{
+					"name": "STM32F765",
+					"type": "subfamily",
+					"compile": {
+						"header": "Drivers/CMSIS/Device/ST/STM32F7xx/Include/stm32f7xx.h",
+						"define": "STM32F765xx"
+					},
+					"processor": {
+						"fpu": "DP_FPU"
+					},
+					"memorySections": [
+						{
+							"id": "IRAM1",
+							"start": "0x20020000",
+							"size": "0x60000",
+							"default": true
+						},
+						{
+							"id": "IRAM2",
+							"start": "0x20000000",
+							"size": "0x20000",
+							"default": true
+						}
+					],
+					"debugOptions": [
+						{
+							"svd": "CMSIS/SVD/STM32F7x5.svd"
+						}
+					],
+					"children": [
+						{
+							"name": "STM32F765BG",
+							"type": "device",
+							"memorySections": [
+								{
+									"id": "IROM1",
+									"start": "0x08000000",
+									"size": "0x100000",
+									"startup": true,
+									"default": true
+								},
+								{
+									"id": "IROM2",
+									"start": "0x00200000",
+									"size": "0x100000"
+								}
+							],
+							"children": [
+								{
+									"name": "STM32F765BGTx",
+									"type": "variant",
+									"features": [
+										{
+											"name": "QFP",
+											"type": "package",
+											"n": 208
+										}
+									]
+								}
+							]
+						},
+						{
+							"name": "STM32F765BI",
+							"type": "device",
+							"memorySections": [
+								{
+									"id": "IROM1",
+									"start": "0x08000000",
+									"size": "0x200000",
+									"startup": true,
+									"default": true
+								},
+								{
+									"id": "IROM2",
+									"start": "0x00200000",
+									"size": "0x200000"
+								}
+							],
+							"children": [
+								{
+									"name": "STM32F765BITx",
+									"type": "variant",
+									"features": [
+										{
+											"name": "QFP",
+											"type": "package",
+											"n": 208
+										}
+									]
+								}
+							]
+						},
+						{
+							"name": "STM32F765IG",
+							"type": "device",
+							"memorySections": [
+								{
+									"id": "IROM1",
+									"start": "0x08000000",
+									"size": "0x100000",
+									"startup": true,
+									"default": true
+								},
+								{
+									"id": "IROM2",
+									"start": "0x00200000",
+									"size": "0x100000"
+								}
+							],
+							"children": [
+								{
+									"name": "STM32F765IGKx",
+									"type": "variant",
+									"features": [
+										{
+											"name": "BGA",
+											"type": "package",
+											"n": 176
+										}
+									]
+								},
+								{
+									"name": "STM32F765IGTx",
+									"type": "variant",
+									"features": [
+										{
+											"name": "QFP",
+											"type": "package",
+											"n": 176
+										}
+									]
+								}
+							]
+						},
+						{
+							"name": "STM32F765II",
+							"type": "device",
+							"memorySections": [
+								{
+									"id": "IROM1",
+									"start": "0x08000000",
+									"size": "0x200000",
+									"startup": true,
+									"default": true
+								},
+								{
+									"id": "IROM2",
+									"start": "0x00200000",
+									"size": "0x200000"
+								}
+							],
+							"children": [
+								{
+									"name": "STM32F765IIKx",
+									"type": "variant",
+									"features": [
+										{
+											"name": "BGA",
+											"type": "package",
+											"n": 176
+										}
+									]
+								},
+								{
+									"name": "STM32F765IITx",
+									"type": "variant",
+									"features": [
+										{
+											"name": "QFP",
+											"type": "package",
+											"n": 176
+										}
+									]
+								}
+							]
+						},
+						{
+							"name": "STM32F765NG",
+							"type": "device",
+							"memorySections": [
+								{
+									"id": "IROM1",
+									"start": "0x08000000",
+									"size": "0x100000",
+									"startup": true,
+									"default": true
+								},
+								{
+									"id": "IROM2",
+									"start": "0x00200000",
+									"size": "0x100000"
+								}
+							],
+							"children": [
+								{
+									"name": "STM32F765NGHx",
+									"type": "variant",
+									"features": [
+										{
+											"name": "BGA",
+											"type": "package",
+											"n": 216
+										}
+									]
+								}
+							]
+						},
+						{
+							"name": "STM32F765NI",
+							"type": "device",
+							"memorySections": [
+								{
+									"id": "IROM1",
+									"start": "0x08000000",
+									"size": "0x200000",
+									"startup": true,
+									"default": true
+								},
+								{
+									"id": "IROM2",
+									"start": "0x00200000",
+									"size": "0x200000"
+								}
+							],
+							"children": [
+								{
+									"name": "STM32F765NIHx",
+									"type": "variant",
+									"features": [
+										{
+											"name": "BGA",
+											"type": "package",
+											"n": 216
+										}
+									]
+								}
+							]
+						},
+						{
+							"name": "STM32F765VG",
+							"type": "device",
+							"memorySections": [
+								{
+									"id": "IROM1",
+									"start": "0x08000000",
+									"size": "0x100000",
+									"startup": true,
+									"default": true
+								},
+								{
+									"id": "IROM2",
+									"start": "0x00200000",
+									"size": "0x100000"
+								}
+							],
+							"children": [
+								{
+									"name": "STM32F765VGTx",
+									"type": "variant",
+									"features": [
+										{
+											"name": "QFP",
+											"type": "package",
+											"n": 100
+										}
+									]
+								}
+							]
+						},
+						{
+							"name": "STM32F765VI",
+							"type": "device",
+							"memorySections": [
+								{
+									"id": "IROM1",
+									"start": "0x08000000",
+									"size": "0x200000",
+									"startup": true,
+									"default": true
+								},
+								{
+									"id": "IROM2",
+									"start": "0x00200000",
+									"size": "0x200000"
+								}
+							],
+							"children": [
+								{
+									"name": "STM32F765VITx",
+									"type": "variant",
+									"features": [
+										{
+											"name": "QFP",
+											"type": "package",
+											"n": 100
+										}
+									]
+								}
+							]
+						},
+						{
+							"name": "STM32F765ZG",
+							"type": "device",
+							"memorySections": [
+								{
+									"id": "IROM1",
+									"start": "0x08000000",
+									"size": "0x100000",
+									"startup": true,
+									"default": true
+								},
+								{
+									"id": "IROM2",
+									"start": "0x00200000",
+									"size": "0x100000"
+								}
+							],
+							"children": [
+								{
+									"name": "STM32F765ZGTx",
+									"type": "variant",
+									"features": [
+										{
+											"name": "QFP",
+											"type": "package",
+											"n": 144
+										}
+									]
+								}
+							]
+						},
+						{
+							"name": "STM32F765ZI",
+							"type": "device",
+							"memorySections": [
+								{
+									"id": "IROM1",
+									"start": "0x08000000",
+									"size": "0x200000",
+									"startup": true,
+									"default": true
+								},
+								{
+									"id": "IROM2",
+									"start": "0x00200000",
+									"size": "0x200000"
+								}
+							],
+							"children": [
+								{
+									"name": "STM32F765ZITx",
+									"type": "variant",
+									"features": [
+										{
+											"name": "QFP",
+											"type": "package",
+											"n": 144
+										}
+									]
+								}
+							]
+						}
+					]
+				},
+				{
 					"name": "STM32F767",
 					"type": "subfamily",
 					"compile": {
 						"header": "Drivers/CMSIS/Device/ST/STM32F7xx/Include/stm32f7xx.h",
 						"define": "STM32F767xx"
+					},
+					"processor": {
+						"fpu": "DP_FPU"
 					},
 					"memorySections": [
 						{
@@ -1249,6 +1624,9 @@
 						"header": "Drivers/CMSIS/Device/ST/STM32F7xx/Include/stm32f7xx.h",
 						"define": "STM32F767xx"
 					},
+					"processor": {
+						"fpu": "DP_FPU"
+					},
 					"debugOptions": [
 						{
 							"svd": "CMSIS/SVD/STM32F7x7.svd"
@@ -1294,6 +1672,9 @@
 					"compile": {
 						"header": "Drivers/CMSIS/Device/ST/STM32F7xx/Include/stm32f7xx.h",
 						"define": "STM32F769xx"
+					},
+					"processor": {
+						"fpu": "DP_FPU"
 					},
 					"memorySections": [
 						{
@@ -1572,6 +1953,9 @@
 						"header": "Drivers/CMSIS/Device/ST/STM32F7xx/Include/stm32f7xx.h",
 						"define": "STM32F777xx"
 					},
+					"processor": {
+						"fpu": "DP_FPU"
+					},
 					"memorySections": [
 						{
 							"id": "IRAM1",
@@ -1767,6 +2151,9 @@
 						"header": "Drivers/CMSIS/Device/ST/STM32F7xx/Include/stm32f7xx.h",
 						"define": "STM32F777xx"
 					},
+					"processor": {
+						"fpu": "DP_FPU"
+					},
 					"debugOptions": [
 						{
 							"svd": "CMSIS/SVD/STM32F7x7.svd"
@@ -1812,6 +2199,9 @@
 					"compile": {
 						"header": "Drivers/CMSIS/Device/ST/STM32F7xx/Include/stm32f7xx.h",
 						"define": "STM32F779xx"
+					},
+					"processor": {
+						"fpu": "DP_FPU"
 					},
 					"memorySections": [
 						{
