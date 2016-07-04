@@ -7,6 +7,14 @@
   <url>http://www.keil.com/pack</url>
 
   <releases>
+    <release version="2.7.0" date="2016-06-17">
+      Added device support and documentation for subfamily STM32F765.
+      Added flash programming algorithm for QuadSPI Flash memory available on STM32 EVAL boards for STM32F77x and STM32F76x subfamilies.
+      Corrected FPU capabilities in device description of some devices which support double precision FPU.
+      Updated CMSIS drivers:
+      - USB Host: Corrected over-current pin configuration
+      - USB Device: VBUS detection is selected automatically based on VBUS sensing pin setting (in RTE_Device.h or by STM32CubeMX)
+    </release>
     <release version="2.6.0" date="2016-05-25">
       Added device support for subfamilies STM32F777, STM32F778, STM32F779, STM32F767, STM32F768, and STM32F769
       Updated Pack to STM32Cube_FW_F7 Firmware Package version V1.4.0
@@ -145,11 +153,12 @@
 
   <devices>
     <family Dfamily="STM32F7 Series" Dvendor="STMicroelectronics:13">
-      <processor Dcore="Cortex-M7" DcoreVersion="r0p1" Dclock="216000000" Dfpu="SP_FPU" Dmpu="MPU" Dendian="Little-endian"/>
+      <processor Dcore="Cortex-M7" DcoreVersion="r0p1" Dclock="216000000" Dmpu="MPU" Dendian="Little-endian"/>
       <book name="Documentation/DM00189702.pdf" title="STM32F7xx HAL Drivers"/>
       <book name="Documentation/DUI0646B_cortex_m7_dgug.pdf" title="Cortex-M7 Generic User Guide"/>
-      <algorithm name="CMSIS/Flash/STM32F7xx_QSPI_Micron.flm" start="0x90000000" size="0x04000000" RAMstart="0x20010000" RAMsize="0x1000" default="0" />
-      <algorithm name="CMSIS/Flash/STM32F7xx_QSPI_Disco.FLM"  start="0x90000000" size="0x01000000" RAMstart="0x20010000" RAMsize="0x1000" default="0" />
+      <algorithm name="CMSIS/Flash/STM32F7xx_QSPI_Disco.FLM"  start="0x90000000" size="0x01000000" RAMstart="0x20010000" RAMsize="0x1000" default="0"/>
+      <algorithm name="CMSIS/Flash/STM32F7xx_QSPI_Micron.flm" start="0x90000000" size="0x04000000" RAMstart="0x20010000" RAMsize="0x1000" default="0"/>
+      <algorithm name="CMSIS/Flash/STM32F77x_QSPI_Micron.FLM" start="0x90000000" size="0x04000000" RAMstart="0x20010000" RAMsize="0x1000" default="0"/>
       <algorithm name="CMSIS/Flash/STM32F7xx_OPT.FLM"         start="0x1FFF0000" size="0x08"       RAMstart="0x20010000" RAMsize="0x1000" default="0"/>
       <algorithm name="CMSIS/Flash/STM32F7xx_OTP.FLM"         start="0x1FF0F000" size="0x0410"     RAMstart="0x20010000" RAMsize="0x1000" default="0"/>
 
@@ -429,6 +438,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
 
       <!-- ************************  Subfamily 'STM32F745'  **************************** -->
       <subFamily DsubFamily="STM32F745">
+        <processor Dfpu="SP_FPU"/>
         <debug svd="CMSIS/SVD/STM32F7x5.svd"/>
         <compile header="Drivers/CMSIS/Device/ST/STM32F7xx/Include/stm32f7xx.h" define="STM32F745xx"/>
         <memory id="IRAM1" start="0x20010000" size="0x40000"   init="0" default="1" />
@@ -492,6 +502,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
 
       <!-- ************************  Subfamily 'STM32F746'  **************************** -->
       <subFamily DsubFamily="STM32F746">
+        <processor Dfpu="SP_FPU"/>
         <debug svd="CMSIS/SVD/STM32F7x6.svd"/>
         <compile header="Drivers/CMSIS/Device/ST/STM32F7xx/Include/stm32f7xx.h" define="STM32F746xx"/>
         <memory id="IRAM1" start="0x20010000" size="0x40000"    init="0" default="1" />
@@ -589,6 +600,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
 
       <!-- ************************  Subfamily 'STM32F756'  **************************** -->
       <subFamily DsubFamily="STM32F756">
+        <processor Dfpu="SP_FPU"/>
         <debug svd="CMSIS/SVD/STM32F7x6.svd"/>
         <compile header="Drivers/CMSIS/Device/ST/STM32F7xx/Include/stm32f7xx.h" define="STM32F756xx"/>
         <memory id="IROM1" start="0x08000000" size="0x100000" startup="1" default="1" />
@@ -625,13 +637,118 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
         </device>
       </subFamily>
 
+      <!-- ************************  Subfamily 'STM32F765'  **************************** -->
+      <subFamily DsubFamily="STM32F765">
+        <processor Dfpu="DP_FPU"/>
+        <debug svd="CMSIS/SVD/STM32F7x5.svd"/>
+        <compile header="Drivers/CMSIS/Device/ST/STM32F7xx/Include/stm32f7xx.h" define="STM32F765xx"/>
+        <memory id="IRAM1" start="0x20020000" size="0x60000"   init="0" default="1" />
+        <memory id="IRAM2" start="0x20000000" size="0x20000"   init="0" default="1" />
+        <book name="Documentation/DM00224583.pdf" title="STM32F76xxx/7xxx Reference Manual"/>
+        <book name="Documentation/DM00273119.pdf" title="STM32F765/767/768A/769 Data Sheet"/>
+
+        <!-- *************************  Device 'STM32F765BG'  ***************************** -->
+        <device Dname="STM32F765BG">
+          <memory id="IROM1" start="0x08000000" size="0x100000" startup="1" default="1" />
+          <memory id="IROM2" start="0x00200000" size="0x100000" startup="0" default="0" />
+          <algorithm name="CMSIS/Flash/STM32F7x_1024.FLM"        start="0x08000000" size="0x100000" RAMstart="0x20020000" RAMsize="0x1000" default="1" />
+          <algorithm name="CMSIS/Flash/STM32F7x_TCM.FLM"         start="0x00200000" size="0x100000" RAMstart="0x20020000" RAMsize="0x1000" default="0" />
+          <variant Dvariant="STM32F765BGTx"> <feature type="QFP" n="208"/> </variant>
+        </device>
+        <!-- *************************  Device 'STM32F765BI'  ***************************** -->
+        <device Dname="STM32F765BI">
+          <memory id="IROM1" start="0x08000000" size="0x200000" startup="1" default="1" />
+          <memory id="IROM2" start="0x00200000" size="0x200000" startup="0" default="0" />
+          <algorithm name="CMSIS/Flash/STM32F7x_2048.FLM"        start="0x08000000" size="0x200000" RAMstart="0x20020000" RAMsize="0x1000" default="1" />
+          <algorithm name="CMSIS/Flash/STM32F7x_2048dual.FLM"    start="0x08000000" size="0x200000" RAMstart="0x20020000" RAMsize="0x1000" default="0" />
+          <algorithm name="CMSIS/Flash/STM32F7xTCM_2048.FLM"     start="0x00200000" size="0x200000" RAMstart="0x20020000" RAMsize="0x1000" default="1" />
+          <algorithm name="CMSIS/Flash/STM32F7xTCM_2048dual.FLM" start="0x00200000" size="0x200000" RAMstart="0x20020000" RAMsize="0x1000" default="0" />
+          <variant Dvariant="STM32F765BITx"> <feature type="QFP" n="208"/> </variant>
+        </device>
+        <!-- *************************  Device 'STM32F765IG'  ***************************** -->
+        <device Dname="STM32F765IG">
+          <memory id="IROM1" start="0x08000000" size="0x100000" startup="1" default="1" />
+          <memory id="IROM2" start="0x00200000" size="0x100000" startup="0" default="0" />
+          <algorithm name="CMSIS/Flash/STM32F7x_1024.FLM"        start="0x08000000" size="0x100000" RAMstart="0x20020000" RAMsize="0x1000" default="1" />
+          <algorithm name="CMSIS/Flash/STM32F7x_TCM.FLM"         start="0x00200000" size="0x100000" RAMstart="0x20020000" RAMsize="0x1000" default="0" />
+          <variant Dvariant="STM32F765IGKx"> <feature type="BGA" n="176"/> </variant>
+          <variant Dvariant="STM32F765IGTx"> <feature type="QFP" n="176"/> </variant>
+        </device>
+        <!-- *************************  Device 'STM32F765II'  ***************************** -->
+        <device Dname="STM32F765II">
+          <memory id="IROM1" start="0x08000000" size="0x200000" startup="1" default="1" />
+          <memory id="IROM2" start="0x00200000" size="0x200000" startup="0" default="0" />
+          <algorithm name="CMSIS/Flash/STM32F7x_2048.FLM"        start="0x08000000" size="0x200000" RAMstart="0x20020000" RAMsize="0x1000" default="1" />
+          <algorithm name="CMSIS/Flash/STM32F7x_2048dual.FLM"    start="0x08000000" size="0x200000" RAMstart="0x20020000" RAMsize="0x1000" default="0" />
+          <algorithm name="CMSIS/Flash/STM32F7xTCM_2048.FLM"     start="0x00200000" size="0x200000" RAMstart="0x20020000" RAMsize="0x1000" default="1" />
+          <algorithm name="CMSIS/Flash/STM32F7xTCM_2048dual.FLM" start="0x00200000" size="0x200000" RAMstart="0x20020000" RAMsize="0x1000" default="0" />
+          <variant Dvariant="STM32F765IIKx"> <feature type="BGA" n="176"/> </variant>
+          <variant Dvariant="STM32F765IITx"> <feature type="QFP" n="176"/> </variant>
+        </device>
+        <!-- *************************  Device 'STM32F765NG'  ***************************** -->
+        <device Dname="STM32F765NG">
+          <memory id="IROM1" start="0x08000000" size="0x100000" startup="1" default="1" />
+          <memory id="IROM2" start="0x00200000" size="0x100000" startup="0" default="0" />
+          <algorithm name="CMSIS/Flash/STM32F7x_1024.FLM"        start="0x08000000" size="0x100000" RAMstart="0x20020000" RAMsize="0x1000" default="1" />
+          <algorithm name="CMSIS/Flash/STM32F7x_TCM.FLM"         start="0x00200000" size="0x100000" RAMstart="0x20020000" RAMsize="0x1000" default="0" />
+          <variant Dvariant="STM32F765NGHx"> <feature type="BGA" n="216"/> </variant>
+        </device>
+        <!-- *************************  Device 'STM32F765NI'  ***************************** -->
+        <device Dname="STM32F765NI">
+          <memory id="IROM1" start="0x08000000" size="0x200000" startup="1" default="1" />
+          <memory id="IROM2" start="0x00200000" size="0x200000" startup="0" default="0" />
+          <algorithm name="CMSIS/Flash/STM32F7x_2048.FLM"        start="0x08000000" size="0x200000" RAMstart="0x20020000" RAMsize="0x1000" default="1" />
+          <algorithm name="CMSIS/Flash/STM32F7x_2048dual.FLM"    start="0x08000000" size="0x200000" RAMstart="0x20020000" RAMsize="0x1000" default="0" />
+          <algorithm name="CMSIS/Flash/STM32F7xTCM_2048.FLM"     start="0x00200000" size="0x200000" RAMstart="0x20020000" RAMsize="0x1000" default="1" />
+          <algorithm name="CMSIS/Flash/STM32F7xTCM_2048dual.FLM" start="0x00200000" size="0x200000" RAMstart="0x20020000" RAMsize="0x1000" default="0" />
+          <variant Dvariant="STM32F765NIHx"> <feature type="BGA" n="216"/> </variant>
+        </device>
+        <!-- *************************  Device 'STM32F765VG'  ***************************** -->
+        <device Dname="STM32F765VG">
+          <memory id="IROM1" start="0x08000000" size="0x100000" startup="1" default="1" />
+          <memory id="IROM2" start="0x00200000" size="0x100000" startup="0" default="0" />
+          <algorithm name="CMSIS/Flash/STM32F7x_1024.FLM"        start="0x08000000" size="0x100000" RAMstart="0x20020000" RAMsize="0x1000" default="1" />
+          <algorithm name="CMSIS/Flash/STM32F7x_TCM.FLM"         start="0x00200000" size="0x100000" RAMstart="0x20020000" RAMsize="0x1000" default="0" />
+          <variant Dvariant="STM32F765VGTx"> <feature type="QFP" n="100"/> </variant>
+        </device>
+        <!-- *************************  Device 'STM32F765VI'  ***************************** -->
+        <device Dname="STM32F765VI">
+          <memory id="IROM1" start="0x08000000" size="0x200000" startup="1" default="1" />
+          <memory id="IROM2" start="0x00200000" size="0x200000" startup="0" default="0" />
+          <algorithm name="CMSIS/Flash/STM32F7x_2048.FLM"        start="0x08000000" size="0x200000" RAMstart="0x20020000" RAMsize="0x1000" default="1" />
+          <algorithm name="CMSIS/Flash/STM32F7x_2048dual.FLM"    start="0x08000000" size="0x200000" RAMstart="0x20020000" RAMsize="0x1000" default="0" />
+          <algorithm name="CMSIS/Flash/STM32F7xTCM_2048.FLM"     start="0x00200000" size="0x200000" RAMstart="0x20020000" RAMsize="0x1000" default="1" />
+          <algorithm name="CMSIS/Flash/STM32F7xTCM_2048dual.FLM" start="0x00200000" size="0x200000" RAMstart="0x20020000" RAMsize="0x1000" default="0" />
+          <variant Dvariant="STM32F765VITx"> <feature type="QFP" n="100"/> </variant>
+        </device>
+        <!-- *************************  Device 'STM32F765ZG'  ***************************** -->
+        <device Dname="STM32F765ZG">
+          <memory id="IROM1" start="0x08000000" size="0x100000" startup="1" default="1" />
+          <memory id="IROM2" start="0x00200000" size="0x100000" startup="0" default="0" />
+          <algorithm name="CMSIS/Flash/STM32F7x_1024.FLM"        start="0x08000000" size="0x100000" RAMstart="0x20020000" RAMsize="0x1000" default="1" />
+          <algorithm name="CMSIS/Flash/STM32F7x_TCM.FLM"         start="0x00200000" size="0x100000" RAMstart="0x20020000" RAMsize="0x1000" default="0" />
+          <variant Dvariant="STM32F765ZGTx"> <feature type="QFP" n="144"/> </variant>
+        </device>
+        <!-- *************************  Device 'STM32F765ZI'  ***************************** -->
+        <device Dname="STM32F765ZI">
+          <memory id="IROM1" start="0x08000000" size="0x200000" startup="1" default="1" />
+          <memory id="IROM2" start="0x00200000" size="0x200000" startup="0" default="0" />
+          <algorithm name="CMSIS/Flash/STM32F7x_2048.FLM"        start="0x08000000" size="0x200000" RAMstart="0x20020000" RAMsize="0x1000" default="1" />
+          <algorithm name="CMSIS/Flash/STM32F7x_2048dual.FLM"    start="0x08000000" size="0x200000" RAMstart="0x20020000" RAMsize="0x1000" default="0" />
+          <algorithm name="CMSIS/Flash/STM32F7xTCM_2048.FLM"     start="0x00200000" size="0x200000" RAMstart="0x20020000" RAMsize="0x1000" default="1" />
+          <algorithm name="CMSIS/Flash/STM32F7xTCM_2048dual.FLM" start="0x00200000" size="0x200000" RAMstart="0x20020000" RAMsize="0x1000" default="0" />
+          <variant Dvariant="STM32F765ZITx"> <feature type="QFP" n="144"/> </variant>
+        </device>
+      </subFamily>
+
       <!-- ************************  Subfamily 'STM32F767'  **************************** -->
       <subFamily DsubFamily="STM32F767">
+        <processor Dfpu="DP_FPU"/>
         <debug svd="CMSIS/SVD/STM32F7x7.svd"/>
         <compile header="Drivers/CMSIS/Device/ST/STM32F7xx/Include/stm32f7xx.h" define="STM32F767xx"/>
         <memory id="IRAM1" start="0x20020000" size="0x60000"   init="0" default="1" />
         <memory id="IRAM2" start="0x20000000" size="0x20000"   init="0" default="1" />
-        <!--book name="Documentation/DM00124865.pdf" title="STM32F77xx/6xx Reference Manual"/-->
+        <book name="Documentation/DM00224583.pdf" title="STM32F76xxx/7xxx Reference Manual"/>
         <book name="Documentation/DM00273119.pdf" title="STM32F765/767/768A/769 Data Sheet"/>
 
         <!-- *************************  Device 'STM32F767BI'  ***************************** -->
@@ -730,9 +847,10 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
 
       <!-- ************************  Subfamily 'STM32F768'  **************************** -->
       <subFamily DsubFamily="STM32F768">
+        <processor Dfpu="DP_FPU"/>
         <debug svd="CMSIS/SVD/STM32F7x7.svd"/>
 	    <compile header="Drivers/CMSIS/Device/ST/STM32F7xx/Include/stm32f7xx.h" define="STM32F767xx"/>
-        <!--book name="Documentation/DM00124865.pdf" title="STM32F77xx/6xx Reference Manual"/-->
+        <book name="Documentation/DM00224583.pdf" title="STM32F76xxx/7xxx Reference Manual"/>
         <book name="Documentation/DM00273119.pdf" title="STM32F765/767/768A/769 Data Sheet"/>
 
         <!-- *************************  Device 'STM32F768AI'  ***************************** -->
@@ -749,11 +867,12 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
 
       <!-- ************************  Subfamily 'STM32F769'  **************************** -->
       <subFamily DsubFamily="STM32F769">
+        <processor Dfpu="DP_FPU"/>
         <debug svd="CMSIS/SVD/STM32F7x9.svd"/>
         <compile header="Drivers/CMSIS/Device/ST/STM32F7xx/Include/stm32f7xx.h" define="STM32F769xx"/>
         <memory id="IRAM1" start="0x20020000" size="0x60000"   init="0" default="1" />
         <memory id="IRAM2" start="0x20000000" size="0x20000"   init="0" default="1" />
-        <!--book name="Documentation/DM00124865.pdf" title="STM32F77xx/6xx Reference Manual"/-->
+        <book name="Documentation/DM00224583.pdf" title="STM32F76xxx/7xxx Reference Manual"/>
         <book name="Documentation/DM00273119.pdf" title="STM32F765/767/768A/769 Data Sheet"/>
 
         <!-- *************************  Device 'STM32F769BI'  ***************************** -->
@@ -832,11 +951,12 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
 
       <!-- ************************  Subfamily 'STM32F777'  **************************** -->
       <subFamily DsubFamily="STM32F777">
+        <processor Dfpu="DP_FPU"/>
         <debug svd="CMSIS/SVD/STM32F7x7.svd"/>
         <compile header="Drivers/CMSIS/Device/ST/STM32F7xx/Include/stm32f7xx.h" define="STM32F777xx"/>
         <memory id="IRAM1" start="0x20020000" size="0x60000"   init="0" default="1" />
         <memory id="IRAM2" start="0x20000000" size="0x20000"   init="0" default="1" />
-        <!--book name="Documentation/DM00124865.pdf" title="STM32F77xx/6xx Reference Manual"/-->
+        <book name="Documentation/DM00224583.pdf" title="STM32F76xxx/7xxx Reference Manual"/>
         <book name="Documentation/DM00225424.pdf" title="STM32F777/778A/779 Data Sheet"/>
 
         <!-- *************************  Device 'STM32F777BI'  ***************************** -->
@@ -894,9 +1014,10 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
 
       <!-- ************************  Subfamily 'STM32F778'  **************************** -->
       <subFamily DsubFamily="STM32F778">
+        <processor Dfpu="DP_FPU"/>
         <debug svd="CMSIS/SVD/STM32F7x7.svd"/>
 	    <compile header="Drivers/CMSIS/Device/ST/STM32F7xx/Include/stm32f7xx.h" define="STM32F777xx"/>
-        <!--book name="Documentation/DM00124865.pdf" title="STM32F77xx/6xx Reference Manual"/-->
+        <book name="Documentation/DM00224583.pdf" title="STM32F76xxx/7xxx Reference Manual"/>
         <book name="Documentation/DM00225424.pdf" title="STM32F777/778A/779 Data Sheet"/>
 
         <!-- *************************  Device 'STM32F778AI'  ***************************** -->
@@ -913,11 +1034,12 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
 
       <!-- ************************  Subfamily 'STM32F779'  **************************** -->
       <subFamily DsubFamily="STM32F779">
+        <processor Dfpu="DP_FPU"/>
         <debug svd="CMSIS/SVD/STM32F7x9.svd"/>
         <compile header="Drivers/CMSIS/Device/ST/STM32F7xx/Include/stm32f7xx.h" define="STM32F779xx"/>
         <memory id="IRAM1" start="0x20020000" size="0x60000"   init="0" default="1" />
         <memory id="IRAM2" start="0x20000000" size="0x20000"   init="0" default="1" />
-        <!--book name="Documentation/DM00124865.pdf" title="STM32F77xx/6xx Reference Manual"/-->
+        <book name="Documentation/DM00224583.pdf" title="STM32F76xxx/7xxx Reference Manual"/>
         <book name="Documentation/DM00225424.pdf" title="STM32F777/778A/779 Data Sheet"/>
 
         <!-- *************************  Device 'STM32F779BI'  ***************************** -->
@@ -1736,7 +1858,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </RTE_Components_h>
       <files>
         <file category="doc"     name="MDK/CubeMX/Documentation/classic.html"/>
-        <file category="header"  name="CMSIS/Driver/Config/RTE_Device.h" attr="config" version="1.2.2"/>
+        <file category="header"  name="CMSIS/Driver/Config/RTE_Device.h" attr="config" version="1.3.0"/>
         <file category="header"  name="MDK/Templates/Inc/stm32f7xx_hal_conf.h" attr="config" version="1.1.0"/>
         <file category="source"  name="MDK/Templates/Src/stm32f7xx_hal_msp.c"  attr="template" select="MCU Specific HAL Initialization / De-Initialization"/>
         <file category="header"  name="MDK/Templates/Inc/stm32f7xx_it.h" attr="template" select="Exception Handlers and Peripheral IRQ"/>
@@ -2325,7 +2447,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </files>
     </component>
 
-    <component Cclass="CMSIS Driver" Cgroup="USB Device" Csub="Full-speed" Capiversion="2.1" Cversion="1.4" condition="STM32F7 CMSIS_Driver USB">
+    <component Cclass="CMSIS Driver" Cgroup="USB Device" Csub="Full-speed" Capiversion="2.1" Cversion="1.5" condition="STM32F7 CMSIS_Driver USB">
       <description>USB Device Full-Speed Driver for STM32F7 Series</description>
       <RTE_Components_h>
         #define RTE_Drivers_USBD0               /* Driver USBD0 */
@@ -2336,7 +2458,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </files>
     </component>
 
-    <component Cclass="CMSIS Driver" Cgroup="USB Device" Csub="High-speed" Capiversion="2.1" Cversion="1.4" condition="STM32F7 CMSIS_Driver USB">
+    <component Cclass="CMSIS Driver" Cgroup="USB Device" Csub="High-speed" Capiversion="2.1" Cversion="1.5" condition="STM32F7 CMSIS_Driver USB">
       <description>USB Device High-Speed Driver for STM32F7 Series</description>
       <RTE_Components_h>
         #define RTE_Drivers_USBD1               /* Driver USBD1 */

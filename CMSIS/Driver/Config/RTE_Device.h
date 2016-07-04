@@ -17,8 +17,8 @@
  *
  * 3. This notice may not be removed or altered from any source distribution.
  *
- * $Date:        23. May 2016
- * $Revision:    V1.2.2
+ * $Date:        26. May 2016
+ * $Revision:    V1.3.0
  *
  * Project:      RTE Device Configuration for ST STM32F7xx
  * -------------------------------------------------------------------------- */
@@ -2681,10 +2681,20 @@
 // <e> USB OTG Full-speed
 #define RTE_USB_OTG_FS                  0
 
+//   <e> Device [Driver_USBD0]
+//   <i> Configuration settings for Driver_USBD0 in component ::CMSIS Driver:USB Device
+
+#define RTE_USB_OTG_FS_DEVICE           1
+
+//     <o0.0> VBUS Sensing Pin
+//     <i> Enable or disable VBUS sensing
+#define RTE_OTG_FS_VBUS_SENSING_PIN     1
+//   </e>
+
 //   <e> Host [Driver_USBH0]
 //   <i> Configuration settings for Driver_USBH0 in component ::CMSIS Driver:USB Host
 
-#define RTE_USB_OTG_FS_HOST             1
+#define RTE_USB_OTG_FS_HOST             0
 
 //     <e> VBUS Power On/Off Pin
 //     <i> Configure Pin for driving VBUS
@@ -2843,9 +2853,20 @@
 
 //   </h>
 
+//   <e> Device [Driver_USBD1]
+//   <i> Configuration settings for Driver_USBD1 in component ::CMSIS Driver:USB Device
+
+#define RTE_USB_OTG_HS_DEVICE           0
+
+//     <o0.0> VBUS Sensing Pin
+//     <i> Enable or disable VBUS sensing
+//     <i> Relevant only if PHY Interface On-chip full-speed PHY is selected
+#define RTE_OTG_HS_VBUS_SENSING_PIN     0
+//   </e>
+
 //   <e> Host [Driver_USBH1]
 //   <i> Configuration settings for Driver_USBH1 in component ::CMSIS Driver:USB Host
-#define RTE_USB_OTG_HS_HOST             1
+#define RTE_USB_OTG_HS_HOST             0
 
 //     <e> VBUS Power On/Off Pin
 //     <i> Configure Pin for driving VBUS

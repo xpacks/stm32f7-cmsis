@@ -18,8 +18,8 @@
  * 3. This notice may not be removed or altered from any source distribution.
  *
  *
- * $Date:        20. May 2016
- * $Revision:    V1.4
+ * $Date:        26. May 2016
+ * $Revision:    V1.5
  *
  * Driver:       Driver_USBD0
  * Configured:   via RTE_Device.h configuration file
@@ -40,11 +40,12 @@
  *                           requirements
  *     - default value:      5
  *     - maximum value:      5
- *   USBD_FS_VBUS_DETECT:    defines if driver supports VBUS detection
- *     - default value:      1 (=enabled)
  * -------------------------------------------------------------------------- */
 
 /* History:
+ *  Version 1.5
+ *    VBUS detection is selected automatically based on VBUS sensing pin
+ *    setting (in RTE_Device.h or by STM32CubeMX)
  *  Version 1.4
  *    Corrected initial resume signaling after USB Bus Reset
  *    Corrected device status information
@@ -67,16 +68,23 @@ The CMSIS-Driver USBD_FS requires:
   - Setup of USB clk to 48MHz
   - Configuration of USB_OTG_FS
  
-The example below uses correct settings for STM32F746G-Discovery Board:
-  - USB_OTG_FS Mode: Device_Only
+Valid settings for various evaluation boards are listed in the table below:
+
+Peripheral Resource | STM32756G-EVAL     | STM32F746G-Discovery 
+:-------------------|:-------------------|:---------------------
+USB_OTG_FS Mode     | <b>Device_only</b> | <b>Device_only</b>
+Activate_VBUS       | <b>enabled</b>     | <b>enabled</b>
+
+For different boards, refer to the hardware schematics to reflect correct setup values.
  
-The STM32CubeMX configuration steps for Pinout, Clock, and System Configuration are
+The STM32CubeMX configuration for STM32F746G-Discovery with steps for Pinout, Clock, and System Configuration are 
 listed below. Enter the values that are marked \b bold.
  
 Pinout tab
 ----------
   1. Configure USBD mode
      - Peripherals \b USB_OTG_FS: Mode=<b>Device_Only</b>
+     - Peripherals \b USB_OTG_FS: Activate_VBUS=<b>enabled</b>
  
 Clock Configuration tab
 -----------------------
@@ -117,10 +125,6 @@ Configuration tab
 #error  Too many Endpoints, maximum IN/OUT Endpoint pairs that this driver supports is 5 !!!
 #endif
 
-#ifndef USBD_FS_VBUS_DETECT
-#define USBD_FS_VBUS_DETECT            (1U)
-#endif
-
 extern uint8_t otg_fs_role;
 
 extern void OTG_FS_PinsConfigure   (uint8_t pins_mask);
@@ -135,14 +139,14 @@ extern PCD_HandleTypeDef hpcd_USB_OTG_FS;
 
 // USBD Driver *****************************************************************
 
-#define ARM_USBD_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,4)
+#define ARM_USBD_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,5)
 
 // Driver Version
 static const ARM_DRIVER_VERSION usbd_driver_version = { ARM_USBD_API_VERSION, ARM_USBD_DRV_VERSION };
 
 // Driver Capabilities
 static const ARM_USBD_CAPABILITIES usbd_driver_capabilities = {
-#if (USBD_FS_VBUS_DETECT == 1)
+#ifdef MX_USB_OTG_FS_VBUS_Pin
   1U,   // VBUS Detection
   1U,   // Event VBUS On
   1U,   // Event VBUS Off
@@ -533,7 +537,7 @@ static int32_t USBD_Initialize (ARM_USBD_SignalDeviceEvent_t   cb_device_event,
   otg_fs_role = ARM_USB_ROLE_DEVICE;
 #ifdef RTE_DEVICE_FRAMEWORK_CLASSIC
   OTG_FS_PinsConfigure (ARM_USB_PIN_DP | ARM_USB_PIN_DM
-#if  (USBD_FS_VBUS_DETECT == 1)
+#ifdef MX_USB_OTG_FS_VBUS_Pin
                       | ARM_USB_PIN_VBUS
 #endif
                        );
@@ -557,7 +561,7 @@ static int32_t USBD_Uninitialize (void) {
 
 #ifdef RTE_DEVICE_FRAMEWORK_CLASSIC
   OTG_FS_PinsUnconfigure (ARM_USB_PIN_DP | ARM_USB_PIN_DM
-#if  (USBD_FS_VBUS_DETECT == 1)
+#ifdef MX_USB_OTG_FS_VBUS_Pin
                         | ARM_USB_PIN_VBUS
 #endif
                          );
@@ -652,7 +656,7 @@ static int32_t USBD_PowerControl (ARM_POWER_STATE state) {
 
       USBD_Reset ();                                    // Reset variables and endpoint settings
 
-#if  (USBD_FS_VBUS_DETECT == 1)
+#ifdef MX_USB_OTG_FS_VBUS_Pin
       OTG->GCCFG    |=  OTG_FS_GCCFG_VBDEN;             // Enable  VBUS sensing device "B"
       OTG->GOTGCTL  &= ~OTG_FS_GOTGCTL_BVALOEN;         // B-peripheral session valid override disable
 #else
@@ -669,7 +673,7 @@ static int32_t USBD_PowerControl (ARM_POWER_STATE state) {
                         OTG_FS_GINTMSK_RXFLVLM  |
                         OTG_FS_GINTMSK_IEPINT   |
                         OTG_FS_GINTMSK_OEPINT   |
-#if  (USBD_FS_VBUS_DETECT == 1)
+#ifdef MX_USB_OTG_FS_VBUS_Pin
                         OTG_FS_GINTMSK_SRQIM    |
                         OTG_FS_GINTMSK_OTGINT   |
 #endif
@@ -1165,7 +1169,7 @@ static uint16_t USBD_GetFrameNumber (void) {
 void USBD_FS_IRQ (uint32_t gintsts) {
   volatile ENDPOINT_t *ptr_ep, *ptr_ep_in;
   uint32_t             val, msk, ep_int;
-#if (USBD_FS_VBUS_DETECT == 1)
+#ifdef MX_USB_OTG_FS_VBUS_Pin
   uint32_t             gotgint;
 #endif
   uint16_t             num;
@@ -1175,8 +1179,8 @@ void USBD_FS_IRQ (uint32_t gintsts) {
   if ((gintsts & OTG_FS_GINTSTS_USBRST) != 0U) {        // Reset interrupt
     OTG->GINTSTS  =  OTG_FS_GINTSTS_USBRST;
     OTG->GINTMSK |=  OTG_FS_GINTMSK_SOFM;               // Unmask SOF interrupts (to detect initial SOF)
-    usbd_state.active = 0U;
     USBD_Reset();
+    usbd_state.active = 0U;
     SignalDeviceEvent(ARM_USBD_EVENT_RESET);
   }
 
@@ -1398,7 +1402,7 @@ void USBD_FS_IRQ (uint32_t gintsts) {
       }
     }
   }
-#if (USBD_FS_VBUS_DETECT == 1)
+#ifdef MX_USB_OTG_FS_VBUS_Pin
   if ((gintsts & OTG_FS_GINTSTS_SRQINT) != 0U) {
     OTG->GINTSTS = OTG_FS_GINTSTS_SRQINT;
     usbd_state.vbus = 1U;
