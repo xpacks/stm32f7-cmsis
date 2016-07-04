@@ -1,5 +1,5 @@
 /* -----------------------------------------------------------------------------
- * Copyright (c) 2013-2015 ARM Ltd.
+ * Copyright (c) 2013-2016 ARM Ltd.
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from
@@ -18,8 +18,8 @@
  * 3. This notice may not be removed or altered from any source distribution.
  *
  *
- * $Date:        14. December 2015
- * $Revision:    V1.2
+ * $Date:        11. March 2016
+ * $Revision:    V1.3
  *
  * Driver:       Driver_SAI1, Driver_SAI2
  * Configured:   via RTE_Device.h configuration file
@@ -35,6 +35,8 @@
  * -------------------------------------------------------------------------- */
 
 /* History:
+ *  Version 1.3
+ *      - Corrected extern SAI_HandleTypeDef definition, for STM32Cube Configuration
  *  Version 1.2
  *      - Corrected receive DMA configuration
  *      - Corrected synchronization configuration
@@ -52,9 +54,64 @@
  *  The SAI input clock must be properly configured in the user application
  */
 
+ /*! \page stm32f7_sai CMSIS-Driver SAI Setup
+
+The CMSIS-Driver SAI requires:
+  - Setup of SAI Block A and block B (Master, Master with master clock output, Asynchronous slave, synchronous slave)
+ 
+The example below uses correct settings for STM32F746G-Discovery:
+  - SAI2 A:  Master with Master Clock Out
+  - SAI2 B:  Synchronous Slave
+
+For different boards, refer to the hardware schematics to reflect correct setup values.
+
+The STM32CubeMX configuration steps for Pinout, Clock, and System Configuration are 
+listed below. Enter the values that are marked \b bold.
+
+Pinout tab
+----------
+  1. Configure SAI2 mode
+     - Peripherals \b SAI2
+                   -  \b SAI2_A: Mode=<b>Master with Master Clock Out</b>
+                   -  \b SAI2_B: Mode=<b>Synchronous Slave</b>
+  2. Configure SAI2_MCLK_A pin (is not the default pin):
+     - Click in chip diagram on pin \b PI4 and select \b SAI2_MCLK_A.
+
+Clock Configuration tab
+-----------------------
+  1. Configure SAI2 Clock.
+  
+Configuration tab
+-----------------
+  1. Under Multimedia open \b SAI2 Configuration:
+     - \e optional <b>DMA Settings</b>: setup DMA transfers for SAI2_A and SAI2_B (DMA is optional)\n
+       \b Add - Select \b SAI2_A: Stream=DMA2 Stream 4, DMA Request Settings: not used\n
+       \b Add - Select \b SAI2_B: Stream=DMA2 Stream 6, DMA Request Settings: not used
+
+     - <b>GPIO Settings</b>: review settings, no changes required
+          Pin Name | Signal on Pin | GPIO mode | GPIO Pull-up/Pull..| Maximum out | User Label
+          :--------|:--------------|:----------|:-------------------|:------------|:----------
+          PG10     | SAI2_SD_B     | Alternate | No Pull-up/down    | Low         |.          
+          PI4      | SAI2_MCLK_A   | Alternate | No Pull-up/down    | Low         |.          
+          PI5      | SAI2_SCK_A    | Alternate | No Pull-up/down    | Low         |.          
+          PI6      | SAI2_SD_A     | Alternate | No Pull-up/down    | Low         |.
+          PI7      | SAI2_FS_A     | Alternate | No Pull-up/down    | Low         |.          
+     - <b>NVIC Settings</b>: enable interrupts
+          Interrupt Table                      | Enable | Preemption Priority | Sub Priority
+          :------------------------------------|:-------|:--------------------|:--------------
+          SAI2 global interrupt                |\b ON   | 0                   | 0
+          DMA2 stream4 global interrupt        |   ON   | 0                   | 0
+          DMA2 stream6 global interrupt        |   ON   | 0                   | 0
+     - Parameter Settings: not used
+     - User Constants: not used
+     - Click \b OK to close the SAI2 Configuration dialog
+*/
+
+/*! \cond */
+
 #include "SAI_STM32F7xx.h"
 
-#define ARM_SAI_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,2)
+#define ARM_SAI_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,3)
 // Driver Version
 static const ARM_DRIVER_VERSION DriverVersion = { ARM_SAI_API_VERSION, ARM_SAI_DRV_VERSION };
 
@@ -119,8 +176,8 @@ static const ARM_DRIVER_VERSION DriverVersion = { ARM_SAI_API_VERSION, ARM_SAI_D
 #ifdef MX_SAI1
 
 #ifdef RTE_DEVICE_FRAMEWORK_CUBE_MX
-SAI_HandleTypeDef hsai_BlockA1;
-SAI_HandleTypeDef hsai_BlockB1;
+extern SAI_HandleTypeDef hsai_BlockA1;
+extern SAI_HandleTypeDef hsai_BlockB1;
 #endif
 
 // SAI1 Run-Time Information
@@ -312,8 +369,8 @@ static const SAI_RESOURCES SAI1_Resources = {
 #ifdef MX_SAI2
 
 #ifdef RTE_DEVICE_FRAMEWORK_CUBE_MX
-SAI_HandleTypeDef hsai_BlockA2;
-SAI_HandleTypeDef hsai_BlockB2;
+extern SAI_HandleTypeDef hsai_BlockA2;
+extern SAI_HandleTypeDef hsai_BlockB2;
 #endif
 
 // SAI2 Run-Time Information
@@ -1077,7 +1134,7 @@ static uint32_t SAI_GetTxCount (SAI_RESOURCES *sai) {
 }
 
 /**
-  \fn          uint32_t ARM_SAI_GetRxCount (SAI_RESOURCES *sai)
+  \fn          uint32_t SAI_GetRxCount (SAI_RESOURCES *sai)
   \brief       Get received data count.
   \param[in]   sai  Pointer to SAI resources
   \return      number of data items received
@@ -1992,3 +2049,5 @@ ARM_DRIVER_SAI Driver_SAI2 = {
     SAI2_GetStatus
 };
 #endif /* MX_SAI2 */
+
+/*! \endcond */

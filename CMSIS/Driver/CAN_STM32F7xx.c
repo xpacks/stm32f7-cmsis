@@ -1,5 +1,5 @@
 /* -----------------------------------------------------------------------------
- * Copyright (c) 2013-2015 ARM Ltd.
+ * Copyright (c) 2013-2016 ARM Ltd.
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from
@@ -18,8 +18,8 @@
  * 3. This notice may not be removed or altered from any source distribution.
  *
  *
- * $Date:        24. December 2015
- * $Revision:    V1.1
+ * $Date:        3. March 2016
+ * $Revision:    V1.2
  *
  * Driver:       Driver_CAN1/2
  * Configured:   via RTE_Device.h configuration file
@@ -46,6 +46,9 @@
  * -------------------------------------------------------------------------- */
 
 /* History:
+ *  Version 1.2
+ *    Corrected functionality when NULL pointer is provided for one or both 
+ *    signal callbacks in Initialize function call
  *  Version 1.1
  *    Corrected functionality when only one CAN controller is used
  *  Version 1.0
@@ -171,7 +174,7 @@ static void Enable_GPIO_Clock (const GPIO_TypeDef *GPIOx) {
 
 // CAN Driver ******************************************************************
 
-#define ARM_CAN_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,1) // CAN driver version
+#define ARM_CAN_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,2) // CAN driver version
 
 // Driver Version
 static const ARM_DRIVER_VERSION can_driver_version = { ARM_CAN_API_VERSION, ARM_CAN_DRV_VERSION };
@@ -901,26 +904,34 @@ static int32_t CANx_PowerControl (ARM_POWER_STATE state, uint8_t x) {
 #if defined(RTE_DEVICE_FRAMEWORK_CLASSIC)
 #if (MX_CAN1 == 1U)
       if (x == 0U) {
-        NVIC_ClearPendingIRQ (CAN1_TX_IRQn);
-        NVIC_EnableIRQ       (CAN1_TX_IRQn);
-        NVIC_ClearPendingIRQ (CAN1_RX0_IRQn);
-        NVIC_EnableIRQ       (CAN1_RX0_IRQn);
-        NVIC_ClearPendingIRQ (CAN1_RX1_IRQn);
-        NVIC_EnableIRQ       (CAN1_RX1_IRQn);
-        NVIC_ClearPendingIRQ (CAN1_SCE_IRQn);
-        NVIC_EnableIRQ       (CAN1_SCE_IRQn);
+        if ((CAN_SignalUnitEvent[0] != NULL) || (CAN_SignalObjectEvent[0] != NULL)) {
+          NVIC_ClearPendingIRQ (CAN1_TX_IRQn);
+          NVIC_EnableIRQ       (CAN1_TX_IRQn);
+          NVIC_ClearPendingIRQ (CAN1_RX0_IRQn);
+          NVIC_EnableIRQ       (CAN1_RX0_IRQn);
+          NVIC_ClearPendingIRQ (CAN1_RX1_IRQn);
+          NVIC_EnableIRQ       (CAN1_RX1_IRQn);
+        }
+        if (CAN_SignalUnitEvent[0] != NULL) {
+          NVIC_ClearPendingIRQ (CAN1_SCE_IRQn);
+          NVIC_EnableIRQ       (CAN1_SCE_IRQn);
+        }
       }
 #endif
 #if (MX_CAN2 == 1U)
       if (x == 1U) {
-        NVIC_ClearPendingIRQ (CAN2_TX_IRQn);
-        NVIC_EnableIRQ       (CAN2_TX_IRQn);
-        NVIC_ClearPendingIRQ (CAN2_RX0_IRQn);
-        NVIC_EnableIRQ       (CAN2_RX0_IRQn);
-        NVIC_ClearPendingIRQ (CAN2_RX1_IRQn);
-        NVIC_EnableIRQ       (CAN2_RX1_IRQn);
-        NVIC_ClearPendingIRQ (CAN2_SCE_IRQn);
-        NVIC_EnableIRQ       (CAN2_SCE_IRQn);
+        if ((CAN_SignalUnitEvent[1] != NULL) || (CAN_SignalObjectEvent[1] != NULL)) {
+          NVIC_ClearPendingIRQ (CAN2_TX_IRQn);
+          NVIC_EnableIRQ       (CAN2_TX_IRQn);
+          NVIC_ClearPendingIRQ (CAN2_RX0_IRQn);
+          NVIC_EnableIRQ       (CAN2_RX0_IRQn);
+          NVIC_ClearPendingIRQ (CAN2_RX1_IRQn);
+          NVIC_EnableIRQ       (CAN2_RX1_IRQn);
+        }
+        if (CAN_SignalUnitEvent[1] != NULL) {
+          NVIC_ClearPendingIRQ (CAN2_SCE_IRQn);
+          NVIC_EnableIRQ       (CAN2_SCE_IRQn);
+        }
       }
 #endif
 #endif
@@ -947,7 +958,6 @@ static int32_t CAN2_PowerControl (ARM_POWER_STATE state) { return CANx_PowerCont
 uint32_t CAN_GetClock (void) {
   return HAL_RCC_GetPCLK1Freq();
 }
-
 
 /**
   \fn          int32_t CANx_SetBitrate (ARM_CAN_BITRATE_SELECT select, uint32_t bitrate, uint32_t bit_segments, uint8_t x)
@@ -1019,25 +1029,27 @@ static int32_t CAN2_SetBitrate (ARM_CAN_BITRATE_SELECT select, uint32_t bitrate,
 */
 static int32_t CANx_SetMode (ARM_CAN_MODE mode, uint8_t x) {
   CAN_TypeDef *ptr_CAN;
+  uint32_t     event;
 
   if (x >= CAN_CTRL_NUM) { return ARM_DRIVER_ERROR; }
 
   ptr_CAN = ptr_CANx[x];
 
+  event = 0U;
   switch (mode) {
     case ARM_CAN_MODE_INITIALIZATION:
       CAN1->FMR    |=  CAN_FMR_FINIT;           // Filter initialization mode
       ptr_CAN->MCR  =  CAN_MCR_INRQ;            // Enter initialization mode
       while ((ptr_CAN->MSR&CAN_MSR_INAK)==0U);  // Wait to enter initialization mode
-      CAN_SignalUnitEvent[x](ARM_CAN_EVENT_UNIT_BUS_OFF);
+      event = ARM_CAN_EVENT_UNIT_BUS_OFF;
       break;
     case ARM_CAN_MODE_NORMAL:
       ptr_CAN->BTR &=~(CAN_BTR_LBKM | CAN_BTR_SILM);
       ptr_CAN->MCR  =  CAN_MCR_ABOM |           // Activate automatic bus-off
                        CAN_MCR_AWUM ;           // Enable automatic wakeup mode
       while ((ptr_CAN->MSR&CAN_MSR_INAK)!=0U);  // Wait to exit initialization mode
-      CAN_SignalUnitEvent[x](ARM_CAN_EVENT_UNIT_ACTIVE);
       CAN1->FMR    &= ~CAN_FMR_FINIT;           // Filter active mode
+      event = ARM_CAN_EVENT_UNIT_ACTIVE;
       break;
     case ARM_CAN_MODE_RESTRICTED:
       return ARM_DRIVER_ERROR_UNSUPPORTED;
@@ -1048,7 +1060,7 @@ static int32_t CANx_SetMode (ARM_CAN_MODE mode, uint8_t x) {
       ptr_CAN->BTR |=  CAN_BTR_SILM;            // Activate silent
       ptr_CAN->MCR &= ~CAN_MCR_INRQ;            // Deactivate initialization mode
       while ((ptr_CAN->MSR&CAN_MSR_INAK)!=0U);  // Wait to exit initialization mode
-      CAN_SignalUnitEvent[x](ARM_CAN_EVENT_UNIT_PASSIVE);
+      event = ARM_CAN_EVENT_UNIT_PASSIVE;
       break;
     case ARM_CAN_MODE_LOOPBACK_INTERNAL:
       ptr_CAN->MCR |=  CAN_MCR_INRQ;            // Enter initialization mode
@@ -1057,7 +1069,7 @@ static int32_t CANx_SetMode (ARM_CAN_MODE mode, uint8_t x) {
       ptr_CAN->BTR |=  CAN_BTR_SILM;            // Activate silent
       ptr_CAN->MCR &= ~CAN_MCR_INRQ;            // Deactivate initialization mode
       while ((ptr_CAN->MSR&CAN_MSR_INAK)!=0U);  // Wait to exit initialization mode
-      CAN_SignalUnitEvent[x](ARM_CAN_EVENT_UNIT_PASSIVE);
+      event = ARM_CAN_EVENT_UNIT_PASSIVE;
       break;
     case ARM_CAN_MODE_LOOPBACK_EXTERNAL:
       ptr_CAN->MCR |=  CAN_MCR_INRQ;            // Enter initialization mode
@@ -1066,11 +1078,12 @@ static int32_t CANx_SetMode (ARM_CAN_MODE mode, uint8_t x) {
       ptr_CAN->BTR |=  CAN_BTR_LBKM;            // Activate loopback
       ptr_CAN->MCR &= ~CAN_MCR_INRQ;            // Deactivate initialization mode
       while ((ptr_CAN->MSR&CAN_MSR_INAK)!=0U);  // Wait to exit initialization mode
-      CAN_SignalUnitEvent[x](ARM_CAN_EVENT_UNIT_PASSIVE);
+      event = ARM_CAN_EVENT_UNIT_ACTIVE;
       break;
     default:
       return ARM_DRIVER_ERROR_PARAMETER;
   }
+  if ((CAN_SignalUnitEvent[x] != NULL) && (event != 0U)) { CAN_SignalUnitEvent[x](event); }
 
   return ARM_DRIVER_OK;
 }
@@ -1467,19 +1480,19 @@ void CAN1_TX_IRQHandler (void) {
 
   if ((CAN1->TSR & CAN_TSR_TXOK0) != 0U) {
     if (can_obj_cfg[0][CAN_RX_OBJ_NUM] == ARM_CAN_OBJ_TX) {
-      CAN_SignalObjectEvent[0](CAN_RX_OBJ_NUM, ARM_CAN_EVENT_SEND_COMPLETE);
+      if (CAN_SignalObjectEvent[0] != NULL) { CAN_SignalObjectEvent[0](CAN_RX_OBJ_NUM, ARM_CAN_EVENT_SEND_COMPLETE); }
     }
     CAN1->TSR = CAN_TSR_RQCP0;          // Request completed on transmit mailbox 0
   }
   if ((CAN1->TSR & CAN_TSR_TXOK1) != 0U) {
     if (can_obj_cfg[0][CAN_RX_OBJ_NUM+1U] == ARM_CAN_OBJ_TX) {
-      CAN_SignalObjectEvent[0](CAN_RX_OBJ_NUM+1U, ARM_CAN_EVENT_SEND_COMPLETE);
+      if (CAN_SignalObjectEvent[0] != NULL) { CAN_SignalObjectEvent[0](CAN_RX_OBJ_NUM+1U, ARM_CAN_EVENT_SEND_COMPLETE); }
     }
     CAN1->TSR = CAN_TSR_RQCP1;          // Request completed on transmit mailbox 1
   }
   if ((CAN1->TSR & CAN_TSR_TXOK2) != 0U) {
     if (can_obj_cfg[0][CAN_RX_OBJ_NUM+2U] == ARM_CAN_OBJ_TX) {
-      CAN_SignalObjectEvent[0](CAN_RX_OBJ_NUM+2U, ARM_CAN_EVENT_SEND_COMPLETE);
+      if (CAN_SignalObjectEvent[0] != NULL) { CAN_SignalObjectEvent[0](CAN_RX_OBJ_NUM+2U, ARM_CAN_EVENT_SEND_COMPLETE); }
     }
     CAN1->TSR = CAN_TSR_RQCP2;          // Request completed on transmit mailbox 2
   }
@@ -1488,10 +1501,12 @@ void CAN1_TX_IRQHandler (void) {
   esr = CAN1->ESR;
   ier = CAN1->IER;
   if (((esr & CAN_ESR_BOFF) == 0U) && ((ier & CAN_IER_BOFIE) == 0U)) { 
-    CAN1->IER |= CAN_IER_BOFIE; CAN_SignalUnitEvent[0](ARM_CAN_EVENT_UNIT_PASSIVE);
+    CAN1->IER |= CAN_IER_BOFIE;
+    if (CAN_SignalUnitEvent[0] != NULL) { CAN_SignalUnitEvent[0](ARM_CAN_EVENT_UNIT_PASSIVE); }
   }
   if (((esr & CAN_ESR_EPVF) == 0U) && ((ier & CAN_IER_EPVIE) == 0U)) {
-    CAN1->IER |= CAN_IER_EPVIE; CAN_SignalUnitEvent[0](ARM_CAN_EVENT_UNIT_ACTIVE);
+    CAN1->IER |= CAN_IER_EPVIE;
+    if (CAN_SignalUnitEvent[0] != NULL) { CAN_SignalUnitEvent[0](ARM_CAN_EVENT_UNIT_ACTIVE); }
   }
   if (((esr & CAN_ESR_EWGF) == 0U) && ((ier & CAN_IER_EWGIE) == 0U) && (((esr & CAN_ESR_TEC) >> 16) == 95U) && (((esr & CAN_ESR_REC) >> 24) < 95U)) {
     CAN1->IER |= CAN_IER_EWGIE;
@@ -1507,14 +1522,14 @@ void CAN1_RX0_IRQHandler (void) {
 
   if ((CAN1->RF0R & CAN_RF0R_FMP0) != 0U) {
     if (can_obj_cfg[0][0] == ARM_CAN_OBJ_RX) {
-      CAN_SignalObjectEvent[0](0U, ARM_CAN_EVENT_RECEIVE);
+      if (CAN_SignalObjectEvent[0] != NULL) { CAN_SignalObjectEvent[0](0U, ARM_CAN_EVENT_RECEIVE); }
     } else {
       CAN1->RF0R = CAN_RF0R_RFOM0;      // Release FIFO 0 output mailbox if object not enabled for reception
     }
   }
   if ((CAN1->RF0R & CAN_RF0R_FOVR0) != 0U) {
     if (can_obj_cfg[0][0] == ARM_CAN_OBJ_RX) {
-      CAN_SignalObjectEvent[0](0U, ARM_CAN_EVENT_RECEIVE_OVERRUN);
+      if (CAN_SignalObjectEvent[0] != NULL) { CAN_SignalObjectEvent[0](0U, ARM_CAN_EVENT_RECEIVE_OVERRUN); }
     }
   }
 
@@ -1522,10 +1537,12 @@ void CAN1_RX0_IRQHandler (void) {
   esr = CAN1->ESR;
   ier = CAN1->IER;
   if (((esr & CAN_ESR_BOFF) == 0U) && ((ier & CAN_IER_BOFIE) == 0U)) { 
-    CAN1->IER |= CAN_IER_BOFIE; CAN_SignalUnitEvent[0](ARM_CAN_EVENT_UNIT_PASSIVE);
+    CAN1->IER |= CAN_IER_BOFIE;
+    if (CAN_SignalUnitEvent[0] != NULL) { CAN_SignalUnitEvent[0](ARM_CAN_EVENT_UNIT_PASSIVE); }
   }
   if (((esr & CAN_ESR_EPVF) == 0U) && ((ier & CAN_IER_EPVIE) == 0U)) {
-    CAN1->IER |= CAN_IER_EPVIE; CAN_SignalUnitEvent[0](ARM_CAN_EVENT_UNIT_ACTIVE);
+    CAN1->IER |= CAN_IER_EPVIE;
+    if (CAN_SignalUnitEvent[0] != NULL) { CAN_SignalUnitEvent[0](ARM_CAN_EVENT_UNIT_ACTIVE); }
   }
   if (((esr & CAN_ESR_EWGF) == 0U) && ((ier & CAN_IER_EWGIE) == 0U) && (((esr & CAN_ESR_TEC) >> 16) < 95U) && (((esr & CAN_ESR_REC) >> 24) == 95U)) {
     CAN1->IER |= CAN_IER_EWGIE;
@@ -1541,14 +1558,14 @@ void CAN1_RX1_IRQHandler (void) {
 
   if ((CAN1->RF1R & CAN_RF1R_FMP1) != 0U) {
     if (can_obj_cfg[0][1] == ARM_CAN_OBJ_RX) {
-      CAN_SignalObjectEvent[0](1U, ARM_CAN_EVENT_RECEIVE);
+      if (CAN_SignalObjectEvent[0] != NULL) { CAN_SignalObjectEvent[0](1U, ARM_CAN_EVENT_RECEIVE); }
     } else {
       CAN1->RF1R = CAN_RF1R_RFOM1;      // Release FIFO 1 output mailbox if object not enabled for reception
     }
   }
   if ((CAN1->RF1R & CAN_RF1R_FOVR1) != 0U) {
     if (can_obj_cfg[0][1] == ARM_CAN_OBJ_RX) {
-      CAN_SignalObjectEvent[0](1U, ARM_CAN_EVENT_RECEIVE_OVERRUN);
+      if (CAN_SignalObjectEvent[0] != NULL) { CAN_SignalObjectEvent[0](1U, ARM_CAN_EVENT_RECEIVE_OVERRUN); }
     }
   }
 
@@ -1556,10 +1573,12 @@ void CAN1_RX1_IRQHandler (void) {
   esr = CAN1->ESR;
   ier = CAN1->IER;
   if (((esr & CAN_ESR_BOFF) == 0U) && ((ier & CAN_IER_BOFIE) == 0U)) { 
-    CAN1->IER |= CAN_IER_BOFIE; CAN_SignalUnitEvent[0](ARM_CAN_EVENT_UNIT_PASSIVE);
+    CAN1->IER |= CAN_IER_BOFIE;
+    if (CAN_SignalUnitEvent[0] != NULL) { CAN_SignalUnitEvent[0](ARM_CAN_EVENT_UNIT_PASSIVE); }
   }
   if (((esr & CAN_ESR_EPVF) == 0U) && ((ier & CAN_IER_EPVIE) == 0U)) {
-    CAN1->IER |= CAN_IER_EPVIE; CAN_SignalUnitEvent[0](ARM_CAN_EVENT_UNIT_ACTIVE);
+    CAN1->IER |= CAN_IER_EPVIE;
+    if (CAN_SignalUnitEvent[0] != NULL) { CAN_SignalUnitEvent[0](ARM_CAN_EVENT_UNIT_ACTIVE); }
   }
   if (((esr & CAN_ESR_EWGF) == 0U) && ((ier & CAN_IER_EWGIE) == 0U) && (((esr & CAN_ESR_TEC) >> 16) < 95U) && (((esr & CAN_ESR_REC) >> 24) == 95U)) {
     CAN1->IER |= CAN_IER_EWGIE;
@@ -1573,12 +1592,14 @@ void CAN1_RX1_IRQHandler (void) {
 void CAN1_SCE_IRQHandler (void) {
   uint32_t esr, ier;
 
-  esr = CAN1->ESR;
-  ier = CAN1->IER;
-  CAN1->MSR = CAN_MSR_ERRI;             // Clear error interrupt
-  if      (((esr & CAN_ESR_BOFF) != 0U) && ((ier & CAN_IER_BOFIE) != 0U)) { CAN1->IER &= ~CAN_IER_BOFIE; CAN_SignalUnitEvent[0](ARM_CAN_EVENT_UNIT_BUS_OFF); }
-  else if (((esr & CAN_ESR_EPVF) != 0U) && ((ier & CAN_IER_EPVIE) != 0U)) { CAN1->IER &= ~CAN_IER_EPVIE; CAN_SignalUnitEvent[0](ARM_CAN_EVENT_UNIT_PASSIVE); }
-  else if (((esr & CAN_ESR_EWGF) != 0U) && ((ier & CAN_IER_EWGIE) != 0U)) { CAN1->IER &= ~CAN_IER_EWGIE; CAN_SignalUnitEvent[0](ARM_CAN_EVENT_UNIT_WARNING); }
+  if (CAN_SignalUnitEvent[0] != NULL) {
+    esr = CAN1->ESR;
+    ier = CAN1->IER;
+    CAN1->MSR = CAN_MSR_ERRI;             // Clear error interrupt
+    if      (((esr & CAN_ESR_BOFF) != 0U) && ((ier & CAN_IER_BOFIE) != 0U)) { CAN1->IER &= ~CAN_IER_BOFIE; CAN_SignalUnitEvent[0](ARM_CAN_EVENT_UNIT_BUS_OFF); }
+    else if (((esr & CAN_ESR_EPVF) != 0U) && ((ier & CAN_IER_EPVIE) != 0U)) { CAN1->IER &= ~CAN_IER_EPVIE; CAN_SignalUnitEvent[0](ARM_CAN_EVENT_UNIT_PASSIVE); }
+    else if (((esr & CAN_ESR_EWGF) != 0U) && ((ier & CAN_IER_EWGIE) != 0U)) { CAN1->IER &= ~CAN_IER_EWGIE; CAN_SignalUnitEvent[0](ARM_CAN_EVENT_UNIT_WARNING); }
+  }
 }
 #endif
 
@@ -1592,19 +1613,19 @@ void CAN2_TX_IRQHandler (void) {
 
   if ((CAN2->TSR & CAN_TSR_TXOK0) != 0U) {
     if (can_obj_cfg[1][CAN_RX_OBJ_NUM] == ARM_CAN_OBJ_TX) {
-      CAN_SignalObjectEvent[1](CAN_RX_OBJ_NUM, ARM_CAN_EVENT_SEND_COMPLETE);
+      if (CAN_SignalObjectEvent[1] != NULL) { CAN_SignalObjectEvent[1](CAN_RX_OBJ_NUM, ARM_CAN_EVENT_SEND_COMPLETE); }
     }
     CAN2->TSR = CAN_TSR_RQCP0;          // Request completed on transmit mailbox 0
   }
   if ((CAN2->TSR & CAN_TSR_TXOK1) != 0U) {
     if (can_obj_cfg[1][CAN_RX_OBJ_NUM+1U] == ARM_CAN_OBJ_TX) {
-      CAN_SignalObjectEvent[1](CAN_RX_OBJ_NUM+1U, ARM_CAN_EVENT_SEND_COMPLETE);
+      if (CAN_SignalObjectEvent[1] != NULL) { CAN_SignalObjectEvent[1](CAN_RX_OBJ_NUM+1U, ARM_CAN_EVENT_SEND_COMPLETE); }
     }
     CAN2->TSR = CAN_TSR_RQCP1;          // Request completed on transmit mailbox 1
   }
   if ((CAN2->TSR & CAN_TSR_TXOK2) != 0U) {
     if (can_obj_cfg[1][CAN_RX_OBJ_NUM+2U] == ARM_CAN_OBJ_TX) {
-      CAN_SignalObjectEvent[1](CAN_RX_OBJ_NUM+2U, ARM_CAN_EVENT_SEND_COMPLETE);
+      if (CAN_SignalObjectEvent[1] != NULL) { CAN_SignalObjectEvent[1](CAN_RX_OBJ_NUM+2U, ARM_CAN_EVENT_SEND_COMPLETE); }
     }
     CAN2->TSR = CAN_TSR_RQCP2;          // Request completed on transmit mailbox 2
   }
@@ -1613,10 +1634,12 @@ void CAN2_TX_IRQHandler (void) {
   esr = CAN2->ESR;
   ier = CAN2->IER;
   if (((esr & CAN_ESR_BOFF) == 0U) && ((ier & CAN_IER_BOFIE) == 0U)) { 
-    CAN2->IER |= CAN_IER_BOFIE; CAN_SignalUnitEvent[1](ARM_CAN_EVENT_UNIT_PASSIVE);
+    CAN2->IER |= CAN_IER_BOFIE;
+    if (CAN_SignalUnitEvent[1] != NULL) { CAN_SignalUnitEvent[1](ARM_CAN_EVENT_UNIT_PASSIVE); }
   }
   if (((esr & CAN_ESR_EPVF) == 0U) && ((ier & CAN_IER_EPVIE) == 0U)) {
-    CAN2->IER |= CAN_IER_EPVIE; CAN_SignalUnitEvent[1](ARM_CAN_EVENT_UNIT_ACTIVE);
+    CAN2->IER |= CAN_IER_EPVIE;
+    if (CAN_SignalUnitEvent[1] != NULL) { CAN_SignalUnitEvent[1](ARM_CAN_EVENT_UNIT_ACTIVE); }
   }
   if (((esr & CAN_ESR_EWGF) == 0U) && ((ier & CAN_IER_EWGIE) == 0U) && (((esr & CAN_ESR_TEC) >> 16) == 95U) && (((esr & CAN_ESR_REC) >> 24) < 95U)) {
     CAN2->IER |= CAN_IER_EWGIE;
@@ -1632,14 +1655,14 @@ void CAN2_RX0_IRQHandler (void) {
 
   if ((CAN2->RF0R & CAN_RF0R_FMP0) != 0U) {
     if (can_obj_cfg[1][0] == ARM_CAN_OBJ_RX) {
-      CAN_SignalObjectEvent[1](0U, ARM_CAN_EVENT_RECEIVE);
+      if (CAN_SignalObjectEvent[1] != NULL) { CAN_SignalObjectEvent[1](0U, ARM_CAN_EVENT_RECEIVE); }
     } else {
       CAN2->RF0R = CAN_RF0R_RFOM0;      // Release FIFO 0 output mailbox if object not enabled for reception
     }
   }
   if ((CAN2->RF0R & CAN_RF0R_FOVR0) != 0U) {
     if (can_obj_cfg[1][0] == ARM_CAN_OBJ_RX) {
-      CAN_SignalObjectEvent[1](0U, ARM_CAN_EVENT_RECEIVE_OVERRUN);
+      if (CAN_SignalObjectEvent[1] != NULL) { CAN_SignalObjectEvent[1](0U, ARM_CAN_EVENT_RECEIVE_OVERRUN); }
     }
   }
 
@@ -1647,10 +1670,12 @@ void CAN2_RX0_IRQHandler (void) {
   esr = CAN2->ESR;
   ier = CAN2->IER;
   if (((esr & CAN_ESR_BOFF) == 0U) && ((ier & CAN_IER_BOFIE) == 0U)) { 
-    CAN2->IER |= CAN_IER_BOFIE; CAN_SignalUnitEvent[1](ARM_CAN_EVENT_UNIT_PASSIVE);
+    CAN2->IER |= CAN_IER_BOFIE;
+    if (CAN_SignalUnitEvent[1] != NULL) { CAN_SignalUnitEvent[1](ARM_CAN_EVENT_UNIT_PASSIVE); }
   }
   if (((esr & CAN_ESR_EPVF) == 0U) && ((ier & CAN_IER_EPVIE) == 0U)) {
-    CAN2->IER |= CAN_IER_EPVIE; CAN_SignalUnitEvent[1](ARM_CAN_EVENT_UNIT_ACTIVE);
+    CAN2->IER |= CAN_IER_EPVIE;
+    if (CAN_SignalUnitEvent[1] != NULL) { CAN_SignalUnitEvent[1](ARM_CAN_EVENT_UNIT_ACTIVE); }
   }
   if (((esr & CAN_ESR_EWGF) == 0U) && ((ier & CAN_IER_EWGIE) == 0U) && (((esr & CAN_ESR_TEC) >> 16) < 95U) && (((esr & CAN_ESR_REC) >> 24) == 95U)) {
     CAN2->IER |= CAN_IER_EWGIE;
@@ -1666,14 +1691,14 @@ void CAN2_RX1_IRQHandler (void) {
 
   if ((CAN2->RF1R & CAN_RF1R_FMP1) != 0U) {
     if (can_obj_cfg[1][1] == ARM_CAN_OBJ_RX) {
-      CAN_SignalObjectEvent[1](1U, ARM_CAN_EVENT_RECEIVE);
+      if (CAN_SignalObjectEvent[1] != NULL) { CAN_SignalObjectEvent[1](1U, ARM_CAN_EVENT_RECEIVE); }
     } else {
       CAN2->RF1R = CAN_RF1R_RFOM1;      // Release FIFO 1 output mailbox if object not enabled for reception
     }
   }
   if ((CAN2->RF1R & CAN_RF1R_FOVR1) != 0U) {
     if (can_obj_cfg[1][1] == ARM_CAN_OBJ_RX) {
-      CAN_SignalObjectEvent[1](1U, ARM_CAN_EVENT_RECEIVE_OVERRUN);
+      if (CAN_SignalObjectEvent[1] != NULL) { CAN_SignalObjectEvent[1](1U, ARM_CAN_EVENT_RECEIVE_OVERRUN); }
     }
   }
 
@@ -1681,10 +1706,12 @@ void CAN2_RX1_IRQHandler (void) {
   esr = CAN2->ESR;
   ier = CAN2->IER;
   if (((esr & CAN_ESR_BOFF) == 0U) && ((ier & CAN_IER_BOFIE) == 0U)) { 
-    CAN2->IER |= CAN_IER_BOFIE; CAN_SignalUnitEvent[1](ARM_CAN_EVENT_UNIT_PASSIVE);
+    CAN2->IER |= CAN_IER_BOFIE;
+    if (CAN_SignalUnitEvent[1] != NULL) { CAN_SignalUnitEvent[1](ARM_CAN_EVENT_UNIT_PASSIVE); }
   }
   if (((esr & CAN_ESR_EPVF) == 0U) && ((ier & CAN_IER_EPVIE) == 0U)) {
-    CAN2->IER |= CAN_IER_EPVIE; CAN_SignalUnitEvent[1](ARM_CAN_EVENT_UNIT_ACTIVE);
+    CAN2->IER |= CAN_IER_EPVIE;
+    if (CAN_SignalUnitEvent[1] != NULL) { CAN_SignalUnitEvent[1](ARM_CAN_EVENT_UNIT_ACTIVE); }
   }
   if (((esr & CAN_ESR_EWGF) == 0U) && ((ier & CAN_IER_EWGIE) == 0U) && (((esr & CAN_ESR_TEC) >> 16) < 95U) && (((esr & CAN_ESR_REC) >> 24) == 95U)) {
     CAN2->IER |= CAN_IER_EWGIE;
@@ -1698,12 +1725,14 @@ void CAN2_RX1_IRQHandler (void) {
 void CAN2_SCE_IRQHandler (void) {
   uint32_t esr, ier;
 
-  esr = CAN2->ESR;
-  ier = CAN2->IER;
-  CAN2->MSR = CAN_MSR_ERRI;             // Clear error interrupt
-  if      (((esr & CAN_ESR_BOFF) != 0U) && ((ier & CAN_IER_BOFIE) != 0U)) { CAN2->IER &= ~CAN_IER_BOFIE; CAN_SignalUnitEvent[1](ARM_CAN_EVENT_UNIT_BUS_OFF); }
-  else if (((esr & CAN_ESR_EPVF) != 0U) && ((ier & CAN_IER_EPVIE) != 0U)) { CAN2->IER &= ~CAN_IER_EPVIE; CAN_SignalUnitEvent[1](ARM_CAN_EVENT_UNIT_PASSIVE); }
-  else if (((esr & CAN_ESR_EWGF) != 0U) && ((ier & CAN_IER_EWGIE) != 0U)) { CAN2->IER &= ~CAN_IER_EWGIE; CAN_SignalUnitEvent[1](ARM_CAN_EVENT_UNIT_WARNING); }
+  if (CAN_SignalUnitEvent[1] != NULL) {
+    esr = CAN2->ESR;
+    ier = CAN2->IER;
+    CAN2->MSR = CAN_MSR_ERRI;             // Clear error interrupt
+    if      (((esr & CAN_ESR_BOFF) != 0U) && ((ier & CAN_IER_BOFIE) != 0U)) { CAN2->IER &= ~CAN_IER_BOFIE; CAN_SignalUnitEvent[1](ARM_CAN_EVENT_UNIT_BUS_OFF); }
+    else if (((esr & CAN_ESR_EPVF) != 0U) && ((ier & CAN_IER_EPVIE) != 0U)) { CAN2->IER &= ~CAN_IER_EPVIE; CAN_SignalUnitEvent[1](ARM_CAN_EVENT_UNIT_PASSIVE); }
+    else if (((esr & CAN_ESR_EWGF) != 0U) && ((ier & CAN_IER_EWGIE) != 0U)) { CAN2->IER &= ~CAN_IER_EWGIE; CAN_SignalUnitEvent[1](ARM_CAN_EVENT_UNIT_WARNING); }
+  }
 }
 #endif
 

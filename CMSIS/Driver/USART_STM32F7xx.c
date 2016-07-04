@@ -18,8 +18,8 @@
  * 3. This notice may not be removed or altered from any source distribution.
  *
  *
- * $Date:        19. November 2015
- * $Revision:    V1.4
+ * $Date:        25. March 2016
+ * $Revision:    V1.6
  *
  * Driver:       Driver_USART1, Driver_USART2, Driver_USART3, Driver_USART4,
  *               Driver_USART5, Driver_USART6, Driver_USART7, Driver_USART8,
@@ -42,6 +42,10 @@
  * -------------------------------------------------------------------------- */
 
 /* History:
+ *  Version 1.6
+ *    Corrected CTS handling
+ *  Version 1.5
+ *    Corrected Data Bits format configuration
  *  Version 1.4
  *    Added Clearing of Noise detection flag
  *  Version 1.3
@@ -109,7 +113,7 @@ Configuration tab
  
 #include "USART_STM32F7xx.h"
 
-#define ARM_USART_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,4)
+#define ARM_USART_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,6)
 
 // Driver Version
 static const ARM_DRIVER_VERSION usart_driver_version = { ARM_USART_API_VERSION, ARM_USART_DRV_VERSION };
@@ -2548,12 +2552,12 @@ static int32_t USART_Control (      uint32_t          control,
         return ARM_USART_ERROR_DATA_BITS;
       }
       // 6 data bits, 7. data bit is parity bit
-      cr2 |= USART_CR1_M_1;
+      cr1 |= USART_CR1_M_1;
       break;
     case ARM_USART_DATA_BITS_7:
       if ((control & ARM_USART_PARITY_Msk) == ARM_USART_PARITY_NONE) {
         // 7 data bits, no parity
-        cr2 |= USART_CR1_M_1;
+        cr1 |= USART_CR1_M_1;
       }
       break;
     case ARM_USART_DATA_BITS_8:
@@ -2614,9 +2618,9 @@ static int32_t USART_Control (      uint32_t          control,
       else  { return ARM_USART_ERROR_FLOW_CONTROL; }
       break;
     case ARM_USART_FLOW_CONTROL_CTS:
-      if (usart->capabilities.flow_control_rts) {
+      if (usart->capabilities.flow_control_cts) {
         flow_control = ARM_USART_FLOW_CONTROL_CTS;
-        // CTS Enable
+        // CTS Enable, CTS interrupt enable
         cr3 |= USART_CR3_CTSE | USART_CR3_CTSIE;
       }
       else { return ARM_USART_ERROR_FLOW_CONTROL; }
@@ -2906,7 +2910,7 @@ void USART_IRQHandler (const USART_RESOURCES *usart) {
   // Read USART status register
   sr = usart->reg->ISR;
 
-  // Reset local variablers
+  // Reset local variables
   val   = 0U;
   event = 0U;
   data  = 0U;

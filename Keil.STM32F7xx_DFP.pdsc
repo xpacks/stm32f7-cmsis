@@ -7,6 +7,29 @@
   <url>http://www.keil.com/pack</url>
 
   <releases>
+    <release version="2.5.0" date="2016-04-14">
+      Updated CMSIS drivers:
+      - EMAC: 
+      -- Corrected Ethernet PTP functionality
+      - CAN: Corrected functionality when NULL pointer is provided for one or both signal callbacks in Initialize function call
+      - USB Host high-speed:
+      -- Corrected initialization for full-speed transceiver mode (unexisting OTG_HS_GUSBCFG_PHSEL corrected to OTG_HS_GUSBCFG_PHYSEL)
+      -- Added DMA configuration to RTE_Device.h
+      -- Corrected wrong result of PipeTransferGetResult for In Pipe transfers in DMA mode
+      -- Added check to PipeTransfer function for 4-byte data alignment if DMA is used
+      - USART:
+      -- Corrected Data Bits format configuration
+      -- Corrected CTS handling
+      Updated examples:
+      - Updated emWin examples to emWin V5.32
+      - Updated CAN example
+      - Updated USB Host examples
+      - Updated USB Device CDC ACM VirtualCOM examples
+    </release>
+    <release version="2.5.0-dev5">
+      Updated documentation.
+      Updated Debug Description (STM32F7xx.dbgconf added).
+    </release>
     <release version="2.4.0" date="2016-01-27">
       Updated STM32Cube_FW_F7 Firmware Package:
       - updated to version V1.3.0
@@ -116,11 +139,16 @@
       <algorithm name="CMSIS/Flash/STM32F7xx_OTP.FLM"         start="0x1FF0F000" size="0x0410"     RAMstart="0x20010000" RAMsize="0x1000" default="0"/>
       <debug svd="CMSIS/SVD/STM32F7x.svd"/>
 
-      <debugvars>
+      <debugvars configfile="Debug/STM32F7xx.dbgconf" version="1.0.0">
         // Debug Access Variables, can be modified by user via copies of DBGCONF files as created by uVision. Also see sub-family level.
         __var DbgMCU_CR      = 0x00000007;   // DBGMCU_CR: DBG_SLEEP, DBG_STOP, DBG_STANDBY
         __var DbgMCU_APB1_Fz = 0x00000000;   // DGBMCU_APB1_FZ: All Peripherals Operate as in Normal Mode
         __var DbgMCU_APB2_Fz = 0x00000000;   // DGBMCU_APB2_FZ: All Peripherals Operate as in Normal Mode
+
+        __var ETMTrace_D0    = 1;            // 0 = PC1,  1 = PE3, 2 = PG13
+        __var ETMTrace_D1    = 1;            // 0 = PC8,  1 = PE4, 2 = PG14
+        __var ETMTrace_D2    = 1;            // 0 = PD2,  1 = PE5
+        __var ETMTrace_D3    = 1;            // 0 = PC12, 1 = PE6
       </debugvars>
 
       <sequences>
@@ -162,96 +190,205 @@
         <!-- User-Defined EnableTraceSWO Sequence -->
         <sequence name="EnableTraceSWO">
           <block>
-            __var dbgmcu_val    = 0;                                                // DBGMCU_CR Value
-            __var rcc_ahb1enr   = 0;                                                // RCC_AHB1ENR Value
-            __var gpiob_moder   = 0;                                                // GPIOB_MODER Value
-            __var gpiob_ospeedr = 0;                                                // GPIOB_OSPEEDR Value
-            __var gpiob_pupdr   = 0;                                                // GPIOB_PUPDR Value
-            __var gpiob_afrl    = 0;                                                // GPIOB_AFRL Value
+            __var dbgmcu_val       = 0;                                             // DBGMCU_CR Value
+            __var dbgmcu_trace_val = 0;                                             // DBGMCU_CR Value
 
-            dbgmcu_val  = Read32(0xE0042004) &amp; (~0xE0);                         // Read DBGMCU_CR and clear trace setup
-            dbgmcu_val |= (1 &lt;&lt; 5);                                           // Trace I/O Enable + Trace Mode Asynchronous
+            dbgmcu_val        = Read32(0xE0042004) &amp; (~0xE0);                   // Read DBGMCU_CR and clear trace setup
+            dbgmcu_trace_val  = (1 &lt;&lt; 5);                                     // Trace I/O Enable + Trace Mode Asynchronous
+          </block>
 
-            rcc_ahb1enr   = (Read32(0x40023830) | 0x00000002);                      // RCC_AHB1ENR: IO port B clock enable
-            gpiob_moder   = (Read32(0x40020400) &amp; (~0x000000C0)) | 0x00000080;  // GPIOB_MODER: Set PB3 Mode (Alternate Function)
-            gpiob_ospeedr = (Read32(0x40020408) | 0x000000C0);                      // GPIOB_OSPEEDR: Set PB3 Speed (High Speed)
-            gpiob_pupdr   = (Read32(0x4002040C) &amp; (~0x000000C0));               // GPIOB_PUPDR: Set PB3 I/O to no pull-up/pull-down
-            gpiob_afrl    = (Read32(0x40020420) &amp; (~0x0000F000));               // GPIOB_AFRL: Set PB3 Alternate Function to AF0 (SWO)
+            <!-- configure SWO -->
+              <block info="configure SWO (PB3)">
+                Write32(0x40023830, ( Read32(0x40023830)                    | 0x00000002) );  // RCC_AHB1ENR: IO port B clock enable
+                Write32(0x40020400, ((Read32(0x40020400) &amp; ~0x000000C0) | 0x00000080) );  // GPIOx_MODER:   Set Mode (Alternate Function)
+                Write32(0x40020408, ((Read32(0x40020408)                  ) | 0x000000C0) );  // GPIOx_OSPEEDR: Set Speed (Very High Speed)
+                Write32(0x4002040C, ((Read32(0x4002040C) &amp; ~0x000000C0)             ) );  // GPIOx_PUPDR:   Set I/O to no pull-up/pull-down
+                Write32(0x40020420, ((Read32(0x40020420) &amp; ~0x0000F000)             ) );  // GPIOx_AFRL:    Alternate Function to AF0
+              </block>
 
-            Write32(0x40023830, rcc_ahb1enr);                                       // Write RCC_AHB1ENR
-            Write32(0x40020400, gpiob_moder);                                       // Write GPIOB_MODER
-            Write32(0x40020408, gpiob_ospeedr);                                     // Write GPIOB_OSPEEDR
-            Write32(0x4002040C, gpiob_pupdr);                                       // Write GPIOB_PUPDR
-            Write32(0x40020420, gpiob_afrl);                                        // Write GPIOB_AFRL
-            Write32(0xE0042004, dbgmcu_val);                                        // Write DBGMCU_CR: Trace Settings
+          <block info="configure Trace I/O Enable + Trace Mode Asynchronous">
+            Write32(0xE0042004, dbgmcu_val | dbgmcu_trace_val);                               // Write DBGMCU_CR: Trace Settings
           </block>
         </sequence>
 
         <!-- User-Defined EnableTraceTPIU Sequence -->
         <sequence name="EnableTraceTPIU">
           <block>
-            __var width         = (__traceout &amp; 0x003F0000) &gt;&gt; 16;        // TPIU Port Width
-            __var dbgmcu_val    = 0;                                                // DBGMCU_CR Value
-            __var rcc_ahb1enr   = 0;                                                // RCC_AHB1ENR Value
-            __var gpioe_moder   = 0;                                                // GPIOE_MODER Value
-            __var gpioe_ospeedr = 0;                                                // GPIOE_OSPEEDR Value
-            __var gpioe_pupdr   = 0;                                                // GPIOE_PUPDR Value
-            __var gpioe_afrl    = 0;                                                // GPIOE_AFRL Value
+            __var width            = (__traceout &amp; 0x003F0000) &gt;&gt; 16;
+            __var dbgmcu_val       = 0;                                             // DBGMCU_CR Value
+            __var dbgmcu_trace_val = 0;                                             // DBGMCU_CR Value
 
-            dbgmcu_val  = Read32(0xE0042004) &amp; (~0xE0);                         // Read DBGMCU_CR and clear trace setup
-            dbgmcu_val |= (1 &lt;&lt; 5);                                           // Trace I/O Enable
-
-            // TRACECK Setup
-            rcc_ahb1enr   = (Read32(0x40023830) | 0x00000010);                      // RCC_AHB1ENR: IO port E clock enable
-            gpioe_moder   = (Read32(0x40021000) &amp; (~0x00000030)) | 0x00000020;  // GPIOE_MODER: Set PE2 Mode (Alternate Function)
-            gpioe_ospeedr = (Read32(0x40021008) | 0x00000030);                      // GPIOE_OSPEEDR: Set PE2 Speed (High Speed)
-            gpioe_pupdr   = (Read32(0x4002100C) &amp; (~0x00000030));               // GPIOE_PUPDR: Set PE2 I/O to no pull-up/pull-down
-            gpioe_afrl    = (Read32(0x40021020) &amp; (~0x00000F00));               // GPIOE_AFRL: Set PE2 Alternate Function to AF0 (TRACECK)
+            dbgmcu_val        = Read32(0xE0042004) &amp; (~0xE0);                   // Read DBGMCU_CR and clear trace setup
           </block>
 
-          <control if="width == 1">
-            <block>
-              // 1-Bit TPIU Trace Setup
-              dbgmcu_val    |= (1 &lt;&lt; 6);                                      // Trace Mode (1-Bit)
-              gpioe_moder    = (gpioe_moder &amp; (~0x000000C0)) | 0x00000080;      // GPIOE_MODER: Set PE3 Mode (Alternate Function)
-              gpioe_ospeedr  = (gpioe_ospeedr | 0x000000C0);                        // GPIOE_OSPEEDR: Set PE3 Speed (High Speed)
-              gpioe_pupdr    = (gpioe_pupdr &amp; (~0x000000C0));                   // GPIOE_PUPDR: Set PE3 I/O to no pull-up/pull-down
-              gpioe_afrl     = (gpioe_afrl  &amp; (~0x0000F000));                   // GPIOE_AFRL: Set PE3 Alternate Function to AF0 (TRACED[0])
+            <!-- configure TRACECLK -->
+              <block info="configure TRACECLK (PE2)">
+                Write32(0x40023830, ( Read32(0x40023830)                    | 0x00000010) );  // RCC_AHB1ENR: IO port E clock enable
+                Write32(0x40021000, ((Read32(0x40021000) &amp; ~0x00000030) | 0x00000020) );  // GPIOx_MODER:   Set Mode (Alternate Function)
+                Write32(0x40021008, ((Read32(0x40021008)                  ) | 0x00000030) );  // GPIOx_OSPEEDR: Set Speed (Very High Speed)
+                Write32(0x4002100C, ((Read32(0x4002100C) &amp; ~0x00000030)             ) );  // GPIOx_PUPDR:   Set I/O to no pull-up/pull-down
+                Write32(0x40021020, ((Read32(0x40021020) &amp; ~0x00000F00)             ) );  // GPIOx_AFRL:    Alternate Function to AF0
+              </block>
+
+          <control if="width &gt;= 1" info="TPIU port width 1">
+            <!-- configure TRACED0 -->
+            <control if="ETMTrace_D0 == 0" info="TRACED0 = PC1?">
+              <block info="configure TRACED0 (PC1)">
+                Write32(0x40023830,  (Read32(0x40023830)                    | 0x00000004) );  // RCC_AHB1ENR: IO port C clock enable
+                Write32(0x40020800, ((Read32(0x40020800) &amp; ~0x0000000C) | 0x00000008) );  // GPIOx_MODER:   Set Mode (Alternate Function)
+                Write32(0x40020808, ((Read32(0x40020808)                  ) | 0x0000000C) );  // GPIOx_OSPEEDR: Set Speed (Very High Speed)
+                Write32(0x4002080C, ((Read32(0x4002080C) &amp; ~0x0000000C)             ) );  // GPIOx_PUPDR:   Set I/O to no pull-up/pull-down
+                Write32(0x40020820, ((Read32(0x40020820) &amp; ~0x000000F0)             ) );  // GPIOx_AFRL:    Alternate Function to AF0
+              </block>
+            </control>
+            <control if="ETMTrace_D0 == 1" info="TRACED0 = PE3?">
+              <block info="configure TRACED0 (PE3)">
+                // Write32(0x40023830,  (Read32(0x40023830)                    | 0x00000010) );  // RCC_AHB1ENR: IO port E clock enable
+                Write32(0x40021000, ((Read32(0x40021000) &amp; ~0x000000C0) | 0x00000080) );  // GPIOx_MODER:   Set Mode (Alternate Function)
+                Write32(0x40021008, ((Read32(0x40021008)                  ) | 0x000000C0) );  // GPIOx_OSPEEDR: Set Speed (Very High Speed)
+                Write32(0x4002100C, ((Read32(0x4002100C) &amp; ~0x000000C0)             ) );  // GPIOx_PUPDR:   Set I/O to no pull-up/pull-down
+                Write32(0x40021020, ((Read32(0x40021020) &amp; ~0x0000F000)             ) );  // GPIOx_AFRL:    Alternate Function to AF0
+              </block>
+            </control>
+            <control if="ETMTrace_D0 == 2" info="TRACED0 = PG13?">
+              <block info="configure TRACED0 (PG13)">
+                Write32(0x40023830,  (Read32(0x40023830)                    | 0x00000040) );  // RCC_AHB1ENR: IO port G clock enable
+                Write32(0x40021800, ((Read32(0x40021800) &amp; ~0x0C000000) | 0x08000000) );  // GPIOx_MODER:   Set Mode (Alternate Function)
+                Write32(0x40021808, ((Read32(0x40021808)                  ) | 0x0C000000) );  // GPIOx_OSPEEDR: Set Speed (Very High Speed)
+                Write32(0x4002180C, ((Read32(0x4002180C) &amp; ~0x0C000000)             ) );  // GPIOx_PUPDR:   Set I/O to no pull-up/pull-down
+                Write32(0x40021824, ((Read32(0x40021824) &amp; ~0x00F00000)             ) );  // GPIOx_AFRL:    Alternate Function to AF0
+              </block>
+            </control>
+            <control if="ETMTrace_D0 &gt; 2" info="TRACED0 not configured">
+              <block>
+                Query(0, "TRACED0 not configured. Using Pin PE3.", 1);
+
+                Write32(0x40021000, ((Read32(0x40021000) &amp; ~0x000000C0) | 0x00000080) );  // GPIOx_MODER:   Set Mode (Alternate Function)
+                Write32(0x40021008, ((Read32(0x40021008)                  ) | 0x000000C0) );  // GPIOx_OSPEEDR: Set Speed (Very High Speed)
+                Write32(0x4002100C, ((Read32(0x4002100C) &amp; ~0x000000C0)             ) );  // GPIOx_PUPDR:   Set I/O to no pull-up/pull-down
+                Write32(0x40021020, ((Read32(0x40021020) &amp; ~0x0000F000)             ) );  // GPIOx_AFRL:    Alternate Function to AF0
+              </block>
+            </control>
+
+            <block info="configure Trace I/O Enable + Trace Mode Synchronous 1 bit">
+              dbgmcu_trace_val  = (3 &lt;&lt; 5);
             </block>
           </control>
 
-          <control if="width == 2">
-            <block>
-              // 2-Bit TPIU Trace Setup
-              dbgmcu_val    |= (2 &lt;&lt; 6);                                      // Trace Mode (2-Bit)
-              gpioe_moder    = (gpioe_moder &amp; (~0x000003C0)) | 0x00000280;      // GPIOE_MODER: Set PE3+PE4 Mode (Alternate Function)
-              gpioe_ospeedr  = (gpioe_ospeedr | 0x000003C0);                        // GPIOE_OSPEEDR: Set PE3+PE4 Speed (High Speed)
-              gpioe_pupdr    = (gpioe_pupdr &amp; (~0x000003C0));                   // GPIOE_PUPDR: Set PE3+PE4 I/O to no pull-up/pull-down
-              gpioe_afrl     = (gpioe_afrl  &amp; (~0x000FF000));                   // GPIOE_AFRL: Set PE3+PE4 Alternate Function to AF0 (TRACED[0..1])
+          <control if="width &gt;= 2" info="TPIU port width 2">
+            <!-- configure TRACED1 -->
+            <control if="ETMTrace_D1 == 0" info="TRACED1 = PC8?">
+              <block info="configure TRACED1 (PC8)">
+                Write32(0x40023830,  (Read32(0x40023830)                    | 0x00000004) );  // RCC_AHB1ENR: IO port C clock enable
+                Write32(0x40020800, ((Read32(0x40020800) &amp; ~0x00030000) | 0x00020000) );  // GPIOx_MODER:   Set Mode (Alternate Function)
+                Write32(0x40020808, ((Read32(0x40020808)                  ) | 0x00030000) );  // GPIOx_OSPEEDR: Set Speed (Very High Speed)
+                Write32(0x4002080C, ((Read32(0x4002080C) &amp; ~0x00030000)             ) );  // GPIOx_PUPDR:   Set I/O to no pull-up/pull-down
+                Write32(0x40020824, ((Read32(0x40020824) &amp; ~0x0000000F)             ) );  // GPIOx_AFRL:    Alternate Function to AF0
+              </block>
+            </control>
+            <control if="ETMTrace_D1 == 1" info="TRACED1 = PE4?">
+              <block info="configure TRACED1 (PE4)">
+                // Write32(0x40023830,  (Read32(0x40023830)                    | 0x00000010) );  // RCC_AHB1ENR: IO port E clock enable
+                Write32(0x40021000, ((Read32(0x40021000) &amp; ~0x00000300) | 0x00000200) );  // GPIOx_MODER:   Set Mode (Alternate Function)
+                Write32(0x40021008, ((Read32(0x40021008)                  ) | 0x00000300) );  // GPIOx_OSPEEDR: Set Speed (Very High Speed)
+                Write32(0x4002100C, ((Read32(0x4002100C) &amp; ~0x00000300)             ) );  // GPIOx_PUPDR:   Set I/O to no pull-up/pull-down
+                Write32(0x40021020, ((Read32(0x40021020) &amp; ~0x000F0000)             ) );  // GPIOx_AFRL:    Alternate Function to AF0
+              </block>
+            </control>
+            <control if="ETMTrace_D1 == 2" info="TRACED1 = PG14?">
+              <block info="configure TRACED1 (PG14)">
+                Write32(0x40023830,  (Read32(0x40023830)                    | 0x00000040) );  // RCC_AHB1ENR: IO port G clock enable
+                Write32(0x40021800, ((Read32(0x40021800) &amp; ~0x30000000) | 0x20000000) );  // GPIOx_MODER:   Set Mode (Alternate Function)
+                Write32(0x40021808, ((Read32(0x40021808)                  ) | 0x30000000) );  // GPIOx_OSPEEDR: Set Speed (Very High Speed)
+                Write32(0x4002180C, ((Read32(0x4002180C) &amp; ~0x30000000)             ) );  // GPIOx_PUPDR:   Set I/O to no pull-up/pull-down
+                Write32(0x40021824, ((Read32(0x40021824) &amp; ~0x0F000000)             ) );  // GPIOx_AFRL:    Alternate Function to AF0
+              </block>
+            </control>
+            <control if="ETMTrace_D1 &gt; 2" info="TRACED1 not configured">
+              <block>
+                Query(0, "TRACED1 not configured. Using Pin PE4.", 1);
+
+                Write32(0x40021000, ((Read32(0x40021000) &amp; ~0x00000300) | 0x00000200) );  // GPIOx_MODER:   Set Mode (Alternate Function)
+                Write32(0x40021008, ((Read32(0x40021008)                  ) | 0x00000300) );  // GPIOx_OSPEEDR: Set Speed (Very High Speed)
+                Write32(0x4002100C, ((Read32(0x4002100C) &amp; ~0x00000300)             ) );  // GPIOx_PUPDR:   Set I/O to no pull-up/pull-down
+                Write32(0x40021020, ((Read32(0x40021020) &amp; ~0x000F0000)             ) );  // GPIOx_AFRL:    Alternate Function to AF0
+              </block>
+            </control>
+
+            <block info="configure Trace I/O Enable + Trace Mode Synchronous 2 bit">
+              dbgmcu_trace_val  = (5 &lt;&lt; 5);
             </block>
           </control>
 
-          <control if="width == 4">
-            <block>
-              // 4-Bit TPIU Trace Setup
-              dbgmcu_val    |= (3 &lt;&lt; 6);                                      // Trace Mode (4-Bit)
-              gpioe_moder    = (gpioe_moder &amp; (~0x00003FC0)) | 0x00002A80;      // GPIOE_MODER: Set PE3+PE4+PE5+PE6 Mode (Alternate Function)
-              gpioe_ospeedr  = (gpioe_ospeedr | 0x00003FC0);                        // GPIOE_OSPEEDR: Set PE3+PE4+PE5+PE6 Speed (High Speed)
-              gpioe_pupdr    = (gpioe_pupdr &amp; (~0x00003FC0));                   // GPIOE_PUPDR: Set PE3+PE4+PE5+PE6 I/O to no pull-up/pull-down
-              gpioe_afrl     = (gpioe_afrl  &amp; (~0x0FFFF000));                   // GPIOE_AFRL: Set PE3+PE4+PE5+PE6 Alternate Function to AF0 (TRACED[0..3])
+          <control if="width &gt;= 4" info="TPIU port width 4">
+            <!-- configure TRACED2 -->
+            <control if="ETMTrace_D2 == 0" info="TRACED2 = PD2?">
+              <block info="configure TRACED2 (PD2)">
+                Write32(0x40023830,  (Read32(0x40023830)                    | 0x00000008) );  // RCC_AHB1ENR: IO port D clock enable
+                Write32(0x40020C00, ((Read32(0x40020C00) &amp; ~0x00000030) | 0x00000020) );  // GPIOx_MODER:   Set Mode (Alternate Function)
+                Write32(0x40020C08, ((Read32(0x40020C08)                  ) | 0x00000030) );  // GPIOx_OSPEEDR: Set Speed (Very High Speed)
+                Write32(0x40020C0C, ((Read32(0x40020C0C) &amp; ~0x00000030)             ) );  // GPIOx_PUPDR:   Set I/O to no pull-up/pull-down
+                Write32(0x40020C20, ((Read32(0x40020C20) &amp; ~0x00000F00)             ) );  // GPIOx_AFRL:    Alternate Function to AF0
+              </block>
+            </control>
+            <control if="ETMTrace_D2 == 1" info="TRACED2 = PE5?">
+              <block info="configure TRACED2 (PE5)">
+                // Write32(0x40023830,  (Read32(0x40023830)                    | 0x00000010) );  // RCC_AHB1ENR: IO port E clock enable
+                Write32(0x40021000, ((Read32(0x40021000) &amp; ~0x00000C00) | 0x00000800) );  // GPIOx_MODER:   Set Mode (Alternate Function)
+                Write32(0x40021008, ((Read32(0x40021008)                  ) | 0x00000C00) );  // GPIOx_OSPEEDR: Set Speed (Very High Speed)
+                Write32(0x4002100C, ((Read32(0x4002100C) &amp; ~0x00000C00)             ) );  // GPIOx_PUPDR:   Set I/O to no pull-up/pull-down
+                Write32(0x40021020, ((Read32(0x40021020) &amp; ~0x00F00000)             ) );  // GPIOx_AFRL:    Alternate Function to AF0
+              </block>
+            </control>
+            <control if="ETMTrace_D2 &gt; 1" info="TRACED2 not configured">
+              <block>
+                Query(0, "TRACED2 not configured. Using Pin PE5.", 1);
+
+                Write32(0x40021000, ((Read32(0x40021000) &amp; ~0x00000C00) | 0x00000800) );  // GPIOx_MODER:   Set Mode (Alternate Function)
+                Write32(0x40021008, ((Read32(0x40021008)                  ) | 0x00000C00) );  // GPIOx_OSPEEDR: Set Speed (Very High Speed)
+                Write32(0x4002100C, ((Read32(0x4002100C) &amp; ~0x00000C00)             ) );  // GPIOx_PUPDR:   Set I/O to no pull-up/pull-down
+                Write32(0x40021020, ((Read32(0x40021020) &amp; ~0x00F00000)             ) );  // GPIOx_AFRL:    Alternate Function to AF0
+              </block>
+            </control>
+
+            <!-- configure TRACED3 -->
+            <control if="ETMTrace_D3 == 0" info="TRACED3 = PC12?">
+              <block info="configure TRACED3 (PC12)">
+                Write32(0x40023830,  (Read32(0x40023830)                    | 0x00000004) );  // RCC_AHB1ENR: IO port C clock enable
+                Write32(0x40020800, ((Read32(0x40020800) &amp; ~0x03000000) | 0x02000000) );  // GPIOx_MODER:   Set Mode (Alternate Function)
+                Write32(0x40020808, ((Read32(0x40020808)                  ) | 0x03000000) );  // GPIOx_OSPEEDR: Set Speed (Very High Speed)
+                Write32(0x4002080C, ((Read32(0x4002080C) &amp; ~0x03000000)             ) );  // GPIOx_PUPDR:   Set I/O to no pull-up/pull-down
+                Write32(0x40020824, ((Read32(0x40020824) &amp; ~0x000F0000)             ) );  // GPIOx_AFRL:    Alternate Function to AF0
+              </block>
+            </control>
+            <control if="ETMTrace_D3 == 1" info="TRACED3 = PE6?">
+              <block info="configure TRACED3 (PE6)">
+                // Write32(0x40023830,  (Read32(0x40023830)                    | 0x00000010) );  // RCC_AHB1ENR: IO port E clock enable
+                Write32(0x40021000, ((Read32(0x40021000) &amp; ~0x00003000) | 0x00002000) );  // GPIOx_MODER:   Set Mode (Alternate Function)
+                Write32(0x40021008, ((Read32(0x40021008)                  ) | 0x00003000) );  // GPIOx_OSPEEDR: Set Speed (Very High Speed)
+                Write32(0x4002100C, ((Read32(0x4002100C) &amp; ~0x00003000)             ) );  // GPIOx_PUPDR:   Set I/O to no pull-up/pull-down
+                Write32(0x40021020, ((Read32(0x40021020) &amp; ~0x0F000000)             ) );  // GPIOx_AFRL:    Alternate Function to AF0
+              </block>
+            </control>
+            <control if="ETMTrace_D3 &gt; 1" info="TRACED3 not configured">
+              <block>
+                Query(0, "TRACED3 not configured. Using Pin PE6.", 1);
+
+                Write32(0x40021000, ((Read32(0x40021000) &amp; ~0x00003000) | 0x00002000) );  // GPIOx_MODER:   Set Mode (Alternate Function)
+                Write32(0x40021008, ((Read32(0x40021008)                  ) | 0x00003000) );  // GPIOx_OSPEEDR: Set Speed (Very High Speed)
+                Write32(0x4002100C, ((Read32(0x4002100C) &amp; ~0x00003000)             ) );  // GPIOx_PUPDR:   Set I/O to no pull-up/pull-down
+                Write32(0x40021020, ((Read32(0x40021020) &amp; ~0x0F000000)             ) );  // GPIOx_AFRL:    Alternate Function to AF0
+              </block>
+            </control>
+
+            <block info="configure Trace I/O Enable + Trace Mode Synchronous 4 bit">
+              dbgmcu_trace_val  = (7 &lt;&lt; 5);
             </block>
           </control>
 
-          <block>
-            // Write Trace Configuration to Target
-            Write32(0x40023830, rcc_ahb1enr);                                       // Write RCC_AHB1ENR
-            Write32(0x40021000, gpioe_moder);                                       // Write GPIOE_MODER
-            Write32(0x40021008, gpioe_ospeedr);                                     // Write GPIOE_OSPEEDR
-            Write32(0x4002100C, gpioe_pupdr);                                       // Write GPIOE_PUPDR
-            Write32(0x40021020, gpioe_afrl);                                        // Write GPIOE_AFRL
-            Write32(0xE0042004, dbgmcu_val);                                        // Write DBGMCU_CR: Trace Settings
+          <block info="configure Trace I/O Enable + Trace Mode Asynchronous">
+            Write32(0xE0042004, dbgmcu_val | dbgmcu_trace_val);                               // Write DBGMCU_CR: Trace Settings
           </block>
-
         </sequence>
 
       </sequences>
@@ -335,7 +472,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
           <variant Dvariant="STM32F745IEKx"> <feature type="BGA" n="176"/> </variant>
         </device>
       </subFamily>
- 
+
       <!-- ************************  Subfamily 'STM32F746'  **************************** -->
       <subFamily DsubFamily="STM32F746">
         <compile header="Drivers/CMSIS/Device/ST/STM32F7xx/Include/stm32f7xx.h" define="STM32F746xx"/>
@@ -375,7 +512,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
           <memory id="IROM2" start="0x00200000" size="0x100000" startup="0" default="0" />
           <algorithm name="CMSIS/Flash/STM32F7x_1024.FLM"       start="0x08000000" size="0x100000" RAMstart="0x20010000" RAMsize="0x1000" default="1" />
           <algorithm name="CMSIS/Flash/STM32F7x_TCM.FLM"        start="0x00200000" size="0x100000" RAMstart="0x20010000" RAMsize="0x1000" default="0" />
-          <variant Dvariant="STM32F746BGTx"> <feature type="QFP" n="208"/> </variant>   
+          <variant Dvariant="STM32F746BGTx"> <feature type="QFP" n="208"/> </variant>
         </device>
         <!-- *************************  Device 'STM32F746NG'  ***************************** -->
         <device Dname="STM32F746NG">
@@ -456,7 +593,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
         </device>
         <!-- *************************  Device 'STM32F756BG'  ***************************** -->
         <device Dname="STM32F756BG">
-          <variant Dvariant="STM32F756BGTx"> <feature type="QFP" n="208"/> </variant>   
+          <variant Dvariant="STM32F756BGTx"> <feature type="QFP" n="208"/> </variant>
         </device>
         <!-- *************************  Device 'STM32F756NG'  ***************************** -->
         <device Dname="STM32F756NG">
@@ -975,7 +1112,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
     <description Cclass="Graphics Display">Display Interface including configuration for emWIN</description>
     <description Cclass="Board Support" Cgroup="Drivers">ST BSP Drivers</description>
   </taxonomy>
-  
+
   <apis>
     <api Cclass="Device" Cgroup="STM32Cube Framework" exclusive="1" Capiversion="1.0.0">
       <description>STM32Cube Framework</description>
@@ -1028,7 +1165,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </RTE_Components_h>
       <files>
         <file category="doc"     name="MDK/CubeMX/Documentation/classic.html"/>
-        <file category="header"  name="CMSIS/Driver/Config/RTE_Device.h" attr="config" version="1.2.0"/>
+        <file category="header"  name="CMSIS/Driver/Config/RTE_Device.h" attr="config" version="1.2.1"/>
         <file category="header"  name="MDK/Templates/Inc/stm32f7xx_hal_conf.h" attr="config" version="1.0.4"/>
         <file category="source"  name="MDK/Templates/Src/stm32f7xx_hal_msp.c"  attr="template" select="MCU Specific HAL Initialization / De-Initialization"/>
         <file category="header"  name="MDK/Templates/Inc/stm32f7xx_it.h" attr="template" select="Exception Handlers and Peripheral IRQ"/>
@@ -1050,7 +1187,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
         <file category="other"   name="MDK/CubeMX/MX_Device_h.ftl" version ="1.0.1"/>
       </files>
     </component>
-    
+
     <!-- START: STMicroelectronics STM32CubeF7 HAL -->
     <component Cclass="Device" Cgroup="STM32Cube HAL" Csub="Common" Cversion="1.0.4" condition="STM32F7 HAL Common">
       <description>Common HAL driver</description>
@@ -1489,7 +1626,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
 
     <!-- END: STMicroelectronics STM32CubeF7 HAL -->
 
-    <component Cclass="CMSIS Driver" Cgroup="CAN" Capiversion="1.0" Cversion="1.1" condition="STM32F7 CMSIS_Driver CAN">
+    <component Cclass="CMSIS Driver" Cgroup="CAN" Capiversion="1.0" Cversion="1.2" condition="STM32F7 CMSIS_Driver CAN">
       <description>CAN Driver for STM32F7 Series</description>
       <RTE_Components_h>  <!-- the following content goes into file 'RTE_Components.h' -->
         #define RTE_Drivers_CAN1                /* Driver CAN1 */
@@ -1515,7 +1652,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </files>
     </component>
 
-    <component Cclass="CMSIS Driver" Cgroup="USART" Capiversion="2.2" Cversion="1.4" condition="STM32F7 CMSIS_Driver USART">
+    <component Cclass="CMSIS Driver" Cgroup="USART" Capiversion="2.1" Cversion="1.6" condition="STM32F7 CMSIS_Driver USART">
       <description>USART Driver for STM32F7 Series</description>
       <RTE_Components_h>
         #define RTE_Drivers_USART1              /* Driver USART1 */
@@ -1555,7 +1692,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </files>
     </component>
 
-    <component Cclass="CMSIS Driver" Cgroup="SAI" Capiversion="1.0" Cversion="1.2" condition="STM32F7 CMSIS_Driver SAI">
+    <component Cclass="CMSIS Driver" Cgroup="SAI" Capiversion="1.0" Cversion="1.3" condition="STM32F7 CMSIS_Driver SAI">
       <description>SAI Driver for STM32F7 Series</description>
       <RTE_Components_h>
         #define RTE_Drivers_SAI1                /* Driver SAI1 */
@@ -1566,7 +1703,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </files>
     </component>
 
-    <component Cclass="CMSIS Driver" Cgroup="Ethernet MAC" Capiversion="2.1" Cversion="1.2" condition="STM32F7 CMSIS_Driver ETH_MAC">
+    <component Cclass="CMSIS Driver" Cgroup="Ethernet MAC" Capiversion="2.1" Cversion="1.3" condition="STM32F7 CMSIS_Driver ETH_MAC">
       <description>Ethernet MAC Driver for STM32F7 Series</description>
       <RTE_Components_h>
         #define RTE_Drivers_ETH_MAC0            /* Driver ETH_MAC0 */
@@ -1598,7 +1735,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </files>
     </component>
 
-    <component Cclass="CMSIS Driver" Cgroup="USB Host" Csub="Full-speed" Capiversion="2.1" Cversion="1.5" condition="STM32F7 CMSIS_Driver USB">
+    <component Cclass="CMSIS Driver" Cgroup="USB Host" Csub="Full-speed" Capiversion="2.1" Cversion="1.6" condition="STM32F7 CMSIS_Driver USB">
       <description>USB Host Full-Speed Driver for STM32F7 Series</description>
       <RTE_Components_h>
         #define RTE_Drivers_USBH0               /* Driver USBH0 */
@@ -1609,7 +1746,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </files>
     </component>
 
-    <component Cclass="CMSIS Driver" Cgroup="USB Host" Csub="High-speed" Capiversion="2.1" Cversion="1.6" condition="STM32F7 CMSIS_Driver USB">
+    <component Cclass="CMSIS Driver" Cgroup="USB Host" Csub="High-speed" Capiversion="2.1" Cversion="1.8" condition="STM32F7 CMSIS_Driver USB">
       <description>USB Host High-Speed Driver for STM32F7 Series</description>
       <RTE_Components_h>
         #define RTE_Drivers_USBH1               /* Driver USBH1 */
@@ -1917,6 +2054,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
     <board vendor="STMicroelectronics" name="STM32F746G-Discovery" revision="Rev.1" salesContact="http://www.st.com/stonline/contactus/contacts/index.php" orderForm="https://my.st.com/esample/app?page=basket&amp;pn=STM32F746G_Discovery">
       <description>STMicroelectronics STM32F746G-Discovery Board Support and Examples</description>
       <image small="MDK/Boards/ST/STM32F746G_Discovery/Documentation/stm32f746g-disco_small.jpg" large="MDK/Boards/ST/STM32F746G_Discovery/Documentation/stm32f746g-disco_large.jpg"/>
+      <book category="setup"     name="Documentation/32F746GDISCOVERY_QSG.pdf" title="STM32F746G-Discovery Quick Start Guide"/>
       <book category="overview"  name="http://www.st.com/web/catalog/tools/FM116/SC959/SS1532/LN1848/PF261641" title="STM32F746G_Discovery Web Page"/>
       <book category="manual"     name="Drivers/BSP/STM32746G-Discovery/STM32746G-Discovery_BSP_User_Manual.chm" title="BSP User Manual"/>
       <!-- <book category="setup"     name="MDK/Boards/ST/STM32F746G_Discovery/Documentation/DM00092826.pdf" title="Getting Started"/> -->
@@ -1953,6 +2091,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       <description>STMicroelectronics STM32756G-EVAL Evaluation Board Support and Examples</description>
       <image small="MDK/Boards/ST/STM32756G_EVAL/Documentation/stm327x6g-eval_small.jpg" large="MDK/Boards/ST/STM32756G_EVAL/Documentation/stm327x6g-eval_large.jpg"/>
       <book category="overview"  name="http://www.st.com/web/catalog/tools/FM116/SC959/SS1532/LN1199/PF261640" title="STM32756G_EVAL Evaluation Board Web Page"/>
+      <book category="setup"     name="Documentation/STM32F756G-EVAL_QSG.pdf" title="STM32F756G-Eval Quick Start Guide"/>
       <book category="manual"     name="Drivers/BSP/STM32756G_EVAL/STM32756G_EVAL_BSP_User_Manual.chm" title="BSP User Manual"/>
       <!-- <book category="setup"     name="MDK/Boards/ST/STM32756G_EVAL/Documentation/DM00092826.pdf" title="Getting Started"/> -->
       <book category="schematic" name="MDK/Boards/ST/STM32756G_EVAL/Documentation/stm327x6g-eval_sch.zip" title="Schematics"/>
@@ -2425,11 +2564,11 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </attributes>
     </example>
 
-    <example name="CAN Data" doc="Abstract.txt" folder="MDK/Boards/ST/STM32756G_EVAL/Middleware/CAN/CAN_Data">
+    <example name="CAN" doc="Abstract.txt" folder="MDK/Boards/ST/STM32756G_EVAL/Middleware/CAN/CAN">
       <description>CAN example that sends and receives data messages</description>
       <board name="STM32756G-EVAL" vendor="STMicroelectronics"/>
       <project>
-        <environment name="uv" load="CAN_Data.uvprojx"/>
+        <environment name="uv" load="CAN.uvprojx"/>
       </project>
       <attributes>
         <category>Middleware</category>
