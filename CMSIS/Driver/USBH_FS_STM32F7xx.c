@@ -1072,7 +1072,11 @@ void USBH_FS_IRQ (uint32_t gintsts) {
       for (ch = 0U; ch < USBH0_MAX_PIPE_NUM; ch++) {
         if (ptr_pipe->active != 0U) {
           ptr_pipe->active = 0U;
-          ptr_ch->HCINT    = 0x7BBU;                    // Clear all interrupts
+
+// [LNP]
+//        ptr_ch->HCINT    = 0x7BBU;                    // Clear all interrupts
+          ptr_ch->HCINT   |= 0x7BBU;                    // Clear all interrupts
+
           ptr_ch->HCINTMSK = OTG_FS_HCINTx_CHH;         // Enable halt interrupt
           ptr_ch->HCCHAR  |= OTG_FS_HCCHARx_CHENA | OTG_FS_HCCHARx_CHDIS;       // Activate Halt
           SignalPipeEvent((ARM_USBH_EP_HANDLE)ptr_ch, ARM_USBH_EVENT_BUS_ERROR);
@@ -1128,16 +1132,28 @@ void USBH_FS_IRQ (uint32_t gintsts) {
         hchalt     =   0U;
         if ((hcint & OTG_FS_HCINTx_CHH) != 0U) {        // If channel halted
           ptr_ch->HCINTMSK = 0U;                        // Disable all channel interrupts
-          ptr_ch->HCINT    = 0x7BBU;                    // Clear all interrupts
+
+// [LNP]
+//        ptr_ch->HCINT    = 0x7BBU;                    // Clear all interrupts
+          ptr_ch->HCINT   |= 0x7BBU;                    // Clear all interrupts
+
           ptr_pipe->in_progress = 0U;                   // Transfer not in progress
         } else if ((hcint & OTG_FS_HCINTx_XFRC) != 0U) {// If data transfer finished
           if ((ptr_ch->HCCHAR & (1U << 15)) == 0U) {    // If endpoint OUT
             ptr_ch->HCINTMSK = 0U;                      // Disable all channel interrupts
             ptr_pipe->in_progress = 0U;                 // Transfer not in progress
           }
-          ptr_ch->HCINT   = 0x7BBU;                     // Clear all interrupts
+
+// [LNP]
+//        ptr_ch->HCINT   = 0x7BBU;                     // Clear all interrupts
+          ptr_ch->HCINT  |= 0x7BBU;                     // Clear all interrupts
+
           if ((ptr_ch->HCCHAR & (1U << 15)) != 0U) {    // If endpoint IN
             ptr_pipe->active = 0U;                      // Transfer not active any more
+
+// [LNP]
+            ptr_pipe->in_progress = 0U;                 // Transfer not in progress
+
             ptr_pipe->event = ARM_USBH_EVENT_TRANSFER_COMPLETE;
           } else {                                      // If endpoint OUT
             ptr_pipe->num_transferred_total += ptr_pipe->num_transferring;
@@ -1152,7 +1168,11 @@ void USBH_FS_IRQ (uint32_t gintsts) {
           }
         } else {
           if ((hcint & OTG_FS_HCINTx_ACK) != 0U) {      // If ACK received
-            ptr_ch->HCINT = OTG_FS_HCINTx_ACK;          // Clear ACK interrupt
+
+// [LNP]
+//            ptr_ch->HCINT = OTG_FS_HCINTx_ACK;        // Clear ACK interrupt
+              ptr_ch->HCINT |= OTG_FS_HCINTx_ACK;       // Clear ACK interrupt
+
             // On ACK, ACK is not an event that can be returned so if transfer
             // is completed another interrupt will happen otherwise for IN
             // endpoint transfer will be restarted for remaining data
@@ -1178,7 +1198,11 @@ void USBH_FS_IRQ (uint32_t gintsts) {
               ptr_pipe->num_transferring = 0U;
             }
             if ((hcint & OTG_FS_HCINTx_NAK)!=0U){       // If NAK received
-              ptr_ch->HCINT = OTG_FS_HCINTx_NAK;        // Clear NAK interrupt
+
+// [LNP]
+//            ptr_ch->HCINT = OTG_FS_HCINTx_NAK;        // Clear NAK interrupt
+              ptr_ch->HCINT |= OTG_FS_HCINTx_NAK;       // Clear NAK interrupt
+
               // On NAK, NAK is not returned to middle layer but transfer is
               // restarted from driver for remaining data, unless it is interrupt
               // endpoint in which case transfer is restarted on SOF event
@@ -1193,12 +1217,20 @@ void USBH_FS_IRQ (uint32_t gintsts) {
                 hchalt = 1U;
               }
             } else if ((hcint&OTG_FS_HCINTx_STALL)!=0U){// If STALL received
-              ptr_ch->HCINT   = OTG_FS_HCINTx_STALL;    // Clear STALL interrupt
+
+// [LNP]
+//            ptr_ch->HCINT  = OTG_FS_HCINTx_STALL;     // Clear STALL interrupt
+              ptr_ch->HCINT  |= OTG_FS_HCINTx_STALL;    // Clear STALL interrupt
+
               ptr_pipe->active = 0U;                    // Transfer not active any more
               ptr_pipe->event = ARM_USBH_EVENT_HANDSHAKE_STALL;
               hchalt = 1U;
             } else {
-              ptr_ch->HCINT   = OTG_FS_HCINTx_ERR;      // Clear all error interrupts
+
+// [LNP]
+//            ptr_ch->HCINT  = OTG_FS_HCINTx_ERR;       // Clear all error interrupts
+              ptr_ch->HCINT  |= OTG_FS_HCINTx_ERR;      // Clear all error interrupts
+
               ptr_pipe->active = 0U;                    // Transfer not active any more
               ptr_pipe->event = ARM_USBH_EVENT_BUS_ERROR;
               hchalt = 1U;
