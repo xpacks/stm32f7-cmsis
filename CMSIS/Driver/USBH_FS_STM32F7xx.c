@@ -1074,7 +1074,8 @@ void USBH_FS_IRQ (uint32_t gintsts) {
           ptr_pipe->active = 0U;
 
 // [LNP]
-          ptr_ch->HCINT    |= 0x7BBU;                    // Clear all interrupts
+//        ptr_ch->HCINT    = 0x7BBU;                    // Clear all interrupts
+          ptr_ch->HCINT   |= 0x7BBU;                    // Clear all interrupts
 
           ptr_ch->HCINTMSK = OTG_FS_HCINTx_CHH;         // Enable halt interrupt
           ptr_ch->HCCHAR  |= OTG_FS_HCCHARx_CHENA | OTG_FS_HCCHARx_CHDIS;       // Activate Halt
@@ -1133,6 +1134,7 @@ void USBH_FS_IRQ (uint32_t gintsts) {
           ptr_ch->HCINTMSK = 0U;                        // Disable all channel interrupts
 
 // [LNP]
+//        ptr_ch->HCINT    = 0x7BBU;                    // Clear all interrupts
           ptr_ch->HCINT   |= 0x7BBU;                    // Clear all interrupts
 
           ptr_pipe->in_progress = 0U;                   // Transfer not in progress
@@ -1143,6 +1145,7 @@ void USBH_FS_IRQ (uint32_t gintsts) {
           }
 
 // [LNP]
+//        ptr_ch->HCINT   = 0x7BBU;                     // Clear all interrupts
           ptr_ch->HCINT  |= 0x7BBU;                     // Clear all interrupts
 
           if ((ptr_ch->HCCHAR & (1U << 15)) != 0U) {    // If endpoint IN
@@ -1167,7 +1170,8 @@ void USBH_FS_IRQ (uint32_t gintsts) {
           if ((hcint & OTG_FS_HCINTx_ACK) != 0U) {      // If ACK received
 
 // [LNP]
-            ptr_ch->HCINT |= OTG_FS_HCINTx_ACK;         // Clear ACK interrupt
+//            ptr_ch->HCINT = OTG_FS_HCINTx_ACK;        // Clear ACK interrupt
+              ptr_ch->HCINT |= OTG_FS_HCINTx_ACK;       // Clear ACK interrupt
 
             // On ACK, ACK is not an event that can be returned so if transfer
             // is completed another interrupt will happen otherwise for IN
@@ -1196,6 +1200,7 @@ void USBH_FS_IRQ (uint32_t gintsts) {
             if ((hcint & OTG_FS_HCINTx_NAK)!=0U){       // If NAK received
 
 // [LNP]
+//            ptr_ch->HCINT = OTG_FS_HCINTx_NAK;        // Clear NAK interrupt
               ptr_ch->HCINT |= OTG_FS_HCINTx_NAK;       // Clear NAK interrupt
 
               // On NAK, NAK is not returned to middle layer but transfer is
@@ -1214,6 +1219,7 @@ void USBH_FS_IRQ (uint32_t gintsts) {
             } else if ((hcint&OTG_FS_HCINTx_STALL)!=0U){// If STALL received
 
 // [LNP]
+//            ptr_ch->HCINT  = OTG_FS_HCINTx_STALL;     // Clear STALL interrupt
               ptr_ch->HCINT  |= OTG_FS_HCINTx_STALL;    // Clear STALL interrupt
 
               ptr_pipe->active = 0U;                    // Transfer not active any more
@@ -1222,6 +1228,7 @@ void USBH_FS_IRQ (uint32_t gintsts) {
             } else {
 
 // [LNP]
+//            ptr_ch->HCINT  = OTG_FS_HCINTx_ERR;       // Clear all error interrupts
               ptr_ch->HCINT  |= OTG_FS_HCINTx_ERR;      // Clear all error interrupts
 
               ptr_pipe->active = 0U;                    // Transfer not active any more
