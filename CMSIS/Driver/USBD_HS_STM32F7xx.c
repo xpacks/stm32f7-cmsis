@@ -670,6 +670,12 @@ static int32_t USBD_PowerControl (ARM_POWER_STATE state) {
       __USB_OTG_HS_ULPI_CLK_ENABLE();
 #endif
       __USB_OTG_HS_CLK_ENABLE();
+          
+      // [LNP]
+      // If USB_OTG_HS is used with the internal PHY and the processor goes to sleep
+      // (WFI or WFE), then the OTGHSULPILPEN bit in RCC->AHB1LPENR must be cleared.
+      RCC->AHB1LPENR &= ~RCC_AHB1LPENR_OTGHSULPILPEN;
+
 #else
       HAL_PCD_MspInit(&hpcd_USB_OTG_HS);
 #endif
