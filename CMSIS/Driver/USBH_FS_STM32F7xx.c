@@ -18,8 +18,8 @@
  * 3. This notice may not be removed or altered from any source distribution.
  *
  *
- * $Date:        2. February 2016
- * $Revision:    V1.6
+ * $Date:        12. December 2016
+ * $Revision:    V1.7
  *
  * Driver:       Driver_USBH0
  * Configured:   via RTE_Device.h configuration file
@@ -49,6 +49,8 @@
  * -------------------------------------------------------------------------- */
 
 /* History:
+ *  Version 1.7
+ *    Minor changes not affecting functionality
  *  Version 1.6
  *    Added comments for external defines regarding VBUS and Overcurrent pin polarity
  *  Version 1.5
@@ -160,7 +162,7 @@ extern HCD_HandleTypeDef hhcd_USB_OTG_FS;
 
 // USBH Driver *****************************************************************
 
-#define ARM_USBH_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,6)
+#define ARM_USBH_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,7)
 
 // Driver Version
 static const ARM_DRIVER_VERSION usbh_driver_version = { ARM_USBH_API_VERSION, ARM_USBH_DRV_VERSION };
@@ -555,9 +557,10 @@ static int32_t USBH_PowerControl (ARM_POWER_STATE state) {
       port_reset     =  false;                          // Reset variables
       memset((void *)(pipe), 0, sizeof(pipe));
 
-      OTG->GCCFG    &= ~OTG_FS_GCCFG_PWRDWN;            // Enable PHY power down
+      OTG->GCCFG    &= ~OTG_FS_GCCFG_PWRDWN;            // Power down on-chip PHY
       OTG->PCGCCTL  |=  OTG_FS_PCGCCTL_STPPCLK;         // Stop PHY clock
       OTG->GCCFG     =  0U;                             // Reset core configuration
+
 #ifdef RTE_DEVICE_FRAMEWORK_CLASSIC
       RCC->AHB2ENR  &= ~RCC_AHB2ENR_OTGFSEN;            // Disable OTG FS clock
 #else
@@ -568,14 +571,19 @@ static int32_t USBH_PowerControl (ARM_POWER_STATE state) {
       break;
 
     case ARM_POWER_FULL:
-      if (hw_initialized == false) { return ARM_DRIVER_ERROR; }
-      if (hw_powered     == true)  { return ARM_DRIVER_OK;    }
+      if (hw_initialized == false) {
+        return ARM_DRIVER_ERROR;
+      }
+      if (hw_powered     == true) {
+        return ARM_DRIVER_OK;
+      }
 
 #ifdef RTE_DEVICE_FRAMEWORK_CLASSIC
       RCC->AHB2ENR  |=  RCC_AHB2ENR_OTGFSEN;            // OTG FS clock enable
 #else
       HAL_HCD_MspInit(&hhcd_USB_OTG_FS);
 #endif
+
       RCC->AHB2RSTR |=  RCC_AHB2RSTR_OTGFSRST;          // Reset OTG FS module
       osDelay(1U);
       RCC->AHB2RSTR &= ~RCC_AHB2RSTR_OTGFSRST;          // Clear reset of OTG FS module
@@ -583,7 +591,7 @@ static int32_t USBH_PowerControl (ARM_POWER_STATE state) {
 
       // On-chip Full-speed PHY
       OTG->PCGCCTL  &= ~OTG_FS_PCGCCTL_STPPCLK;         // Start PHY clock
-      OTG->GCCFG    |=  OTG_FS_GCCFG_PWRDWN;            // Disable power down
+      OTG->GCCFG    |=  OTG_FS_GCCFG_PWRDWN;            // Power up on-chip PHY
       OTG->GUSBCFG  |=  OTG_FS_GUSBCFG_PHYSEL;          // Full-speed transceiver
 
       OTG->HCFG     |=  OTG_FS_HCFG_FSLSS;              // Support for FS/LS only
@@ -599,7 +607,7 @@ static int32_t USBH_PowerControl (ARM_POWER_STATE state) {
       while ((OTG->GRSTCTL & OTG_FS_GRSTCTL_AHBIDL) == 0U);
 
       port_reset     =  false;                          // Reset variables
-      memset((void *)(pipe), 0, sizeof(pipe));
+      memset((void *)(pipe), 0U, sizeof(pipe));
 
       OTG->GCCFG    &= ~OTG_FS_GCCFG_VBDEN;             // Disable VBUS sensing
 
@@ -945,7 +953,7 @@ static int32_t USBH_PipeTransfer (ARM_USBH_PIPE_HANDLE pipe_hndl, uint32_t packe
   if ((OTG->HPRT & OTG_FS_HPRT_PCSTS) == 0U) { return ARM_DRIVER_ERROR;           }
 
   ptr_pipe = (PIPE_t *)(&pipe[USBH_CH_GetIndexFromAddress ((OTG_FS_HC *)(pipe_hndl))]);
-  if (ptr_pipe->active != 0U)                         { return ARM_DRIVER_ERROR_BUSY;      }
+  if (ptr_pipe->active != 0U)                { return ARM_DRIVER_ERROR_BUSY;      }
 
   // Update current transfer information
   ptr_pipe->packet                = packet;

@@ -18,8 +18,8 @@
  * 3. This notice may not be removed or altered from any source distribution.
  *
  *
- * $Date:        30. March 2016
- * $Revision:    V1.8
+ * $Date:        12. December 2016
+ * $Revision:    V1.9
  *
  * Driver:       Driver_USBH1
  * Configured:   via RTE_Device.h configuration file
@@ -56,6 +56,8 @@
  * -------------------------------------------------------------------------- */
 
 /* History:
+ *  Version 1.9
+ *    On-chip PHY powered down if external ULPI PHY is used
  *  Version 1.8
  *    Corrected initialization for full-speed transceiver mode 
  *    (unexisting OTG_HS_GUSBCFG_PHSEL corrected to OTG_HS_GUSBCFG_PHYSEL)
@@ -123,7 +125,7 @@ Configuration tab
      - DMA Settings: not used
      - <b>GPIO Settings</b>: review settings, no changes required
           Pin Name | Signal on Pin        | GPIO mode | GPIO Pull-up/Pull..| Maximum out | User Label
-          :--------|:--------------       |:----------|:-------------------|:------------|:----------
+          :--------|:---------------------|:----------|:-------------------|:------------|:----------
           PA3      | USB_OTG_DS_ULPI_D0   | Alternate | No pull-up and no..| High        |.
           PA5      | USB_OTG_DS_ULPI_CK   | Alternate | No pull-up and no..| High        |.
           PB0      | USB_OTG_DS_ULPI_D1   | Alternate | No pull-up and no..| High        |.
@@ -189,7 +191,7 @@ extern HCD_HandleTypeDef hhcd_USB_OTG_HS;
 
 // USBH Driver *****************************************************************
 
-#define ARM_USBH_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,8)
+#define ARM_USBH_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,9)
 
 // Driver Version
 static const ARM_DRIVER_VERSION usbh_driver_version = { ARM_USBH_API_VERSION, ARM_USBH_DRV_VERSION };
@@ -691,10 +693,11 @@ static int32_t USBH_PowerControl (ARM_POWER_STATE state) {
       RCC->AHB1ENR  &= ~RCC_AHB1ENR_OTGHSULPIEN;        // OTG HS ULPI clock disable
 #endif
 #else                                                   // On-chip Full-speed PHY
-      OTG->GCCFG    &= ~OTG_HS_GCCFG_PWRDWN;            // Enable PHY power down
+      OTG->GCCFG    &= ~OTG_HS_GCCFG_PWRDWN;            // Power down on-chip PHY
 #endif
       OTG->PCGCCTL  |=  OTG_HS_PCGCCTL_STPPCLK;         // Stop PHY clock
       OTG->GCCFG     =  0U;                             // Reset core configuration
+
 #ifdef RTE_DEVICE_FRAMEWORK_CLASSIC
       RCC->AHB1ENR  &= ~RCC_AHB1ENR_OTGHSEN;            // Disable OTG HS clock
 #else
@@ -705,25 +708,29 @@ static int32_t USBH_PowerControl (ARM_POWER_STATE state) {
       break;
 
     case ARM_POWER_FULL:
-      if (hw_initialized == false) { return ARM_DRIVER_ERROR; }
-      if (hw_powered     == true)  { return ARM_DRIVER_OK;    }
+      if (hw_initialized == false) {
+        return ARM_DRIVER_ERROR;
+      }
+      if (hw_powered     == true) {
+        return ARM_DRIVER_OK;
+      }
 
 #ifdef RTE_DEVICE_FRAMEWORK_CLASSIC
 #ifdef MX_USB_OTG_HS_ULPI_D7_Pin                        // External ULPI High-speed PHY
       RCC->AHB1ENR  |=  RCC_AHB1ENR_OTGHSULPIEN;        // OTG HS ULPI clock enable
 #endif
-
       RCC->AHB1ENR  |=  RCC_AHB1ENR_OTGHSEN;            // OTG HS clock enable
 #else
       HAL_HCD_MspInit(&hhcd_USB_OTG_HS);
 #endif
+
       RCC->AHB1RSTR |=  RCC_AHB1RSTR_OTGHRST;           // Reset OTG HS module
       osDelay(1U);
       RCC->AHB1RSTR &= ~RCC_AHB1RSTR_OTGHRST;           // Clear reset of OTG HS module
       osDelay(1U);
 
 #ifdef MX_USB_OTG_HS_ULPI_D7_Pin                        // External ULPI High-speed PHY
-      OTG->GCCFG    &= ~OTG_HS_GCCFG_PWRDWN;            // Enable power down
+      OTG->GCCFG    &= ~OTG_HS_GCCFG_PWRDWN;            // Power down on-chip PHY
       OTG->GUSBCFG  &=~(OTG_HS_GUSBCFG_TSDPS      |     // Data line pulsing using utmi_txvalid (default)
                         OTG_HS_GUSBCFG_ULPIFSLS   |     // ULPI interface
                         OTG_HS_GUSBCFG_PHYSEL     |     // High-speed transceiver
@@ -731,7 +738,7 @@ static int32_t USBH_PowerControl (ARM_POWER_STATE state) {
       OTG->GUSBCFG  |=  OTG_HS_GUSBCFG_ULPIEVBUSD ;     // ULPI ext VBUS drive
 #else                                                   // On-chip Full-speed PHY
       OTG->PCGCCTL  &= ~OTG_HS_PCGCCTL_STPPCLK;         // Start PHY clock
-      OTG->GCCFG    |=  OTG_HS_GCCFG_PWRDWN;            // Disable power down
+      OTG->GCCFG    |=  OTG_HS_GCCFG_PWRDWN;            // Power up on-chip PHY
       OTG->GUSBCFG  |= (OTG_HS_GUSBCFG_PHYSEL  |        // Full-speed transceiver
                         OTG_HS_GUSBCFG_PHYLPCS);        // 48 MHz external clock
 #endif
@@ -753,7 +760,7 @@ static int32_t USBH_PowerControl (ARM_POWER_STATE state) {
       while ((OTG->GRSTCTL & OTG_HS_GRSTCTL_AHBIDL) == 0U);
 
       port_reset     =  false;                          // Reset variables
-      memset((void *)(pipe), 0, sizeof(pipe));
+      memset((void *)(pipe), 0U, sizeof(pipe));
 
       OTG->GCCFG    &= ~OTG_HS_GCCFG_VBDEN;             // Disable VBUS sensing
 

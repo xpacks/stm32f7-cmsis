@@ -18,8 +18,8 @@
  * 3. This notice may not be removed or altered from any source distribution.
  *
  *
- * $Date:        22. September 2016
- * $Revision:    V1.6
+ * $Date:        12. December 2016
+ * $Revision:    V1.7
  *
  * Driver:       Driver_USBD0
  * Configured:   via RTE_Device.h configuration file
@@ -43,6 +43,8 @@
  * -------------------------------------------------------------------------- */
 
 /* History:
+ *  Version 1.7
+ *    Minor changes not affecting functionality
  *  Version 1.6
  *    Corrected resume event signaling
  *  Version 1.5
@@ -141,7 +143,7 @@ extern PCD_HandleTypeDef hpcd_USB_OTG_FS;
 
 // USBD Driver *****************************************************************
 
-#define ARM_USBD_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,6)
+#define ARM_USBD_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,7)
 
 // Driver Version
 static const ARM_DRIVER_VERSION usbd_driver_version = { ARM_USBD_API_VERSION, ARM_USBD_DRV_VERSION };
@@ -602,7 +604,7 @@ static int32_t USBD_PowerControl (ARM_POWER_STATE state) {
       memset((void *)(&usbd_state), 0, sizeof(usbd_state));
       memset((void *)(ep),          0, sizeof(ep));
 
-      OTG->GCCFG    &= ~OTG_FS_GCCFG_PWRDWN;            // Enable PHY power down
+      OTG->GCCFG    &= ~OTG_FS_GCCFG_PWRDWN;            // Power down on-chip PHY
       OTG->PCGCCTL  |=  OTG_FS_PCGCCTL_STPPCLK;         // Stop PHY clock
       OTG->GCCFG     =  0U;                             // Reset core configuration
 
@@ -632,7 +634,7 @@ static int32_t USBD_PowerControl (ARM_POWER_STATE state) {
       RCC->AHB2RSTR &= ~RCC_AHB2RSTR_OTGFSRST;          // Clear reset of OTG FS module
       osDelay(1U);
 
-      OTG->GCCFG    |=  OTG_FS_GCCFG_PWRDWN;            // Disable power down
+      OTG->GCCFG    |=  OTG_FS_GCCFG_PWRDWN;            // Power up on-chip PHY
       OTG->GUSBCFG  |=  OTG_FS_GUSBCFG_PHYSEL;          // Full-speed transceiver
 
       // Wait until AHB Master state machine is in the idle condition
@@ -706,8 +708,8 @@ static int32_t USBD_DeviceConnect (void) {
 
   if (hw_powered == false) { return ARM_DRIVER_ERROR; }
 
-  OTG->DCTL    &= ~OTG_FS_DCTL_SDIS;    // Soft disconnect disabled
-  OTG->GCCFG   |=  OTG_FS_GCCFG_PWRDWN; // Disable power down
+  OTG->DCTL  &= ~OTG_FS_DCTL_SDIS;      // Soft disconnect disabled
+  OTG->GCCFG |=  OTG_FS_GCCFG_PWRDWN;   // Power up on-chip PHY
 
   return ARM_DRIVER_OK;
 }
@@ -722,7 +724,7 @@ static int32_t USBD_DeviceDisconnect (void) {
   if (hw_powered == false) { return ARM_DRIVER_ERROR; }
 
   OTG->DCTL  |=  OTG_FS_DCTL_SDIS;      // Soft disconnect enabled
-  OTG->GCCFG &= ~OTG_FS_GCCFG_PWRDWN;   // Enable power down
+  OTG->GCCFG &= ~OTG_FS_GCCFG_PWRDWN;   // Power down on-chip PHY
 
   return ARM_DRIVER_OK;
 }
