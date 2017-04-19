@@ -1,5 +1,5 @@
 /* -----------------------------------------------------------------------------
- * Copyright (c) 2013-2016 ARM Ltd.
+ * Copyright (c) 2013-2017 ARM Ltd.
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from
@@ -18,8 +18,8 @@
  * 3. This notice may not be removed or altered from any source distribution.
  *
  *
- * $Date:        6. September 2016
- * $Revision:    V1.3
+ * $Date:        10. Januay 2017
+ * $Revision:    V1.4
  *
  * Driver:       Driver_SPI1, Driver_SPI2, Driver_SPI3,
  *               Driver_SPI4, Driver_SPI5, Driver_SPI6
@@ -40,6 +40,8 @@
  * -------------------------------------------------------------------------- */
 
 /* History:
+ *  Version 1.4
+ *    Corrected DMA transfer problem
  *  Version 1.3
  *    Corrected transfer problem, when DMA is used
  *  Version 1.2
@@ -119,7 +121,7 @@ Configuration tab
 
 #include "SPI_STM32F7xx.h"
 
-#define ARM_SPI_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,3)
+#define ARM_SPI_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,4)
 
 // Driver Version
 static const ARM_DRIVER_VERSION DriverVersion = { ARM_SPI_API_VERSION, ARM_SPI_DRV_VERSION };
@@ -1202,8 +1204,8 @@ static int32_t SPI_Send (const void *data, uint32_t num, const SPI_RESOURCES *sp
   if (spi->rx_dma != NULL) {
     // DMA mode
 
-    if ((num % 2) == 1) {spi->reg->CR1 |=  SPI_CR2_LDMARX;}
-    else                {spi->reg->CR1 &= ~SPI_CR2_LDMARX;}
+    if ((num % 2) == 1) {spi->reg->CR2 |=  SPI_CR2_LDMARX;}
+    else                {spi->reg->CR2 &= ~SPI_CR2_LDMARX;}
     // Prepare DMA to receive dummy RX data
     spi->rx_dma->hdma->Init.PeriphInc             = DMA_PINC_DISABLE;
     spi->rx_dma->hdma->Init.MemInc                = DMA_MINC_DISABLE;
@@ -1418,8 +1420,8 @@ static int32_t SPI_Transfer (const void *data_out, void *data_in, uint32_t num, 
     // DMA mode
 
     if (spi->rx_dma != NULL) {
-      if ((num % 2) == 1) {spi->reg->CR1 |=  SPI_CR2_LDMARX;}
-      else                {spi->reg->CR1 &= ~SPI_CR2_LDMARX;}
+      if ((num % 2) == 1) {spi->reg->CR2 |=  SPI_CR2_LDMARX;}
+      else                {spi->reg->CR2 &= ~SPI_CR2_LDMARX;}
       // Prepare DMA to receive RX data
       spi->rx_dma->hdma->Init.PeriphInc             = DMA_PINC_DISABLE;
       spi->rx_dma->hdma->Init.MemInc                = DMA_MINC_ENABLE; 
@@ -1443,8 +1445,8 @@ static int32_t SPI_Transfer (const void *data_out, void *data_in, uint32_t num, 
     }
 
     if (spi->tx_dma != NULL) {
-      if ((num % 2) == 1) {spi->reg->CR1 |=  SPI_CR2_LDMATX;}
-      else                {spi->reg->CR1 &= ~SPI_CR2_LDMATX;}
+      if ((num % 2) == 1) {spi->reg->CR2 |=  SPI_CR2_LDMATX;}
+      else                {spi->reg->CR2 &= ~SPI_CR2_LDMATX;}
       // Prepare DMA to send TX data
       spi->tx_dma->hdma->Init.PeriphInc             = DMA_PINC_DISABLE;
       spi->tx_dma->hdma->Init.MemInc                = DMA_MINC_ENABLE;

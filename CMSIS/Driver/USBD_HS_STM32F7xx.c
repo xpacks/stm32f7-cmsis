@@ -18,8 +18,8 @@
  * 3. This notice may not be removed or altered from any source distribution.
  *
  *
- * $Date:        22. September 2016
- * $Revision:    V1.6
+ * $Date:        12. December 2016
+ * $Revision:    V1.7
  *
  * Driver:       Driver_USBD1
  * Configured:   via RTE_Device.h configuration file
@@ -43,6 +43,8 @@
  * -------------------------------------------------------------------------- */
 
 /* History:
+ *  Version 1.7
+ *    On-chip PHY powered down if external ULPI PHY is used
  *  Version 1.6
  *    Corrected resume event signaling
  *  Version 1.5
@@ -152,7 +154,7 @@ extern PCD_HandleTypeDef hpcd_USB_OTG_HS;
 
 // USBD Driver *****************************************************************
 
-#define ARM_USBD_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,6)
+#define ARM_USBD_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,7)
 
 // Driver Version
 static const ARM_DRIVER_VERSION usbd_driver_version = { ARM_USBD_API_VERSION, ARM_USBD_DRV_VERSION };
@@ -633,7 +635,7 @@ static int32_t USBD_PowerControl (ARM_POWER_STATE state) {
 #ifdef MX_USB_OTG_HS_ULPI_D7_Pin                        // External ULPI High-speed PHY
       RCC->AHB1ENR  &= ~RCC_AHB1ENR_OTGHSULPIEN;        // OTG HS ULPI clock disable
 #else                                                   // On-chip Full-speed PHY
-      OTG->GCCFG    &= ~OTG_HS_GCCFG_PWRDWN;            // Enable PHY power down
+      OTG->GCCFG    &= ~OTG_HS_GCCFG_PWRDWN;            // Power down on-chip PHY
 #endif
       OTG->PCGCCTL  |=  OTG_HS_PCGCCTL_STPPCLK;         // Stop PHY clock
       OTG->GCCFG     =  0U;                             // Reset core configuration
@@ -668,14 +670,15 @@ static int32_t USBD_PowerControl (ARM_POWER_STATE state) {
       RCC->AHB1RSTR &= ~RCC_AHB1RSTR_OTGHRST;           // Clear reset of OTG HS module
       osDelay(1U);
 
-      OTG->GCCFG    |=  OTG_HS_GCCFG_PWRDWN;            // Disable power down
 #ifdef MX_USB_OTG_HS_ULPI_D7_Pin                        // External ULPI High-speed PHY
+      OTG->GCCFG    &= ~OTG_HS_GCCFG_PWRDWN;            // Power down on-chip PHY
       OTG->GUSBCFG  &=~(OTG_HS_GUSBCFG_TSDPS      |     // Data line pulsing using utmi_txvalid (default)
                         OTG_HS_GUSBCFG_ULPIFSLS   |     // ULPI interface
                         OTG_HS_GUSBCFG_PHYSEL     |     // High-speed transceiver
                         OTG_HS_GUSBCFG_ULPIEVBUSI |     // ULPI int VBUS indicator
                         OTG_HS_GUSBCFG_ULPIEVBUSD);     // ULPI int VBUS drive
 #else                                                   // On-chip Full-speed PHY
+      OTG->GCCFG    |=  OTG_HS_GCCFG_PWRDWN;            // Power up on-chip PHY
       OTG->GUSBCFG  |= (OTG_HS_GUSBCFG_PHYSEL  |        // Full-speed transceiver
                         OTG_HS_GUSBCFG_PHYLPCS);        // 48 MHz external clock
 #endif
@@ -683,7 +686,7 @@ static int32_t USBD_PowerControl (ARM_POWER_STATE state) {
       while ((OTG->GRSTCTL & OTG_HS_GRSTCTL_AHBIDL) == 0U);
 
       OTG->GRSTCTL  |=  OTG_HS_GRSTCTL_CSRST;           // Core soft reset
-      while ((OTG->GRSTCTL & OTG_HS_GRSTCTL_CSRST) != 0U);
+      while ((OTG->GRSTCTL & OTG_HS_GRSTCTL_CSRST)  != 0U);
       osDelay (1U);
 
       // Wait until AHB Master state machine is in the idle condition
@@ -754,9 +757,9 @@ static int32_t USBD_DeviceConnect (void) {
 
   if (hw_powered == false) { return ARM_DRIVER_ERROR; }
 
-  OTG->DCTL    &= ~OTG_HS_DCTL_SDIS;    // Soft disconnect disabled
-#ifndef MX_USB_OTG_HS_ULPI_D7_Pin
-  OTG->GCCFG   |=  OTG_HS_GCCFG_PWRDWN; // Disable power down
+  OTG->DCTL  &= ~OTG_HS_DCTL_SDIS;      // Soft disconnect disabled
+#ifndef MX_USB_OTG_HS_ULPI_D7_Pin       // If on-chip PHY is used
+  OTG->GCCFG |=  OTG_HS_GCCFG_PWRDWN;   // Power up on-chip PHY
 #endif
 
   return ARM_DRIVER_OK;
@@ -772,8 +775,8 @@ static int32_t USBD_DeviceDisconnect (void) {
   if (hw_powered == false) { return ARM_DRIVER_ERROR; }
 
   OTG->DCTL  |=  OTG_HS_DCTL_SDIS;      // Soft disconnect enabled
-#ifndef MX_USB_OTG_HS_ULPI_D7_Pin
-  OTG->GCCFG &= ~OTG_HS_GCCFG_PWRDWN;   // Enable power down
+#ifndef MX_USB_OTG_HS_ULPI_D7_Pin       // If on-chip PHY is used
+  OTG->GCCFG &= ~OTG_HS_GCCFG_PWRDWN;   // Power down on-chip PHY
 #endif
 
   return ARM_DRIVER_OK;
