@@ -7,8 +7,8 @@
 	"vendorName": "Keil",
 	"name": "STM32F7xx_DFP",
 	"description": "STMicroelectronics STM32F7 Series Device Support, Drivers and Examples",
-	"version": "2.7.0",
-	"date": "2016-06-17",
+	"version": "2.8.0",
+	"date": "2016-11-18",
 	"devices": [
 		{
 			"name": "STM32F7 Series",
@@ -2353,6 +2353,337 @@
 		}
 	],
 	"boards": [
+		{
+			"vendorName": "STMicroelectronics",
+			"name": "STM32F769I-Discovery",
+			"revision": "Rev.1",
+			"description": "STMicroelectronics STM32F769I-Discovery Board Support and Examples",
+			"mountedDevices": [
+				{
+					"deviceIndex": "0",
+					"vendor": {
+						"name": "STMicroelectronics",
+						"id": 13
+					},
+					"name": "STM32F769NIHx"
+				}
+			],
+			"compatibleDevices": [
+				{
+					"deviceIndex": "0",
+					"vendor": {
+						"name": "STMicroelectronics",
+						"id": 13
+					},
+					"subFamily": "STM32F769"
+				}
+			],
+			"debugInterfaces": [
+				{
+					"adapter": "ST-Link",
+					"connector": "Mini-USB"
+				}
+			],
+			"features": [
+				{
+					"name": "ODbg",
+					"description": "On-board ST-LINK/V2",
+					"n": 1
+				},
+				{
+					"name": "XTAL",
+					"n": 25000000
+				},
+				{
+					"name": "RAM",
+					"description": "128-Mbit SDRAM (64 Mbits accessible)",
+					"n": 1
+				},
+				{
+					"name": "ROM",
+					"description": "512-Mbit Quad-SPI Flash memory",
+					"n": 1
+				},
+				{
+					"name": "MemCard",
+					"description": "microSD card holder",
+					"n": 1
+				},
+				{
+					"name": "PWR",
+					"description": "USB Powered",
+					"n": 5
+				},
+				{
+					"name": "PWR",
+					"description": "External Supply",
+					"n": 3,
+					"m": 5
+				},
+				{
+					"name": "USB",
+					"description": "USB OTG HS with micro-AB Connector",
+					"n": 1
+				},
+				{
+					"name": "ETH",
+					"description": "RJ54 Jack",
+					"n": 1,
+					"m": 100000000
+				},
+				{
+					"name": "I2C",
+					"description": "I2C extension connector",
+					"n": 1
+				},
+				{
+					"name": "Button",
+					"description": "Push-buttons: User and Reset",
+					"n": 2
+				},
+				{
+					"name": "LineIn",
+					"n": 1
+				},
+				{
+					"name": "LineOut",
+					"n": 1
+				},
+				{
+					"name": "MIC",
+					"description": "ST MEMS microphones",
+					"n": 4
+				},
+				{
+					"name": "ConnOther",
+					"description": "SPDIF RCA input connector",
+					"n": 1
+				},
+				{
+					"name": "ConnOther",
+					"description": "SPDIF RCA output connector",
+					"n": 1
+				},
+				{
+					"name": "Speaker",
+					"description": "Stereo speaker outputs",
+					"n": 1
+				},
+				{
+					"name": "GLCD",
+					"description": "Color TFT LCD with capacitive touch screen",
+					"n": 1,
+					"m": 800.48
+				},
+				{
+					"name": "CustomFF",
+					"description": "Discovery Board Formfactor",
+					"n": 80,
+					"m": 130
+				},
+				{
+					"name": "ArduinoFF",
+					"description": "Arduino Uno 3V connectors",
+					"n": 1
+				}
+			]
+		},
+		{
+			"vendorName": "STMicroelectronics",
+			"name": "STM32F769I-EVAL",
+			"revision": "Rev.A",
+			"description": "STMicroelectronics STM32F769I-EVAL Evaluation Board Support and Examples",
+			"mountedDevices": [
+				{
+					"deviceIndex": "0",
+					"vendor": {
+						"name": "STMicroelectronics",
+						"id": 13
+					},
+					"name": "STM32F769NIHx"
+				}
+			],
+			"compatibleDevices": [
+				{
+					"deviceIndex": "0",
+					"vendor": {
+						"name": "STMicroelectronics",
+						"id": 13
+					},
+					"subFamily": "STM32F769"
+				},
+				{
+					"deviceIndex": "0",
+					"vendor": {
+						"name": "STMicroelectronics",
+						"id": 13
+					},
+					"subFamily": "STM32F779"
+				}
+			],
+			"debugInterfaces": [
+				{
+					"adapter": "ST-Link",
+					"connector": "Mini-USB"
+				},
+				{
+					"adapter": "JTAG/SW",
+					"connector": "20 pin JTAG (0.1 inch connector)"
+				},
+				{
+					"adapter": "JTAG/SW",
+					"connector": "20-pin Cortex debug + ETM Trace (0.05 inch connector)"
+				}
+			],
+			"features": [
+				{
+					"name": "ODbg",
+					"description": "On-board ST-LINK/V2",
+					"n": 1
+				},
+				{
+					"name": "RAM",
+					"description": "8M x 32-bit SDRAM",
+					"n": 1
+				},
+				{
+					"name": "RAM",
+					"description": "1M x 16-bit SRAM",
+					"n": 1
+				},
+				{
+					"name": "ROM",
+					"description": "8M x 16-bit Nor Flash",
+					"n": 1
+				},
+				{
+					"name": "ROM",
+					"description": "512-Mbit Quad-SPI NOR Flash",
+					"n": 1
+				},
+				{
+					"name": "USB",
+					"description": "High-Speed USB with micro-AB Connector",
+					"n": 1
+				},
+				{
+					"name": "USB",
+					"description": "Full-Speed USB with micro-AB Connector",
+					"n": 2
+				},
+				{
+					"name": "Joystick",
+					"description": "5-position Joystick",
+					"n": 1
+				},
+				{
+					"name": "Camera",
+					"n": 1
+				},
+				{
+					"name": "Button",
+					"description": "Push-Buttons for Reset, Wakeup/Tamper or Key",
+					"n": 2
+				},
+				{
+					"name": "LED",
+					"description": "4 color user LEDs",
+					"n": 4
+				},
+				{
+					"name": "GLCD",
+					"description": "4-inch 800x480 TFT color LCD with capacitive touch panel",
+					"n": 1,
+					"m": 800.48
+				},
+				{
+					"name": "Poti",
+					"description": "Analog Voltage Control for ADC Input (potentiometer)",
+					"n": 1
+				},
+				{
+					"name": "LineIn",
+					"description": "Audio CODEC with Stereo Line-In/Out and Speaker/Microphone",
+					"n": 1
+				},
+				{
+					"name": "LineOut",
+					"description": "Audio CODEC with Stereo Line-In/Out and Speaker/Microphone",
+					"n": 1
+				},
+				{
+					"name": "MIC",
+					"description": "ST MEMS microphones",
+					"n": 2
+				},
+				{
+					"name": "Speaker",
+					"n": 2
+				},
+				{
+					"name": "Other",
+					"description": "Digital Stereo Microphone",
+					"n": 1
+				},
+				{
+					"name": "CAN",
+					"n": 1
+				},
+				{
+					"name": "RS232",
+					"n": 1
+				},
+				{
+					"name": "I2C",
+					"n": 4
+				},
+				{
+					"name": "ETH",
+					"description": "10/100 Ethernet Port",
+					"n": 1
+				},
+				{
+					"name": "XTAL",
+					"n": 25000000
+				},
+				{
+					"name": "PWR",
+					"description": "USB Powered",
+					"n": 5
+				},
+				{
+					"name": "PWR",
+					"description": "External Supply",
+					"n": 3,
+					"m": 5
+				},
+				{
+					"name": "MemCard",
+					"description": "SDIO interface microSD card",
+					"n": 1
+				},
+				{
+					"name": "DIO",
+					"description": "Motor Control Connector",
+					"n": 34
+				},
+				{
+					"name": "DIO",
+					"description": "Daughterboard Extension header 1",
+					"n": 60
+				},
+				{
+					"name": "DIO",
+					"description": "Daughterboard Extension header 2",
+					"n": 60
+				},
+				{
+					"name": "ConnOther",
+					"description": "Motor control connector",
+					"n": 1
+				}
+			]
+		},
 		{
 			"vendorName": "STMicroelectronics",
 			"name": "STM32F746G-Discovery",
