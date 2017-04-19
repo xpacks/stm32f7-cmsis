@@ -18,8 +18,8 @@
  * 3. This notice may not be removed or altered from any source distribution.
  *
  *
- * $Date:        24. May 2016
- * $Revision:    V1.3
+ * $Date:        5. September 2016
+ * $Revision:    V1.4
  *
  * Project:      USART Driver definitions for ST STM32F7xx
  * -------------------------------------------------------------------------- */
@@ -108,24 +108,28 @@
     #define USART1_TX_DMA_Handler     DMAx_STREAMy_IRQ(RTE_USART1_TX_DMA_NUMBER, RTE_USART1_TX_DMA_STREAM)
   #endif
 
-  #define MX_USART1_TX_Pin            1
-  #define MX_USART1_TX_GPIOx          RTE_USART1_TX_PORT
-  #define MX_USART1_TX_GPIO_Pin      (1U << RTE_USART1_TX_BIT)
-  #define MX_USART1_TX_GPIO_PuPd      GPIO_NOPULL
-  #if   (RTE_USART1_TX_ID == 2)
-    #define MX_USART1_TX_GPIO_AF      GPIO_AF4_USART1
-  #else
-    #define MX_USART1_TX_GPIO_AF      GPIO_AF7_USART1
+  #if (RTE_USART1_TX == 1)
+    #define MX_USART1_TX_Pin          1
+    #define MX_USART1_TX_GPIOx        RTE_USART1_TX_PORT
+    #define MX_USART1_TX_GPIO_Pin    (1U << RTE_USART1_TX_BIT)
+    #define MX_USART1_TX_GPIO_PuPd    GPIO_NOPULL
+    #if   (RTE_USART1_TX_ID == 3)
+      #define MX_USART1_TX_GPIO_AF    GPIO_AF4_USART1
+    #else
+      #define MX_USART1_TX_GPIO_AF    GPIO_AF7_USART1
+    #endif
   #endif
 
-  #define MX_USART1_RX_Pin            1
-  #define MX_USART1_RX_GPIOx          RTE_USART1_RX_PORT
-  #define MX_USART1_RX_GPIO_Pin      (1U << RTE_USART1_RX_BIT)
-  #define MX_USART1_RX_GPIO_PuPd      GPIO_NOPULL
-  #if   (RTE_USART1_RX_ID == 2)
-    #define MX_USART1_RX_GPIO_AF      GPIO_AF4_USART1
-  #else
-    #define MX_USART1_RX_GPIO_AF      GPIO_AF7_USART1
+  #if (RTE_USART1_RX == 1)
+    #define MX_USART1_RX_Pin          1
+    #define MX_USART1_RX_GPIOx        RTE_USART1_RX_PORT
+    #define MX_USART1_RX_GPIO_Pin    (1U << RTE_USART1_RX_BIT)
+    #define MX_USART1_RX_GPIO_PuPd    GPIO_NOPULL
+    #if   (RTE_USART1_RX_ID == 3)
+      #define MX_USART1_RX_GPIO_AF    GPIO_AF4_USART1
+    #else
+      #define MX_USART1_RX_GPIO_AF    GPIO_AF7_USART1
+    #endif
   #endif
 
   #if (RTE_USART1_CK == 1)
@@ -175,17 +179,21 @@
     #define USART2_TX_DMA_Handler     DMAx_STREAMy_IRQ(RTE_USART2_TX_DMA_NUMBER, RTE_USART2_TX_DMA_STREAM)
   #endif
 
-  #define MX_USART2_TX_Pin            1
-  #define MX_USART2_TX_GPIOx          RTE_USART2_TX_PORT
-  #define MX_USART2_TX_GPIO_Pin      (1U << RTE_USART2_TX_BIT)
-  #define MX_USART2_TX_GPIO_PuPd      GPIO_NOPULL
-  #define MX_USART2_TX_GPIO_AF        GPIO_AF7_USART2
+  #if (RTE_USART2_TX == 1)
+    #define MX_USART2_TX_Pin          1
+    #define MX_USART2_TX_GPIOx        RTE_USART2_TX_PORT
+    #define MX_USART2_TX_GPIO_Pin    (1U << RTE_USART2_TX_BIT)
+    #define MX_USART2_TX_GPIO_PuPd    GPIO_NOPULL
+    #define MX_USART2_TX_GPIO_AF      GPIO_AF7_USART2
+  #endif
 
-  #define MX_USART2_RX_Pin            1
-  #define MX_USART2_RX_GPIOx          RTE_USART2_RX_PORT
-  #define MX_USART2_RX_GPIO_Pin      (1U << RTE_USART2_RX_BIT)
-  #define MX_USART2_RX_GPIO_PuPd      GPIO_NOPULL
-  #define MX_USART2_RX_GPIO_AF        GPIO_AF7_USART2
+  #if (RTE_USART2_RX == 1)
+    #define MX_USART2_RX_Pin          1
+    #define MX_USART2_RX_GPIOx        RTE_USART2_RX_PORT
+    #define MX_USART2_RX_GPIO_Pin    (1U << RTE_USART2_RX_BIT)
+    #define MX_USART2_RX_GPIO_PuPd    GPIO_NOPULL
+    #define MX_USART2_RX_GPIO_AF      GPIO_AF7_USART2
+  #endif
 
   #if (RTE_USART2_CK == 1)
     #define MX_USART2_CK_Pin          1
@@ -245,17 +253,21 @@
     #define USART3_TX_DMA_Handler     DMAx_STREAMy_IRQ(RTE_USART3_TX_DMA_NUMBER, RTE_USART3_TX_DMA_STREAM)
   #endif
 
-  #define MX_USART3_TX_Pin            1
-  #define MX_USART3_TX_GPIOx          RTE_USART3_TX_PORT
-  #define MX_USART3_TX_GPIO_Pin      (1U << RTE_USART3_TX_BIT)
-  #define MX_USART3_TX_GPIO_PuPd      GPIO_NOPULL
-  #define MX_USART3_TX_GPIO_AF        GPIO_AF7_USART3
+  #if (RTE_USART3_TX == 1)
+    #define MX_USART3_TX_Pin          1
+    #define MX_USART3_TX_GPIOx        RTE_USART3_TX_PORT
+    #define MX_USART3_TX_GPIO_Pin    (1U << RTE_USART3_TX_BIT)
+    #define MX_USART3_TX_GPIO_PuPd    GPIO_NOPULL
+    #define MX_USART3_TX_GPIO_AF      GPIO_AF7_USART3
+  #endif
 
-  #define MX_USART3_RX_Pin            1
-  #define MX_USART3_RX_GPIOx          RTE_USART3_RX_PORT
-  #define MX_USART3_RX_GPIO_Pin      (1U << RTE_USART3_RX_BIT)
-  #define MX_USART3_RX_GPIO_PuPd      GPIO_NOPULL
-  #define MX_USART3_RX_GPIO_AF        GPIO_AF7_USART3
+  #if (RTE_USART3_RX == 1)
+    #define MX_USART3_RX_Pin          1
+    #define MX_USART3_RX_GPIOx        RTE_USART3_RX_PORT
+    #define MX_USART3_RX_GPIO_Pin    (1U << RTE_USART3_RX_BIT)
+    #define MX_USART3_RX_GPIO_PuPd    GPIO_NOPULL
+    #define MX_USART3_RX_GPIO_AF      GPIO_AF7_USART3
+  #endif
 
   #if (RTE_USART3_CK == 1)
     #define MX_USART3_CK_Pin          1
@@ -309,24 +321,28 @@
     #define UART4_TX_DMA_Handler      DMAx_STREAMy_IRQ(RTE_UART4_TX_DMA_NUMBER, RTE_UART4_TX_DMA_STREAM)
   #endif
 
-  #define MX_UART4_TX_Pin             1
-  #define MX_UART4_TX_GPIOx           RTE_UART4_TX_PORT
-  #define MX_UART4_TX_GPIO_Pin       (1U << RTE_UART4_TX_BIT)
-  #define MX_UART4_TX_GPIO_PuPd       GPIO_NOPULL
-  #if   (RTE_UART4_TX_ID == 2)
-    #define MX_UART4_TX_GPIO_AF       GPIO_AF6_UART4
-  #else
-    #define MX_UART4_TX_GPIO_AF       GPIO_AF8_UART4
+  #if (RTE_UART4_TX == 1)
+    #define MX_UART4_TX_Pin           1
+    #define MX_UART4_TX_GPIOx         RTE_UART4_TX_PORT
+    #define MX_UART4_TX_GPIO_Pin     (1U << RTE_UART4_TX_BIT)
+    #define MX_UART4_TX_GPIO_PuPd     GPIO_NOPULL
+    #if   (RTE_UART4_TX_ID == 3)
+      #define MX_UART4_TX_GPIO_AF     GPIO_AF6_UART4
+    #else
+      #define MX_UART4_TX_GPIO_AF     GPIO_AF8_UART4
+    #endif
   #endif
 
-  #define MX_UART4_RX_Pin             1
-  #define MX_UART4_RX_GPIOx           RTE_UART4_RX_PORT
-  #define MX_UART4_RX_GPIO_Pin       (1U << RTE_UART4_RX_BIT)
-  #define MX_UART4_RX_GPIO_PuPd       GPIO_NOPULL
-  #if   (RTE_UART4_RX_ID == 2)
-    #define MX_UART4_RX_GPIO_AF       GPIO_AF6_UART4
-  #else
-    #define MX_UART4_RX_GPIO_AF       GPIO_AF8_UART4
+  #if (RTE_UART4_RX == 1)
+    #define MX_UART4_RX_Pin           1
+    #define MX_UART4_RX_GPIOx         RTE_UART4_RX_PORT
+    #define MX_UART4_RX_GPIO_Pin     (1U << RTE_UART4_RX_BIT)
+    #define MX_UART4_RX_GPIO_PuPd     GPIO_NOPULL
+    #if   (RTE_UART4_RX_ID == 3)
+      #define MX_UART4_RX_GPIO_AF     GPIO_AF6_UART4
+    #else
+      #define MX_UART4_RX_GPIO_AF     GPIO_AF8_UART4
+    #endif
   #endif
 
   #if (RTE_UART4_RTS == 1)
@@ -372,28 +388,32 @@
     #define UART5_TX_DMA_Handler      DMAx_STREAMy_IRQ(RTE_UART5_TX_DMA_NUMBER, RTE_UART5_TX_DMA_STREAM)
   #endif
 
-  #define MX_UART5_TX_Pin             1
-  #define MX_UART5_TX_GPIOx           RTE_UART5_TX_PORT
-  #define MX_UART5_TX_GPIO_Pin       (1U << RTE_UART5_TX_BIT)
-  #define MX_UART5_TX_GPIO_PuPd       GPIO_NOPULL
-  #if   (RTE_UART5_TX_ID == 1)
-    #define MX_UART5_TX_GPIO_AF       GPIO_AF1_UART5
-  #elif (RTE_UART5_TX_ID == 2)
-    #define MX_UART5_TX_GPIO_AF       GPIO_AF7_UART5
-  #else
-    #define MX_UART5_TX_GPIO_AF       GPIO_AF8_UART5
+  #if (RTE_UART5_TX == 1)
+    #define MX_UART5_TX_Pin           1
+    #define MX_UART5_TX_GPIOx         RTE_UART5_TX_PORT
+    #define MX_UART5_TX_GPIO_Pin     (1U << RTE_UART5_TX_BIT)
+    #define MX_UART5_TX_GPIO_PuPd     GPIO_NOPULL
+    #if   (RTE_UART5_TX_ID == 2)
+      #define MX_UART5_TX_GPIO_AF     GPIO_AF1_UART5
+    #elif (RTE_UART5_TX_ID == 3)
+      #define MX_UART5_TX_GPIO_AF     GPIO_AF7_UART5
+    #else
+      #define MX_UART5_TX_GPIO_AF     GPIO_AF8_UART5
+    #endif
   #endif
-
-  #define MX_UART5_RX_Pin             1
-  #define MX_UART5_RX_GPIOx           RTE_UART5_RX_PORT
-  #define MX_UART5_RX_GPIO_Pin       (1U << RTE_UART5_RX_BIT)
-  #define MX_UART5_RX_GPIO_PuPd       GPIO_NOPULL
-  #if   (RTE_UART5_RX_ID == 1)
-    #define MX_UART5_RX_GPIO_AF       GPIO_AF1_UART5
-  #elif (RTE_UART5_RX_ID == 2)
-    #define MX_UART5_RX_GPIO_AF       GPIO_AF7_UART5
-  #else
-    #define MX_UART5_RX_GPIO_AF       GPIO_AF8_UART5
+  
+  #if (RTE_UART5_RX == 1)
+    #define MX_UART5_RX_Pin           1
+    #define MX_UART5_RX_GPIOx         RTE_UART5_RX_PORT
+    #define MX_UART5_RX_GPIO_Pin     (1U << RTE_UART5_RX_BIT)
+    #define MX_UART5_RX_GPIO_PuPd     GPIO_NOPULL
+    #if   (RTE_UART5_RX_ID == 2)
+      #define MX_UART5_RX_GPIO_AF     GPIO_AF1_UART5
+    #elif (RTE_UART5_RX_ID == 3)
+      #define MX_UART5_RX_GPIO_AF     GPIO_AF7_UART5
+    #else
+      #define MX_UART5_RX_GPIO_AF     GPIO_AF8_UART5
+    #endif
   #endif
 
   #if (RTE_UART5_RTS == 1)
@@ -434,17 +454,21 @@
     #define USART6_TX_DMA_Handler     DMAx_STREAMy_IRQ(RTE_USART6_TX_DMA_NUMBER, RTE_USART6_TX_DMA_STREAM)
   #endif
 
-  #define MX_USART6_TX_Pin            1
-  #define MX_USART6_TX_GPIOx          RTE_USART6_TX_PORT
-  #define MX_USART6_TX_GPIO_Pin      (1U << RTE_USART6_TX_BIT)
-  #define MX_USART6_TX_GPIO_PuPd      GPIO_NOPULL
-  #define MX_USART6_TX_GPIO_AF        GPIO_AF8_USART6
+  #if (RTE_USART6_TX == 1)
+    #define MX_USART6_TX_Pin          1
+    #define MX_USART6_TX_GPIOx        RTE_USART6_TX_PORT
+    #define MX_USART6_TX_GPIO_Pin    (1U << RTE_USART6_TX_BIT)
+    #define MX_USART6_TX_GPIO_PuPd    GPIO_NOPULL
+    #define MX_USART6_TX_GPIO_AF      GPIO_AF8_USART6
+  #endif
 
-  #define MX_USART6_RX_Pin            1
-  #define MX_USART6_RX_GPIOx          RTE_USART6_RX_PORT
-  #define MX_USART6_RX_GPIO_Pin      (1U << RTE_USART6_RX_BIT)
-  #define MX_USART6_RX_GPIO_PuPd      GPIO_NOPULL
-  #define MX_USART6_RX_GPIO_AF        GPIO_AF8_USART6
+  #if (RTE_USART6_RX == 1)
+    #define MX_USART6_RX_Pin          1
+    #define MX_USART6_RX_GPIOx        RTE_USART6_RX_PORT
+    #define MX_USART6_RX_GPIO_Pin    (1U << RTE_USART6_RX_BIT)
+    #define MX_USART6_RX_GPIO_PuPd    GPIO_NOPULL
+    #define MX_USART6_RX_GPIO_AF      GPIO_AF8_USART6
+  #endif
 
   #if (RTE_USART6_CK == 1)
     #define MX_USART6_CK_Pin          1
@@ -497,24 +521,28 @@
     #define UART7_TX_DMA_Handler      DMAx_STREAMy_IRQ(RTE_UART7_TX_DMA_NUMBER, RTE_UART7_TX_DMA_STREAM)
   #endif
 
-  #define MX_UART7_TX_Pin             1
-  #define MX_UART7_TX_GPIOx           RTE_UART7_TX_PORT
-  #define MX_UART7_TX_GPIO_Pin       (1U << RTE_UART7_TX_BIT)
-  #define MX_UART7_TX_GPIO_PuPd       GPIO_NOPULL
-  #if   (RTE_UART7_TX_ID == 2) || (RTE_UART7_TX_ID == 3)
-    #define MX_UART7_TX_GPIO_AF       GPIO_AF12_UART7
-  #else
-    #define MX_UART7_TX_GPIO_AF       GPIO_AF8_UART7
+  #if (RTE_UART7_TX == 1)
+    #define MX_UART7_TX_Pin           1
+    #define MX_UART7_TX_GPIOx         RTE_UART7_TX_PORT
+    #define MX_UART7_TX_GPIO_Pin     (1U << RTE_UART7_TX_BIT)
+    #define MX_UART7_TX_GPIO_PuPd     GPIO_NOPULL
+    #if   (RTE_UART7_TX_ID == 3) || (RTE_UART7_TX_ID == 4)
+      #define MX_UART7_TX_GPIO_AF     GPIO_AF12_UART7
+    #else
+      #define MX_UART7_TX_GPIO_AF     GPIO_AF8_UART7
+    #endif
   #endif
 
-  #define MX_UART7_RX_Pin             1
-  #define MX_UART7_RX_GPIOx           RTE_UART7_RX_PORT
-  #define MX_UART7_RX_GPIO_Pin       (1U << RTE_UART7_RX_BIT)
-  #define MX_UART7_RX_GPIO_PuPd       GPIO_NOPULL
-  #if   (RTE_UART7_RX_ID == 2) || (RTE_UART7_RX_ID == 3)
-    #define MX_UART7_RX_GPIO_AF       GPIO_AF12_UART7
-  #else
-    #define MX_UART7_RX_GPIO_AF       GPIO_AF8_UART7
+  #if (RTE_UART7_RX == 1)
+    #define MX_UART7_RX_Pin           1
+    #define MX_UART7_RX_GPIOx         RTE_UART7_RX_PORT
+    #define MX_UART7_RX_GPIO_Pin     (1U << RTE_UART7_RX_BIT)
+    #define MX_UART7_RX_GPIO_PuPd     GPIO_NOPULL
+    #if   (RTE_UART7_RX_ID == 3) || (RTE_UART7_RX_ID == 4)
+      #define MX_UART7_RX_GPIO_AF     GPIO_AF12_UART7
+    #else
+      #define MX_UART7_RX_GPIO_AF     GPIO_AF8_UART7
+    #endif
   #endif
 
   #if (RTE_UART7_RTS == 1)
@@ -560,17 +588,21 @@
     #define UART8_TX_DMA_Handler      DMAx_STREAMy_IRQ(RTE_UART8_TX_DMA_NUMBER, RTE_UART8_TX_DMA_STREAM)
   #endif
 
-  #define MX_UART8_TX_Pin             1
-  #define MX_UART8_TX_GPIOx           RTE_UART8_TX_PORT
-  #define MX_UART8_TX_GPIO_Pin       (1U << RTE_UART8_TX_BIT)
-  #define MX_UART8_TX_GPIO_PuPd       GPIO_NOPULL
-  #define MX_UART8_TX_GPIO_AF         GPIO_AF8_UART8
+  #if (RTE_UART8_TX == 1)
+    #define MX_UART8_TX_Pin           1
+    #define MX_UART8_TX_GPIOx         RTE_UART8_TX_PORT
+    #define MX_UART8_TX_GPIO_Pin     (1U << RTE_UART8_TX_BIT)
+    #define MX_UART8_TX_GPIO_PuPd     GPIO_NOPULL
+    #define MX_UART8_TX_GPIO_AF       GPIO_AF8_UART8
+  #endif
 
-  #define MX_UART8_RX_Pin             1
-  #define MX_UART8_RX_GPIOx           RTE_UART8_RX_PORT
-  #define MX_UART8_RX_GPIO_Pin       (1U << RTE_UART8_RX_BIT)
-  #define MX_UART8_RX_GPIO_PuPd       GPIO_NOPULL
-  #define MX_UART8_RX_GPIO_AF         GPIO_AF8_UART8
+  #if (RTE_UART8_RX == 1)
+    #define MX_UART8_RX_Pin           1
+    #define MX_UART8_RX_GPIOx         RTE_UART8_RX_PORT
+    #define MX_UART8_RX_GPIO_Pin     (1U << RTE_UART8_RX_BIT)
+    #define MX_UART8_RX_GPIO_PuPd     GPIO_NOPULL
+    #define MX_UART8_RX_GPIO_AF       GPIO_AF8_UART8
+  #endif
 
   #if (RTE_UART8_RTS == 1)
     #define MX_UART8_RTS_Pin          1

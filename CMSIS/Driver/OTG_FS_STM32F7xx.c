@@ -18,14 +18,16 @@
  * 3. This notice may not be removed or altered from any source distribution.
  *
  *
- * $Date:        3. June 2016
- * $Revision:    V1.2
+ * $Date:        18. November 2016
+ * $Revision:    V1.3
  *
  * Project:      OTG Full/Low-Speed Common Driver for ST STM32F7xx
  * Configured:   via RTE_Device.h configuration file
  * -------------------------------------------------------------------------- */
 
 /* History:
+ *  Version 1.3
+ *    Added support for STM32F769I-EVAL Board
  *  Version 1.2
  *    Corrected over-current pin configuration
  *  Version 1.1
@@ -39,6 +41,9 @@
 #include "stm32f7xx_hal.h"
 #if       defined(USE_STM32756G_EVAL)
 #include "stm32756g_eval_io.h"
+#endif
+#if       defined(USE_STM32F769I_EVAL)
+#include "stm32f769i_eval_io.h"
 #endif
 
 #include "Driver_USBH.h"
@@ -181,7 +186,7 @@ void OTG_FS_PinsConfigure (uint8_t pins_mask) {
 #endif
   if ((pins_mask & ARM_USB_PIN_VBUS) != 0U) {
     if (otg_fs_role == ARM_USB_ROLE_HOST) {
-#if  (defined(USE_STM32756G_EVAL))              // Host VBUS power driving pin is on IO expander
+#if  (defined (USE_STM32756G_EVAL) || defined (USE_STM32F769I_EVAL)) // Host VBUS power driving pin is on IO expander
       BSP_IO_Init();
       BSP_IO_ConfigPin(IO_PIN_7, IO_MODE_OUTPUT);
 
@@ -212,7 +217,7 @@ void OTG_FS_PinsConfigure (uint8_t pins_mask) {
   }
   if ((pins_mask & ARM_USB_PIN_OC) != 0U) {
     if (otg_fs_role == ARM_USB_ROLE_HOST) {
-#if  (defined(USE_STM32756G_EVAL))              // Host overcurrent sensing pin is on IO expander
+#if  (defined (USE_STM32756G_EVAL) || defined (USE_STM32F769I_EVAL)) // Host overcurrent sensing pin is on IO expander
       BSP_IO_Init();
       BSP_IO_ConfigPin(IO_PIN_6, IO_MODE_INPUT);
 #elif (defined(MX_USB_OTG_FS_Overcurrent_Pin))  // Host overcurrent sensing pin is GPIO (input)
@@ -229,7 +234,7 @@ void OTG_FS_PinsConfigure (uint8_t pins_mask) {
 #endif
 
 #ifdef RTE_DEVICE_FRAMEWORK_CUBE_MX
-#if  (defined(USE_STM32756G_EVAL))              // Host VBUS power driving pin is on IO expander
+#if  (defined (USE_STM32756G_EVAL) || defined (USE_STM32F769I_EVAL)) // Host VBUS power driving pin is on IO expander
   if ((pins_mask & ARM_USB_PIN_VBUS) != 0U) {
     if (otg_fs_role == ARM_USB_ROLE_HOST) {
       BSP_IO_Init();
@@ -283,7 +288,7 @@ void OTG_FS_PinsUnconfigure (uint8_t pins_mask) {
 #endif
   if ((pins_mask & ARM_USB_PIN_VBUS) != 0U) {
     if (otg_fs_role == ARM_USB_ROLE_HOST) {
-#if  (defined(USE_STM32756G_EVAL))
+#if  (defined (USE_STM32756G_EVAL) || defined (USE_STM32F769I_EVAL))
       BSP_IO_ConfigPin(IO_PIN_7, IO_MODE_OFF);
 #elif (defined(MX_USB_OTG_FS_VBUS_Power_Pin))
       HAL_GPIO_DeInit (MX_USB_OTG_FS_VBUS_Power_GPIOx, MX_USB_OTG_FS_VBUS_Power_GPIO_Pin);
@@ -292,7 +297,7 @@ void OTG_FS_PinsUnconfigure (uint8_t pins_mask) {
   }
   if ((pins_mask & ARM_USB_PIN_OC) != 0U) {
     if (otg_fs_role == ARM_USB_ROLE_HOST) {
-#if  (defined(USE_STM32756G_EVAL))
+#if  (defined (USE_STM32756G_EVAL) || defined (USE_STM32F769I_EVAL))
       BSP_IO_ConfigPin(IO_PIN_6, IO_MODE_OFF);
 #elif (defined(MX_USB_OTG_FS_Overcurrent_Pin))
       HAL_GPIO_DeInit (MX_USB_OTG_FS_Overcurrent_GPIOx, MX_USB_OTG_FS_Overcurrent_GPIO_Pin);
@@ -302,7 +307,7 @@ void OTG_FS_PinsUnconfigure (uint8_t pins_mask) {
 #endif
 
 #ifdef RTE_DEVICE_FRAMEWORK_CUBE_MX
-#if  (defined(USE_STM32756G_EVAL))              // Host VBUS power driving pin is on IO expander
+#if  (defined (USE_STM32756G_EVAL) || defined (USE_STM32F769I_EVAL)) // Host VBUS power driving pin is on IO expander
   if ((pins_mask & ARM_USB_PIN_VBUS) != 0U) {
     if (otg_fs_role == ARM_USB_ROLE_HOST) {
       BSP_IO_ConfigPin(IO_PIN_7, IO_MODE_OFF);
@@ -325,16 +330,16 @@ void OTG_FS_PinsUnconfigure (uint8_t pins_mask) {
 void OTG_FS_PinVbusOnOff (bool state) {
 
   if (otg_fs_role == ARM_USB_ROLE_HOST) {
-#if  (USB_OTG_FS_VBUS_Power_Pin_Active == 0)    // VBUS active low
-#if  (defined(USE_STM32756G_EVAL))              // Host VBUS power driving pin is on IO expander
+#if  (USB_OTG_FS_VBUS_Power_Pin_Active == 0)                            // VBUS active low
+#if  (defined (USE_STM32756G_EVAL) || defined (USE_STM32F769I_EVAL))    // Host VBUS power driving pin is on IO expander
     BSP_IO_WritePin (IO_PIN_7, ((state == true) ? BSP_IO_PIN_RESET : BSP_IO_PIN_SET));
-#elif (defined(MX_USB_OTG_FS_VBUS_Power_Pin))   // Host VBUS power driving pin is GPIO (output)
+#elif (defined(MX_USB_OTG_FS_VBUS_Power_Pin))                           // Host VBUS power driving pin is GPIO (output)
     HAL_GPIO_WritePin (MX_USB_OTG_FS_VBUS_Power_GPIOx, MX_USB_OTG_FS_VBUS_Power_GPIO_Pin, ((state == true) ? GPIO_PIN_RESET : GPIO_PIN_SET));
 #endif
-#else                                           // VBUS active high
-#if  (defined(USE_STM32756G_EVAL))              // Host VBUS power driving pin on IO expander
+#else                                                                   // VBUS active high
+#if  (defined (USE_STM32756G_EVAL) || defined (USE_STM32F769I_EVAL))    // Host VBUS power driving pin on IO expander
     BSP_IO_WritePin (IO_PIN_7, ((state == true) ? BSP_IO_PIN_SET   : BSP_IO_PIN_RESET));
-#elif (defined(MX_USB_OTG_FS_VBUS_Power_Pin))   // Host VBUS power driving pin is GPIO (output)
+#elif (defined(MX_USB_OTG_FS_VBUS_Power_Pin))                           // Host VBUS power driving pin is GPIO (output)
     HAL_GPIO_WritePin (MX_USB_OTG_FS_VBUS_Power_GPIOx, MX_USB_OTG_FS_VBUS_Power_GPIO_Pin, ((state == true) ? GPIO_PIN_SET   : GPIO_PIN_RESET));
 #endif
 #endif
@@ -349,16 +354,16 @@ void OTG_FS_PinVbusOnOff (bool state) {
 bool OTG_FS_PinGetOC (void) {
 
   if (otg_fs_role == ARM_USB_ROLE_HOST) {
-#if  (USB_OTG_FS_Overcurrent_Pin_Active == 0)   // Overcurrent active low
-#if  (defined(USE_STM32756G_EVAL))              // Host overcurrent sensing pin is on IO expander
+#if  (USB_OTG_FS_Overcurrent_Pin_Active == 0)                           // Overcurrent active low
+#if  (defined (USE_STM32756G_EVAL) || defined (USE_STM32F769I_EVAL))    // Host overcurrent sensing pin is on IO expander
     return (BSP_IO_ReadPin (IO_PIN_6) == BSP_IO_PIN_RESET ? true : false);
-#elif (defined(MX_USB_OTG_FS_Overcurrent_Pin))  // Host overcurrent sensing pin is GPIO (input)
+#elif (defined(MX_USB_OTG_FS_Overcurrent_Pin))                          // Host overcurrent sensing pin is GPIO (input)
     return ((HAL_GPIO_ReadPin (MX_USB_OTG_FS_Overcurrent_GPIOx, MX_USB_OTG_FS_Overcurrent_GPIO_Pin) == GPIO_PIN_RESET) ? true : false);
 #endif
-#else                                           // Overcurrent active high
-#if  (defined(USE_STM32756G_EVAL))              // Host overcurrent sensing pin is on IO expander
+#else                                                                   // Overcurrent active high
+#if  (defined (USE_STM32756G_EVAL) || defined (USE_STM32F769I_EVAL)))   // Host overcurrent sensing pin is on IO expander
     return (BSP_IO_ReadPin (IO_PIN_6) == BSP_IO_PIN_SET ? true : false);
-#elif (defined(MX_USB_OTG_FS_Overcurrent_Pin))  // Host overcurrent sensing pin is GPIO (input)
+#elif (defined(MX_USB_OTG_FS_Overcurrent_Pin))                          // Host overcurrent sensing pin is GPIO (input)
     return ((HAL_GPIO_ReadPin (MX_USB_OTG_FS_Overcurrent_GPIOx, MX_USB_OTG_FS_Overcurrent_GPIO_Pin) == GPIO_PIN_SET)   ? true : false);
 #endif
 #endif

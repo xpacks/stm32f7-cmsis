@@ -18,10 +18,10 @@
  * 3. This notice may not be removed or altered from any source distribution.
  *
  *
- * $Date:        24. December 2015
- * $Revision:    V1.1
+ * $Date:        4. November 2016
+ * $Revision:    V1.2
  *
- * Driver:       Driver_CAN1/2
+ * Driver:       Driver_CAN1/2/3
  * Configured:   via RTE_Device.h configuration file
  * Project:      CAN Driver Header for ST STM32F7xx
  * -------------------------------------------------------------------------- */
@@ -47,8 +47,8 @@
 
 #if    (defined(RTE_DEVICE_FRAMEWORK_CLASSIC))
 
-#if   ((defined(RTE_Drivers_CAN1) ||  defined(RTE_Drivers_CAN2)) && \
-      ((RTE_CAN1 == 0)            && (RTE_CAN2 == 0)))
+#if   ((defined(RTE_Drivers_CAN1) ||  defined(RTE_Drivers_CAN2) ||  defined(RTE_Drivers_CAN3)) && \
+      ((RTE_CAN1 == 0)            && (RTE_CAN2 == 0)            && (RTE_CAN3 == 0)))
 #error "No CAN configured in RTE_Device.h!"
 #endif
 
@@ -96,10 +96,32 @@
 #define MX_CAN2_TX_GPIO_Mode            GPIO_MODE_AF_PP
 #endif
 
+#if    (RTE_CAN3 != 0)
+#define MX_CAN3                         1
+
+/* Pin CAN3_RX */
+#define MX_CAN3_RX_Pin                  1
+#define MX_CAN3_RX_GPIO_Speed           GPIO_SPEED_HIGH
+#define MX_CAN3_RX_GPIOx                RTE_CAN3_RX_PORT
+#define MX_CAN3_RX_GPIO_PuPd            GPIO_NOPULL
+#define MX_CAN3_RX_GPIO_Pin             RTE_CAN3_RX_BIT
+#define MX_CAN3_RX_GPIO_AF              GPIO_AF11_CAN3
+#define MX_CAN3_RX_GPIO_Mode            GPIO_MODE_AF_PP
+
+/* Pin CAN3_TX */
+#define MX_CAN3_TX_Pin                  1
+#define MX_CAN3_TX_GPIO_Speed           GPIO_SPEED_HIGH
+#define MX_CAN3_TX_GPIOx                RTE_CAN3_TX_PORT
+#define MX_CAN3_TX_GPIO_PuPd            GPIO_NOPULL
+#define MX_CAN3_TX_GPIO_Pin             RTE_CAN3_TX_BIT
+#define MX_CAN3_TX_GPIO_AF              GPIO_AF11_CAN3
+#define MX_CAN3_TX_GPIO_Mode            GPIO_MODE_AF_PP
+#endif
+
 #elif  (defined(RTE_DEVICE_FRAMEWORK_CUBE_MX))
 
-#if   ((defined(RTE_Drivers_CAN1) ||   defined(RTE_Drivers_CAN2)) && \
-      (!defined(MX_CAN1))         && (!defined(MX_CAN2)))
+#if   ((defined(RTE_Drivers_CAN1) ||   defined(RTE_Drivers_CAN2) ||   defined(RTE_Drivers_CAN3)) && \
+      (!defined(MX_CAN1))         && (!defined(MX_CAN2))         && (!defined(MX_CAN3)))
 #error "No CAN configured in STM32CubeMX!"
 #endif
 
@@ -111,8 +133,13 @@
 #if    !defined(MX_CAN2)
 #define MX_CAN2                         (0U)
 #endif
+#if    !defined(MX_CAN3)
+#define MX_CAN3                         (0U)
+#endif
 
-#if    (MX_CAN2 == 1U)
+#if    (MX_CAN3 == 1U)
+#define CAN_CTRL_NUM                    (3U)
+#elif  (MX_CAN2 == 1U)
 #define CAN_CTRL_NUM                    (2U)
 #else
 #define CAN_CTRL_NUM                    (1U)

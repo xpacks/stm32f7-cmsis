@@ -18,8 +18,8 @@
  * 3. This notice may not be removed or altered from any source distribution.
  *
  *
- * $Date:        26. May 2016
- * $Revision:    V1.4
+ * $Date:        18. November 2016
+ * $Revision:    V1.5
  *
  * Project:      OTG High-Speed Driver Header for ST STM32F7xx
  * -------------------------------------------------------------------------- */
@@ -33,7 +33,7 @@
 
 // Do basic RTE configuration check
 #if    (RTE_USB_OTG_HS == 1)
-#if   ((RTE_USB_OTG_HS_HOST == 1) && (!defined(USE_STM32756G_EVAL)) && (RTE_USB_OTG_HS_PHY == 0) && (RTE_OTG_HS_VBUS_PIN == 0))
+#if   ((RTE_USB_OTG_HS_HOST == 1) && (!defined(USE_STM32756G_EVAL))&& (!defined(USE_STM32F769I_EVAL)) && (RTE_USB_OTG_HS_PHY == 0) && (RTE_OTG_HS_VBUS_PIN == 0))
 #error  Configure VBUS Power On/Off pin for USB OTG High-speed in RTE_Device.h!
 #endif
 #else

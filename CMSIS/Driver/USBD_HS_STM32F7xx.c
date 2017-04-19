@@ -18,8 +18,8 @@
  * 3. This notice may not be removed or altered from any source distribution.
  *
  *
- * $Date:        26. May 2016
- * $Revision:    V1.5
+ * $Date:        22. September 2016
+ * $Revision:    V1.6
  *
  * Driver:       Driver_USBD1
  * Configured:   via RTE_Device.h configuration file
@@ -43,6 +43,8 @@
  * -------------------------------------------------------------------------- */
 
 /* History:
+ *  Version 1.6
+ *    Corrected resume event signaling
  *  Version 1.5
  *    VBUS detection is selected automatically based on VBUS sensing pin
  *    setting (in RTE_Device.h or by STM32CubeMX)
@@ -150,7 +152,7 @@ extern PCD_HandleTypeDef hpcd_USB_OTG_HS;
 
 // USBD Driver *****************************************************************
 
-#define ARM_USBD_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,5)
+#define ARM_USBD_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,6)
 
 // Driver Version
 static const ARM_DRIVER_VERSION usbd_driver_version = { ARM_USBD_API_VERSION, ARM_USBD_DRV_VERSION };
@@ -1283,9 +1285,10 @@ void USBD_HS_IRQ (uint32_t gintsts) {
     OTG->DCTL    |= OTG_HS_DCTL_CGONAK;                 // Clear global OUT NAK
   }
 
-  if ((gintsts & OTG_HS_GINTSTS_SOF) != 0U) {           // First SOF after Reset
-    OTG->GINTMSK |= OTG_HS_GINTMSK_SOFM;                // Unmask SOF interrupts (to detect initial resume)
-    OTG->GINTSTS  = OTG_HS_GINTSTS_SOF;
+  if ((usbd_state.active == 0U) &&
+      (gintsts & OTG_HS_GINTSTS_SOF) != 0U) {           // First SOF after Reset
+    OTG->GINTMSK &= ~OTG_HS_GINTMSK_SOFM;               // Mask SOF interrupts
+    OTG->GINTSTS  =  OTG_HS_GINTSTS_SOF;
     usbd_state.active = 1U;
     SignalDeviceEvent(ARM_USBD_EVENT_RESUME);
   }
