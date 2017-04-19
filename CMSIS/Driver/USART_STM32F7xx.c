@@ -18,8 +18,8 @@
  * 3. This notice may not be removed or altered from any source distribution.
  *
  *
- * $Date:        24. May 2016
- * $Revision:    V1.7
+ * $Date:        19. October 2016
+ * $Revision:    V1.8
  *
  * Driver:       Driver_USART1, Driver_USART2, Driver_USART3, Driver_USART4,
  *               Driver_USART5, Driver_USART6, Driver_USART7, Driver_USART8,
@@ -42,6 +42,8 @@
  * -------------------------------------------------------------------------- */
 
 /* History:
+ *  Version 1.8
+ *    Changed USART_ISR_LBD (legacy define) to USART_ISR_LBDF
  *  Version 1.7
  *    Added port configuration for ports supported by new subfamilies.
  *  Version 1.6
@@ -115,7 +117,7 @@ Configuration tab
  
 #include "USART_STM32F7xx.h"
 
-#define ARM_USART_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,7)
+#define ARM_USART_DRV_VERSION ARM_DRIVER_VERSION_MAJOR_MINOR(1,8)
 
 // Driver Version
 static const ARM_DRIVER_VERSION usart_driver_version = { ARM_USART_API_VERSION, ARM_USART_DRV_VERSION };
@@ -3077,7 +3079,7 @@ void USART_IRQHandler (const USART_RESOURCES *usart) {
   }
 
   // Break Detection
-  if ((sr & USART_ISR_LBD) != 0U) {
+  if ((sr & USART_ISR_LBDF) != 0U) {
     // Clear Break detection flag
     usart->reg->ICR = USART_ICR_LBDCF;
 

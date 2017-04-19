@@ -18,8 +18,8 @@
  * 3. This notice may not be removed or altered from any source distribution.
  *
  *
- * $Date:        24. May 2016
- * $Revision:    V1.3
+ * $Date:        5. September 2016
+ * $Revision:    V1.4
  *
  * Project:      SPI Driver definitions for ST STM32F7xx
  * -------------------------------------------------------------------------- */
@@ -98,17 +98,21 @@
     #define SPI1_TX_DMA_Handler       DMAx_STREAMy_IRQ(RTE_SPI1_TX_DMA_NUMBER, RTE_SPI1_TX_DMA_STREAM)
   #endif
 
-  #define MX_SPI1_MISO_Pin            1U
-  #define MX_SPI1_MISO_GPIOx          RTE_SPI1_MISO_PORT
-  #define MX_SPI1_MISO_GPIO_Pin      (1U << RTE_SPI1_MISO_BIT)
-  #define MX_SPI1_MISO_GPIO_PuPd      GPIO_NOPULL
-  #define MX_SPI1_MISO_GPIO_AF        GPIO_AF5_SPI1
+  #if (RTE_SPI1_MISO == 1)
+    #define MX_SPI1_MISO_Pin          1U
+    #define MX_SPI1_MISO_GPIOx        RTE_SPI1_MISO_PORT
+    #define MX_SPI1_MISO_GPIO_Pin    (1U << RTE_SPI1_MISO_BIT)
+    #define MX_SPI1_MISO_GPIO_PuPd    GPIO_NOPULL
+    #define MX_SPI1_MISO_GPIO_AF      GPIO_AF5_SPI1
+  #endif
 
-  #define MX_SPI1_MOSI_Pin            1U
-  #define MX_SPI1_MOSI_GPIOx          RTE_SPI1_MOSI_PORT
-  #define MX_SPI1_MOSI_GPIO_Pin      (1U << RTE_SPI1_MOSI_BIT)
-  #define MX_SPI1_MOSI_GPIO_PuPd      GPIO_NOPULL
-  #define MX_SPI1_MOSI_GPIO_AF        GPIO_AF5_SPI1
+  #if (RTE_SPI1_MOSI == 1)
+    #define MX_SPI1_MOSI_Pin          1U
+    #define MX_SPI1_MOSI_GPIOx        RTE_SPI1_MOSI_PORT
+    #define MX_SPI1_MOSI_GPIO_Pin    (1U << RTE_SPI1_MOSI_BIT)
+    #define MX_SPI1_MOSI_GPIO_PuPd    GPIO_NOPULL
+    #define MX_SPI1_MOSI_GPIO_AF      GPIO_AF5_SPI1
+  #endif
 
   #define MX_SPI1_SCK_Pin             1U
   #define MX_SPI1_SCK_GPIOx           RTE_SPI1_SCL_PORT
@@ -145,17 +149,21 @@
     #define SPI2_TX_DMA_Handler       DMAx_STREAMy_IRQ(RTE_SPI2_TX_DMA_NUMBER, RTE_SPI2_TX_DMA_STREAM)
   #endif
 
-  #define MX_SPI2_MISO_Pin            1U
-  #define MX_SPI2_MISO_GPIOx          RTE_SPI2_MISO_PORT
-  #define MX_SPI2_MISO_GPIO_Pin      (1U << RTE_SPI2_MISO_BIT)
-  #define MX_SPI2_MISO_GPIO_PuPd      GPIO_NOPULL
-  #define MX_SPI2_MISO_GPIO_AF        GPIO_AF5_SPI2
+  #if (RTE_SPI2_MISO == 1)
+    #define MX_SPI2_MISO_Pin          1U
+    #define MX_SPI2_MISO_GPIOx        RTE_SPI2_MISO_PORT
+    #define MX_SPI2_MISO_GPIO_Pin    (1U << RTE_SPI2_MISO_BIT)
+    #define MX_SPI2_MISO_GPIO_PuPd    GPIO_NOPULL
+    #define MX_SPI2_MISO_GPIO_AF      GPIO_AF5_SPI2
+  #endif
 
-  #define MX_SPI2_MOSI_Pin            1U
-  #define MX_SPI2_MOSI_GPIOx          RTE_SPI2_MOSI_PORT
-  #define MX_SPI2_MOSI_GPIO_Pin      (1U << RTE_SPI2_MOSI_BIT)
-  #define MX_SPI2_MOSI_GPIO_PuPd      GPIO_NOPULL
-  #define MX_SPI2_MOSI_GPIO_AF        GPIO_AF5_SPI2
+  #if (RTE_SPI2_MOSI == 1)
+    #define MX_SPI2_MOSI_Pin          1U
+    #define MX_SPI2_MOSI_GPIOx        RTE_SPI2_MOSI_PORT
+    #define MX_SPI2_MOSI_GPIO_Pin    (1U << RTE_SPI2_MOSI_BIT)
+    #define MX_SPI2_MOSI_GPIO_PuPd    GPIO_NOPULL
+    #define MX_SPI2_MOSI_GPIO_AF      GPIO_AF5_SPI2
+  #endif
 
   #define MX_SPI2_SCK_Pin             1U
   #define MX_SPI2_SCK_GPIOx           RTE_SPI2_SCL_PORT
@@ -196,22 +204,26 @@
     #define SPI3_TX_DMA_Handler       DMAx_STREAMy_IRQ(RTE_SPI3_TX_DMA_NUMBER, RTE_SPI3_TX_DMA_STREAM)
   #endif
 
-  #define MX_SPI3_MISO_Pin            1U
-  #define MX_SPI3_MISO_GPIOx          RTE_SPI3_MISO_PORT
-  #define MX_SPI3_MISO_GPIO_Pin      (1U << RTE_SPI3_MISO_BIT)
-  #define MX_SPI3_MISO_GPIO_PuPd      GPIO_NOPULL
-  #define MX_SPI3_MISO_GPIO_AF        GPIO_AF6_SPI3
+  #if (RTE_SPI3_MISO == 1)
+    #define MX_SPI3_MISO_Pin          1U
+    #define MX_SPI3_MISO_GPIOx        RTE_SPI3_MISO_PORT
+    #define MX_SPI3_MISO_GPIO_Pin    (1U << RTE_SPI3_MISO_BIT)
+    #define MX_SPI3_MISO_GPIO_PuPd    GPIO_NOPULL
+    #define MX_SPI3_MISO_GPIO_AF      GPIO_AF6_SPI3
+  #endif
 
-  #define MX_SPI3_MOSI_Pin            1U
-  #define MX_SPI3_MOSI_GPIOx          RTE_SPI3_MOSI_PORT
-  #define MX_SPI3_MOSI_GPIO_Pin      (1U << RTE_SPI3_MOSI_BIT)
-  #define MX_SPI3_MOSI_GPIO_PuPd      GPIO_NOPULL
-  #if (RTE_SPI3_MOSI_PORT_ID == 0)
-    #define MX_SPI3_MOSI_GPIO_AF      GPIO_AF7_SPI3
-  #elif (RTE_SPI3_MOSI_PORT_ID == 3)
-    #define MX_SPI3_MOSI_GPIO_AF      GPIO_AF5_SPI3
-  #else
-    #define MX_SPI3_MOSI_GPIO_AF      GPIO_AF6_SPI3
+  #if (RTE_SPI3_MOSI == 1)
+    #define MX_SPI3_MOSI_Pin          1U
+    #define MX_SPI3_MOSI_GPIOx        RTE_SPI3_MOSI_PORT
+    #define MX_SPI3_MOSI_GPIO_Pin    (1U << RTE_SPI3_MOSI_BIT)
+    #define MX_SPI3_MOSI_GPIO_PuPd    GPIO_NOPULL
+    #if (RTE_SPI3_MOSI_PORT_ID == 1)
+      #define MX_SPI3_MOSI_GPIO_AF    GPIO_AF7_SPI3
+    #elif (RTE_SPI3_MOSI_PORT_ID == 4)
+      #define MX_SPI3_MOSI_GPIO_AF    GPIO_AF5_SPI3
+    #else
+      #define MX_SPI3_MOSI_GPIO_AF    GPIO_AF6_SPI3
+    #endif
   #endif
 
   #define MX_SPI3_SCK_Pin             1U
@@ -266,17 +278,21 @@
     #define SPI4_TX_DMA_Handler       DMAx_STREAMy_IRQ(RTE_SPI4_TX_DMA_NUMBER, RTE_SPI4_TX_DMA_STREAM)
   #endif
 
-  #define MX_SPI4_MISO_Pin            1U
-  #define MX_SPI4_MISO_GPIOx          RTE_SPI4_MISO_PORT
-  #define MX_SPI4_MISO_GPIO_Pin      (1U << RTE_SPI4_MISO_BIT)
-  #define MX_SPI4_MISO_GPIO_PuPd      GPIO_NOPULL
-  #define MX_SPI4_MISO_GPIO_AF        GPIO_AF5_SPI4
+  #if (RTE_SPI4_MISO == 1)
+    #define MX_SPI4_MISO_Pin          1U
+    #define MX_SPI4_MISO_GPIOx        RTE_SPI4_MISO_PORT
+    #define MX_SPI4_MISO_GPIO_Pin    (1U << RTE_SPI4_MISO_BIT)
+    #define MX_SPI4_MISO_GPIO_PuPd    GPIO_NOPULL
+    #define MX_SPI4_MISO_GPIO_AF      GPIO_AF5_SPI4
+  #endif
 
-  #define MX_SPI4_MOSI_Pin            1U
-  #define MX_SPI4_MOSI_GPIOx          RTE_SPI4_MOSI_PORT
-  #define MX_SPI4_MOSI_GPIO_Pin      (1U << RTE_SPI4_MOSI_BIT)
-  #define MX_SPI4_MOSI_GPIO_PuPd      GPIO_NOPULL
-  #define MX_SPI4_MOSI_GPIO_AF        GPIO_AF5_SPI4
+  #if (RTE_SPI4_MOSI == 1)
+    #define MX_SPI4_MOSI_Pin          1U
+    #define MX_SPI4_MOSI_GPIOx        RTE_SPI4_MOSI_PORT
+    #define MX_SPI4_MOSI_GPIO_Pin    (1U << RTE_SPI4_MOSI_BIT)
+    #define MX_SPI4_MOSI_GPIO_PuPd    GPIO_NOPULL
+    #define MX_SPI4_MOSI_GPIO_AF      GPIO_AF5_SPI4
+  #endif
 
   #define MX_SPI4_SCK_Pin             1U
   #define MX_SPI4_SCK_GPIOx           RTE_SPI4_SCL_PORT
@@ -330,17 +346,21 @@
     #define SPI5_TX_DMA_Handler       DMAx_STREAMy_IRQ(RTE_SPI5_TX_DMA_NUMBER, RTE_SPI5_TX_DMA_STREAM)
   #endif
 
-  #define MX_SPI5_MISO_Pin            1U
-  #define MX_SPI5_MISO_GPIOx          RTE_SPI5_MISO_PORT
-  #define MX_SPI5_MISO_GPIO_Pin      (1U << RTE_SPI5_MISO_BIT)
-  #define MX_SPI5_MISO_GPIO_PuPd      GPIO_NOPULL
-  #define MX_SPI5_MISO_GPIO_AF        GPIO_AF5_SPI5
+  #if (RTE_SPI5_MISO == 1)
+    #define MX_SPI5_MISO_Pin          1U
+    #define MX_SPI5_MISO_GPIOx        RTE_SPI5_MISO_PORT
+    #define MX_SPI5_MISO_GPIO_Pin    (1U << RTE_SPI5_MISO_BIT)
+    #define MX_SPI5_MISO_GPIO_PuPd    GPIO_NOPULL
+    #define MX_SPI5_MISO_GPIO_AF      GPIO_AF5_SPI5
+  #endif
 
-  #define MX_SPI5_MOSI_Pin            1U
-  #define MX_SPI5_MOSI_GPIOx          RTE_SPI5_MOSI_PORT
-  #define MX_SPI5_MOSI_GPIO_Pin      (1U << RTE_SPI5_MOSI_BIT)
-  #define MX_SPI5_MOSI_GPIO_PuPd      GPIO_NOPULL
-  #define MX_SPI5_MOSI_GPIO_AF        GPIO_AF5_SPI5
+  #if (RTE_SPI5_MOSI == 1)
+    #define MX_SPI5_MOSI_Pin          1U
+    #define MX_SPI5_MOSI_GPIOx        RTE_SPI5_MOSI_PORT
+    #define MX_SPI5_MOSI_GPIO_Pin    (1U << RTE_SPI5_MOSI_BIT)
+    #define MX_SPI5_MOSI_GPIO_PuPd    GPIO_NOPULL
+    #define MX_SPI5_MOSI_GPIO_AF      GPIO_AF5_SPI5
+  #endif
 
   #define MX_SPI5_SCK_Pin             1U
   #define MX_SPI5_SCK_GPIOx           RTE_SPI5_SCL_PORT
@@ -382,24 +402,28 @@
     #define SPI6_TX_DMA_Handler       DMAx_STREAMy_IRQ(RTE_SPI6_TX_DMA_NUMBER, RTE_SPI6_TX_DMA_STREAM)
   #endif
 
-  #define MX_SPI6_MISO_Pin            1U
-  #define MX_SPI6_MISO_GPIOx          RTE_SPI6_MISO_PORT
-  #define MX_SPI6_MISO_GPIO_Pin      (1U << RTE_SPI6_MISO_BIT)
-  #define MX_SPI6_MISO_GPIO_PuPd      GPIO_NOPULL
-  #if (RTE_SPI6_MISO_PORT_ID == 0)
-    #define MX_SPI6_MISO_GPIO_AF      GPIO_AF5_SPI6
-  #else
-    #define MX_SPI6_MISO_GPIO_AF      GPIO_AF8_SPI6
+  #if (RTE_SPI6_MISO == 1)
+    #define MX_SPI6_MISO_Pin          1U
+    #define MX_SPI6_MISO_GPIOx        RTE_SPI6_MISO_PORT
+    #define MX_SPI6_MISO_GPIO_Pin    (1U << RTE_SPI6_MISO_BIT)
+    #define MX_SPI6_MISO_GPIO_PuPd    GPIO_NOPULL
+    #if (RTE_SPI6_MISO_PORT_ID == 1)
+      #define MX_SPI6_MISO_GPIO_AF    GPIO_AF5_SPI6
+    #else
+      #define MX_SPI6_MISO_GPIO_AF    GPIO_AF8_SPI6
+    #endif
   #endif
 
-  #define MX_SPI6_MOSI_Pin            1U
-  #define MX_SPI6_MOSI_GPIOx          RTE_SPI6_MOSI_PORT
-  #define MX_SPI6_MOSI_GPIO_Pin      (1U << RTE_SPI6_MOSI_BIT)
-  #define MX_SPI6_MOSI_GPIO_PuPd      GPIO_NOPULL
-  #if (RTE_SPI6_MOSI_PORT_ID == 0)
-    #define MX_SPI6_MOSI_GPIO_AF      GPIO_AF5_SPI6
-  #else
-    #define MX_SPI6_MOSI_GPIO_AF      GPIO_AF8_SPI6
+  #if (RTE_SPI6_MOSI == 1)
+    #define MX_SPI6_MOSI_Pin          1U
+    #define MX_SPI6_MOSI_GPIOx        RTE_SPI6_MOSI_PORT
+    #define MX_SPI6_MOSI_GPIO_Pin    (1U << RTE_SPI6_MOSI_BIT)
+    #define MX_SPI6_MOSI_GPIO_PuPd    GPIO_NOPULL
+    #if (RTE_SPI6_MOSI_PORT_ID == 1)
+      #define MX_SPI6_MOSI_GPIO_AF    GPIO_AF5_SPI6
+    #else
+      #define MX_SPI6_MOSI_GPIO_AF    GPIO_AF8_SPI6
+    #endif
   #endif
 
   #define MX_SPI6_SCK_Pin             1U

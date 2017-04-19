@@ -7,6 +7,30 @@
   <url>http://www.keil.com/pack</url>
 
   <releases>
+    <release version="2.8.0" date="2016-11-18">
+      Updated to STM32Cube_FW_F7 Firmware Package version V1.5.1
+      Updated RTE_Device config file:
+      - Added "Not Used" support for SPI MOSI/MISO pins and USART TX/RX pins.
+      - Added SDMMC2 and CAN pin configurations
+      Updated CMSIS drivers:
+      - CAN:
+      -- Added CAN3
+      -- Corrected clearing of overrun flag in interrupt routine
+      - MCI: Added SDMMC2
+      - SPI:
+      -- Added "Not Used" support for MISO and MOSI pins
+      -- Corrected transfer problem, when DMA is used
+      - USART:
+      -- Changed USART_ISR_LBD (legacy define) to USART_ISR_LBDF
+      -- Added "Not Used" support for TX and RX pins
+      - USB Device: Corrected resume event signaling
+      Added board support for STM32F769I-Discovery and STM32F769I-EVAL boards
+      - Middleware example projects
+      - Board support drivers
+      Updated examples:
+      - Updated emWin examples to emWin V5.36f
+      - Updated USB Device CDC ACM VirtualCOM examples (corrected initial UART receive size)
+    </release>
     <release version="2.7.0" date="2016-06-17">
       Added device support and documentation for subfamily STM32F765.
       Added flash programming algorithm for QuadSPI Flash memory available on STM32 EVAL boards for STM32F77x and STM32F76x subfamilies.
@@ -1195,9 +1219,25 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       <accept  condition="STM32F778"/>
       <accept  condition="STM32F779"/>
     </condition>
+    <condition id="STM32F7x8">
+      <description>STMicroelectronics STM32F768/778 Series devices</description>
+      <accept  condition="STM32F768"/>
+      <accept  condition="STM32F778"/>
+    </condition>
     <condition id="STM32F7x9">
       <description>STMicroelectronics STM32F769/779 Series devices</description>
       <accept  condition="STM32F769"/>
+      <accept  condition="STM32F779"/>
+    </condition>
+    <condition id="STM32F7x8_7x9">
+      <description>STMicroelectronics STM32F7x8/7x9 Series devices</description>
+      <accept  condition="STM32F7x8"/>
+      <accept  condition="STM32F7x9"/>
+    </condition>
+    <condition id="STM32F756_777_779">
+      <description>STMicroelectronics STM32F756/777/779 Series devices</description>
+      <accept  condition="STM32F756"/>
+      <accept  condition="STM32F777"/>
       <accept  condition="STM32F779"/>
     </condition>
     <condition id="STM32F7x7_7x8_7x9">
@@ -1417,9 +1457,9 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       <require condition="STM32F76x_77x"/>
       <require Cclass="Device" Cgroup="STM32Cube HAL" Csub="Common"/>
     </condition>
-    <condition id="STM32F7x9 HAL">
-      <description>STMicroelectronics STM32F769/779 Device and HAL</description>
-      <require condition="STM32F7x9"/>
+    <condition id="STM32F7x8_7x9 HAL">
+      <description>STMicroelectronics STM32F7x8/7x9 Device and HAL</description>
+      <require condition="STM32F7x8_7x9"/>
       <require Cclass="Device" Cgroup="STM32Cube HAL" Csub="Common"/>
     </condition>
     <condition id="STM32F7x7_7x8_7x9 HAL">
@@ -1427,6 +1467,12 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       <require condition="STM32F7x7_7x8_7x9"/>
       <require Cclass="Device" Cgroup="STM32Cube HAL" Csub="Common"/>
     </condition>
+    <condition id="STM32F756_777_779 HAL DMA">
+      <description>STMicroelectronics STM32F756/777/779 Device and HAL</description>
+      <require condition="STM32F756_777_779"/>
+      <require Cclass="Device" Cgroup="STM32Cube HAL" Csub="Common"/>
+      <require Cclass="Device" Cgroup="STM32Cube HAL" Csub="DMA"/>
+    </condition> 
 
     <condition id="STM32F7 HAL GPIO">
       <description>STMicroelectronics STM32F7 Device and HAL with GPIO</description>
@@ -1438,12 +1484,6 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
     <condition id="STM32F7 HAL DMA">
       <description>STMicroelectronics STM32F7 Device and HAL with DMA</description>
       <require condition="STM32F7"/>
-      <require Cclass="Device" Cgroup="STM32Cube HAL" Csub="Common"/>
-      <require Cclass="Device" Cgroup="STM32Cube HAL" Csub="DMA"/>
-    </condition>
-    <condition id="STM32F756 HAL DMA">
-      <description>STMicroelectronics STM32F756 Device and HAL with DMA</description>
-      <require condition="STM32F756"/>
       <require Cclass="Device" Cgroup="STM32Cube HAL" Csub="Common"/>
       <require Cclass="Device" Cgroup="STM32Cube HAL" Csub="DMA"/>
     </condition>
@@ -1542,6 +1582,207 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       <require condition="STM32F7"/>
       <require Cclass="CMSIS Driver" Cgroup="SAI" Capiversion="1.0"/>
       <require Cclass="CMSIS Driver" Cgroup="I2C" Capiversion="2.2"/>
+    </condition>
+
+    <condition id="STM32F769I-Discovery LCD_RGB">
+      <description>STMicroelectronics STM32F769I-Discovery LCD (RGB IF)</description>
+      <require condition="STM32F7"/>
+      <require Cclass="Device" Cgroup="STM32Cube HAL" Csub="Common"/>
+      <require Cclass="Device" Cgroup="STM32Cube HAL" Csub="GPIO"/>
+      <require Cclass="Graphics Display" Cgroup="STM32F769I-Discovery" Cvariant="RGB IF"/>
+    </condition>
+    <condition id="STM32F769I-Discovery GLCD">
+      <description>STMicroelectronics STM32F769I-Discovery GLCD</description>
+      <require condition="STM32F7"/>
+      <require Cclass="Board Support" Cgroup="Drivers" Csub="LCD"/>
+    </condition>
+    <condition id="STM32F769I-Discovery TS">
+      <description>STMicroelectronics STM32F769I-Discovery TS</description>
+      <require condition="STM32F7"/>
+      <require Cclass="Board Support" Cgroup="Drivers" Csub="Touch Screen"/>
+    </condition>
+
+    <condition id="STM32F769I-Discovery BSP">
+      <description>STMicroelectronics STM32F769I-Discovery BSP</description>
+      <require condition="STM32F7"/>
+      <require Cclass="Device" Cgroup="STM32Cube HAL" Csub="Common"/>
+      <require Cclass="Device" Cgroup="STM32Cube HAL" Csub="GPIO"/>
+      <require Cclass="Device" Cgroup="STM32Cube HAL" Csub="I2C"/>
+    </condition>
+    <condition id="STM32F769I-Discovery BSP Audio">
+      <description>STMicroelectronics STM32F769I-Discovery BSP Audio</description>
+      <require condition="STM32F7"/>
+      <require Cclass="Device" Cgroup="STM32Cube HAL" Csub="Common"/>
+      <require Cclass="Device" Cgroup="STM32Cube HAL" Csub="SAI"/>
+      <require Cclass="Device" Cgroup="STM32Cube HAL" Csub="DMA"/>
+      <require Cclass="Device" Cgroup="STM32Cube HAL" Csub="DFSDM"/>      
+      <require Cclass="Board Support" Cgroup="Drivers" Csub="Basic I/O"/>
+    </condition>
+    <condition id="STM32F769I-Discovery BSP EEPROM">
+      <description>STMicroelectronics STM32F769I-Discovery BSP EEPROM</description>
+      <require condition="STM32F7"/>
+      <require Cclass="Board Support" Cgroup="Drivers" Csub="Basic I/O"/>
+    </condition>
+    <condition id="STM32F769I-Discovery BSP LCD">
+      <description>STMicroelectronics STM32F769I-Discovery BSP LCD</description>
+      <require condition="STM32F7"/>
+      <require Cclass="Device" Cgroup="STM32Cube HAL" Csub="Common"/>
+      <require Cclass="Device" Cgroup="STM32Cube HAL" Csub="LTDC"/>
+      <require Cclass="Device" Cgroup="STM32Cube HAL" Csub="DMA2D"/>
+      <require Cclass="Device" Cgroup="STM32Cube HAL" Csub="DSI"/>
+      <require Cclass="Board Support" Cgroup="Drivers" Csub="SDRAM"/>
+      <require Cclass="Board Support" Cgroup="Drivers" Csub="Basic I/O"/>
+    </condition>
+    <condition id="STM32F769I-Discovery BSP QSPI">
+      <description>STMicroelectronics STM32F769I-Discovery BSP QSPI</description>
+      <require condition="STM32F7"/>
+      <require Cclass="Device" Cgroup="STM32Cube HAL" Csub="Common"/>
+      <require Cclass="Device" Cgroup="STM32Cube HAL" Csub="GPIO"/>
+      <require Cclass="Device" Cgroup="STM32Cube HAL" Csub="QSPI"/>
+    </condition>
+    <condition id="STM32F769I-Discovery BSP SD">
+      <description>STMicroelectronics STM32F769I-Discovery BSP SD</description>
+      <require condition="STM32F7"/>
+      <require Cclass="Device" Cgroup="STM32Cube HAL" Csub="Common"/>
+      <require Cclass="Device" Cgroup="STM32Cube HAL" Csub="SD"/>
+      <require Cclass="Device" Cgroup="STM32Cube HAL" Csub="DMA"/>
+      <require Cclass="Board Support" Cgroup="Drivers" Csub="Basic I/O"/>
+    </condition>
+    <condition id="STM32F769I-Discovery BSP SDRAM">
+      <description>STMicroelectronics STM32F769I-Discovery BSP SDRAM</description>
+      <require condition="STM32F7"/>
+      <require Cclass="Device" Cgroup="STM32Cube HAL" Csub="Common"/>
+      <require Cclass="Device" Cgroup="STM32Cube HAL" Csub="GPIO"/>
+      <require Cclass="Device" Cgroup="STM32Cube HAL" Csub="SDRAM"/>
+      <require Cclass="Device" Cgroup="STM32Cube HAL" Csub="DMA"/>
+    </condition>
+    <condition id="STM32F769I-Discovery BSP TS">
+      <description>STMicroelectronics STM32F769I-Discovery BSP TS</description>
+      <require condition="STM32F7"/>
+      <require Cclass="Device" Cgroup="STM32Cube HAL" Csub="Common"/>
+      <require Cclass="Device" Cgroup="STM32Cube HAL" Csub="GPIO"/>
+      <require Cclass="Board Support" Cgroup="Drivers" Csub="Basic I/O"/>
+      <require Cclass="Board Support" Cgroup="Drivers" Csub="LCD"/>
+    </condition>
+
+    <condition id="STM32F769I-EVAL LCD_RGB">
+      <description>STMicroelectronics STM32F769I-EVAL LCD (RGB IF)</description>
+      <require condition="STM32F7"/>
+      <require Cclass="Device" Cgroup="STM32Cube HAL" Csub="Common"/>
+      <require Cclass="Device" Cgroup="STM32Cube HAL" Csub="GPIO"/>
+      <require Cclass="Graphics Display" Cgroup="STM32F769I-EVAL" Cvariant="RGB IF"/>
+    </condition>
+    <condition id="STM32F769I-EVAL GLCD">
+      <description>STMicroelectronics STM32F769I-EVAL GLCD</description>
+      <require condition="STM32F7"/>
+      <require Cclass="Board Support" Cgroup="Drivers" Csub="LCD"/>
+    </condition>
+    <condition id="STM32F769I-EVAL TS">
+      <description>STMicroelectronics STM32746G-EVAL TS</description>
+      <require condition="STM32F7"/>
+      <require Cclass="Board Support" Cgroup="Drivers" Csub="Touch Screen"/>
+    </condition>
+    <condition id="STM32F769I-EVAL Joystick">
+      <description>STMicroelectronics STM32746G-EVAL Joystick</description>
+      <require condition="STM32F7"/>
+      <require Cclass="Board Support" Cgroup="Drivers" Csub="I/O"/>
+    </condition>
+
+    <condition id="STM32F769I-EVAL BSP">
+      <description>STMicroelectronics STM32746G-EVAL BSP</description>
+      <require condition="STM32F7"/>
+      <require Cclass="Device" Cgroup="STM32Cube HAL" Csub="Common"/>
+      <require Cclass="Device" Cgroup="STM32Cube HAL" Csub="GPIO"/>
+      <require Cclass="Device" Cgroup="STM32Cube HAL" Csub="UART"/>
+      <require Cclass="Device" Cgroup="STM32Cube HAL" Csub="I2C"/>
+      <require Cclass="Device" Cgroup="STM32Cube HAL" Csub="ADC"/>
+    </condition>
+    <condition id="STM32F769I-EVAL BSP Audio">
+      <description>STMicroelectronics STM32F769I-EVAL BSP Audio</description>
+      <require condition="STM32F7"/>
+      <require Cclass="Device" Cgroup="STM32Cube HAL" Csub="Common"/>
+      <require Cclass="Device" Cgroup="STM32Cube HAL" Csub="GPIO"/>
+      <require Cclass="Device" Cgroup="STM32Cube HAL" Csub="SAI"/>
+      <require Cclass="Device" Cgroup="STM32Cube HAL" Csub="I2S"/>
+      <require Cclass="Device" Cgroup="STM32Cube HAL" Csub="DMA"/>
+      <require Cclass="Device" Cgroup="STM32Cube HAL" Csub="TIM"/>
+      <require Cclass="Board Support" Cgroup="Drivers" Csub="Basic I/O"/>
+    </condition>
+    <condition id="STM32F769I-EVAL BSP Camera">
+      <description>STMicroelectronics STM32F769I-EVAL BSP Camera</description>
+      <require condition="STM32F7"/>
+      <require Cclass="Device" Cgroup="STM32Cube HAL" Csub="Common"/>
+      <require Cclass="Device" Cgroup="STM32Cube HAL" Csub="GPIO"/>
+      <require Cclass="Device" Cgroup="STM32Cube HAL" Csub="DCMI"/>
+      <require Cclass="Device" Cgroup="STM32Cube HAL" Csub="DMA"/>
+      <require Cclass="Board Support" Cgroup="Drivers" Csub="I/O"/>
+    </condition>
+    <condition id="STM32F769I-EVAL BSP EEPROM">
+      <description>STMicroelectronics STM32F769I-EVAL BSP EEPROM</description>
+      <require condition="STM32F7"/>
+      <require Cclass="Board Support" Cgroup="Drivers" Csub="Basic I/O"/>
+    </condition>
+    <condition id="STM32F769I-EVAL BSP IO">
+      <description>STMicroelectronics STM32F769I-EVAL BSP IO</description>
+      <require condition="STM32F7"/>
+      <require Cclass="Board Support" Cgroup="Drivers" Csub="Basic I/O"/>
+    </condition>
+    <condition id="STM32F769I-EVAL BSP LCD">
+      <description>STMicroelectronics STM32F769I-EVAL BSP LCD</description>
+      <require condition="STM32F7"/>
+      <require Cclass="Device" Cgroup="STM32Cube HAL" Csub="Common"/>
+      <require Cclass="Device" Cgroup="STM32Cube HAL" Csub="LTDC"/>
+      <require Cclass="Device" Cgroup="STM32Cube HAL" Csub="DMA2D"/>
+      <require Cclass="Device" Cgroup="STM32Cube HAL" Csub="DSI"/>
+      <require Cclass="Board Support" Cgroup="Drivers" Csub="SDRAM"/>
+      <require Cclass="Board Support" Cgroup="Drivers" Csub="Basic I/O"/>
+    </condition>
+    <condition id="STM32F769I-EVAL BSP NOR">
+      <description>STMicroelectronics STM32F769I-EVAL BSP NOR</description>
+      <require condition="STM32F7"/>
+      <require Cclass="Device" Cgroup="STM32Cube HAL" Csub="Common"/>
+      <require Cclass="Device" Cgroup="STM32Cube HAL" Csub="GPIO"/>
+      <require Cclass="Device" Cgroup="STM32Cube HAL" Csub="NOR"/>
+    </condition>
+    <condition id="STM32F769I-EVAL BSP QSPI">
+      <description>STMicroelectronics STM32F769I-EVAL BSP QSPI</description>
+      <require condition="STM32F7"/>
+      <require Cclass="Device" Cgroup="STM32Cube HAL" Csub="Common"/>
+      <require Cclass="Device" Cgroup="STM32Cube HAL" Csub="GPIO"/>
+      <require Cclass="Device" Cgroup="STM32Cube HAL" Csub="QSPI"/>
+    </condition>
+    <condition id="STM32F769I-EVAL BSP SD">
+      <description>STMicroelectronics STM32F769I-EVAL BSP SD</description>
+      <require condition="STM32F7"/>
+      <require Cclass="Device" Cgroup="STM32Cube HAL" Csub="Common"/>
+      <require Cclass="Device" Cgroup="STM32Cube HAL" Csub="GPIO"/>
+      <require Cclass="Device" Cgroup="STM32Cube HAL" Csub="SD"/>
+      <require Cclass="Device" Cgroup="STM32Cube HAL" Csub="DMA"/>
+      <require Cclass="Board Support" Cgroup="Drivers" Csub="I/O"/>
+    </condition>
+    <condition id="STM32F769I-EVAL BSP SDRAM">
+      <description>STMicroelectronics STM32F769I-EVAL BSP SDRAM</description>
+      <require condition="STM32F7"/>
+      <require Cclass="Device" Cgroup="STM32Cube HAL" Csub="Common"/>
+      <require Cclass="Device" Cgroup="STM32Cube HAL" Csub="GPIO"/>
+      <require Cclass="Device" Cgroup="STM32Cube HAL" Csub="SDRAM"/>
+      <require Cclass="Device" Cgroup="STM32Cube HAL" Csub="DMA"/>
+    </condition>
+    <condition id="STM32F769I-EVAL BSP SRAM">
+      <description>STMicroelectronics STM32F769I-EVAL BSP SRAM</description>
+      <require condition="STM32F7"/>
+      <require Cclass="Device" Cgroup="STM32Cube HAL" Csub="Common"/>
+      <require Cclass="Device" Cgroup="STM32Cube HAL" Csub="GPIO"/>
+      <require Cclass="Device" Cgroup="STM32Cube HAL" Csub="SRAM"/>
+      <require Cclass="Device" Cgroup="STM32Cube HAL" Csub="DMA"/>
+    </condition>
+    <condition id="STM32F769I-EVAL BSP TS">
+      <description>STMicroelectronics STM32F769I-EVAL BSP TS</description>
+      <require condition="STM32F7"/>
+      <require Cclass="Device" Cgroup="STM32Cube HAL" Csub="Common"/>
+      <require Cclass="Device" Cgroup="STM32Cube HAL" Csub="GPIO"/>
+      <require Cclass="Board Support" Cgroup="Drivers" Csub="Basic I/O"/>
+      <require Cclass="Board Support" Cgroup="Drivers" Csub="LCD"/>
     </condition>
 
     <condition id="STM32F746G-Discovery LCD_RGB">
@@ -1795,7 +2036,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
   </apis>
 
   <components>
-    <component Cclass="Device" Cgroup="Startup" Cversion="1.1.0" condition="STM32F7 CMSIS">
+    <component Cclass="Device" Cgroup="Startup" Cversion="1.1.2" condition="STM32F7 CMSIS">
       <description>System Startup for STMicroelectronics STM32F7 Series</description>
       <RTE_Components_h>
         #define RTE_DEVICE_STARTUP_STM32F7XX    /* Device Startup for STM32F7 */
@@ -1813,53 +2054,53 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
 
         <!-- startup files -->
         <!-- ARM Compiler Toolchain -->
-        <file category="source" condition="STM32F745_ARMCC" name="Drivers/CMSIS/Device/ST/STM32F7xx/Source/Templates/arm/startup_stm32f745xx.s" attr="config" version="1.1.0"/>
-        <file category="source" condition="STM32F746_ARMCC" name="Drivers/CMSIS/Device/ST/STM32F7xx/Source/Templates/arm/startup_stm32f746xx.s" attr="config" version="1.1.0"/>
-        <file category="source" condition="STM32F756_ARMCC" name="Drivers/CMSIS/Device/ST/STM32F7xx/Source/Templates/arm/startup_stm32f756xx.s" attr="config" version="1.1.0"/>
-        <file category="source" condition="STM32F765_ARMCC" name="Drivers/CMSIS/Device/ST/STM32F7xx/Source/Templates/arm/startup_stm32f765xx.s" attr="config" version="1.1.0"/>
-        <file category="source" condition="STM32F767_ARMCC" name="Drivers/CMSIS/Device/ST/STM32F7xx/Source/Templates/arm/startup_stm32f767xx.s" attr="config" version="1.1.0"/>
-        <file category="source" condition="STM32F768_ARMCC" name="Drivers/CMSIS/Device/ST/STM32F7xx/Source/Templates/arm/startup_stm32f767xx.s" attr="config" version="1.1.0"/>
-        <file category="source" condition="STM32F769_ARMCC" name="Drivers/CMSIS/Device/ST/STM32F7xx/Source/Templates/arm/startup_stm32f769xx.s" attr="config" version="1.1.0"/>
-        <file category="source" condition="STM32F777_ARMCC" name="Drivers/CMSIS/Device/ST/STM32F7xx/Source/Templates/arm/startup_stm32f777xx.s" attr="config" version="1.1.0"/>
-        <file category="source" condition="STM32F778_ARMCC" name="Drivers/CMSIS/Device/ST/STM32F7xx/Source/Templates/arm/startup_stm32f777xx.s" attr="config" version="1.1.0"/>
-        <file category="source" condition="STM32F779_ARMCC" name="Drivers/CMSIS/Device/ST/STM32F7xx/Source/Templates/arm/startup_stm32f779xx.s" attr="config" version="1.1.0"/>
+        <file category="source" condition="STM32F745_ARMCC" name="Drivers/CMSIS/Device/ST/STM32F7xx/Source/Templates/arm/startup_stm32f745xx.s" attr="config" version="1.1.2"/>
+        <file category="source" condition="STM32F746_ARMCC" name="Drivers/CMSIS/Device/ST/STM32F7xx/Source/Templates/arm/startup_stm32f746xx.s" attr="config" version="1.1.2"/>
+        <file category="source" condition="STM32F756_ARMCC" name="Drivers/CMSIS/Device/ST/STM32F7xx/Source/Templates/arm/startup_stm32f756xx.s" attr="config" version="1.1.2"/>
+        <file category="source" condition="STM32F765_ARMCC" name="Drivers/CMSIS/Device/ST/STM32F7xx/Source/Templates/arm/startup_stm32f765xx.s" attr="config" version="1.1.2"/>
+        <file category="source" condition="STM32F767_ARMCC" name="Drivers/CMSIS/Device/ST/STM32F7xx/Source/Templates/arm/startup_stm32f767xx.s" attr="config" version="1.1.2"/>
+        <file category="source" condition="STM32F768_ARMCC" name="Drivers/CMSIS/Device/ST/STM32F7xx/Source/Templates/arm/startup_stm32f767xx.s" attr="config" version="1.1.2"/>
+        <file category="source" condition="STM32F769_ARMCC" name="Drivers/CMSIS/Device/ST/STM32F7xx/Source/Templates/arm/startup_stm32f769xx.s" attr="config" version="1.1.2"/>
+        <file category="source" condition="STM32F777_ARMCC" name="Drivers/CMSIS/Device/ST/STM32F7xx/Source/Templates/arm/startup_stm32f777xx.s" attr="config" version="1.1.2"/>
+        <file category="source" condition="STM32F778_ARMCC" name="Drivers/CMSIS/Device/ST/STM32F7xx/Source/Templates/arm/startup_stm32f777xx.s" attr="config" version="1.1.2"/>
+        <file category="source" condition="STM32F779_ARMCC" name="Drivers/CMSIS/Device/ST/STM32F7xx/Source/Templates/arm/startup_stm32f779xx.s" attr="config" version="1.1.2"/>
         <!-- GCC Toolchain -->
-        <file category="source" condition="STM32F745_GCC"   name="Drivers/CMSIS/Device/ST/STM32F7xx/Source/Templates/gcc/startup_stm32f745xx.S" attr="config" version="1.1.0"/>
-        <file category="source" condition="STM32F746_GCC"   name="Drivers/CMSIS/Device/ST/STM32F7xx/Source/Templates/gcc/startup_stm32f746xx.S" attr="config" version="1.1.0"/>
-        <file category="source" condition="STM32F756_GCC"   name="Drivers/CMSIS/Device/ST/STM32F7xx/Source/Templates/gcc/startup_stm32f756xx.S" attr="config" version="1.1.0"/>
-        <file category="source" condition="STM32F765_GCC"   name="Drivers/CMSIS/Device/ST/STM32F7xx/Source/Templates/gcc/startup_stm32f765xx.S" attr="config" version="1.1.0"/>
-        <file category="source" condition="STM32F767_GCC"   name="Drivers/CMSIS/Device/ST/STM32F7xx/Source/Templates/gcc/startup_stm32f767xx.S" attr="config" version="1.1.0"/>
-        <file category="source" condition="STM32F768_GCC"   name="Drivers/CMSIS/Device/ST/STM32F7xx/Source/Templates/gcc/startup_stm32f767xx.S" attr="config" version="1.1.0"/>
-        <file category="source" condition="STM32F769_GCC"   name="Drivers/CMSIS/Device/ST/STM32F7xx/Source/Templates/gcc/startup_stm32f769xx.S" attr="config" version="1.1.0"/>
-        <file category="source" condition="STM32F777_GCC"   name="Drivers/CMSIS/Device/ST/STM32F7xx/Source/Templates/gcc/startup_stm32f777xx.S" attr="config" version="1.1.0"/>
-        <file category="source" condition="STM32F778_GCC"   name="Drivers/CMSIS/Device/ST/STM32F7xx/Source/Templates/gcc/startup_stm32f777xx.S" attr="config" version="1.1.0"/>
-        <file category="source" condition="STM32F779_GCC"   name="Drivers/CMSIS/Device/ST/STM32F7xx/Source/Templates/gcc/startup_stm32f779xx.S" attr="config" version="1.1.0"/>
+        <file category="source" condition="STM32F745_GCC"   name="Drivers/CMSIS/Device/ST/STM32F7xx/Source/Templates/gcc/startup_stm32f745xx.S" attr="config" version="1.1.2"/>
+        <file category="source" condition="STM32F746_GCC"   name="Drivers/CMSIS/Device/ST/STM32F7xx/Source/Templates/gcc/startup_stm32f746xx.S" attr="config" version="1.1.2"/>
+        <file category="source" condition="STM32F756_GCC"   name="Drivers/CMSIS/Device/ST/STM32F7xx/Source/Templates/gcc/startup_stm32f756xx.S" attr="config" version="1.1.2"/>
+        <file category="source" condition="STM32F765_GCC"   name="Drivers/CMSIS/Device/ST/STM32F7xx/Source/Templates/gcc/startup_stm32f765xx.S" attr="config" version="1.1.2"/>
+        <file category="source" condition="STM32F767_GCC"   name="Drivers/CMSIS/Device/ST/STM32F7xx/Source/Templates/gcc/startup_stm32f767xx.S" attr="config" version="1.1.2"/>
+        <file category="source" condition="STM32F768_GCC"   name="Drivers/CMSIS/Device/ST/STM32F7xx/Source/Templates/gcc/startup_stm32f767xx.S" attr="config" version="1.1.2"/>
+        <file category="source" condition="STM32F769_GCC"   name="Drivers/CMSIS/Device/ST/STM32F7xx/Source/Templates/gcc/startup_stm32f769xx.S" attr="config" version="1.1.2"/>
+        <file category="source" condition="STM32F777_GCC"   name="Drivers/CMSIS/Device/ST/STM32F7xx/Source/Templates/gcc/startup_stm32f777xx.S" attr="config" version="1.1.2"/>
+        <file category="source" condition="STM32F778_GCC"   name="Drivers/CMSIS/Device/ST/STM32F7xx/Source/Templates/gcc/startup_stm32f777xx.S" attr="config" version="1.1.2"/>
+        <file category="source" condition="STM32F779_GCC"   name="Drivers/CMSIS/Device/ST/STM32F7xx/Source/Templates/gcc/startup_stm32f779xx.S" attr="config" version="1.1.2"/>
         <!-- IAR Toolchain -->
-        <file category="source" condition="STM32F745_IAR"   name="Drivers/CMSIS/Device/ST/STM32F7xx/Source/Templates/iar/startup_stm32f745xx.s" attr="config" version="1.1.0"/>
-        <file category="source" condition="STM32F746_IAR"   name="Drivers/CMSIS/Device/ST/STM32F7xx/Source/Templates/iar/startup_stm32f746xx.s" attr="config" version="1.1.0"/>
-        <file category="source" condition="STM32F756_IAR"   name="Drivers/CMSIS/Device/ST/STM32F7xx/Source/Templates/iar/startup_stm32f756xx.s" attr="config" version="1.1.0"/>
-        <file category="source" condition="STM32F765_IAR"   name="Drivers/CMSIS/Device/ST/STM32F7xx/Source/Templates/iar/startup_stm32f765xx.s" attr="config" version="1.1.0"/>
-        <file category="source" condition="STM32F767_IAR"   name="Drivers/CMSIS/Device/ST/STM32F7xx/Source/Templates/iar/startup_stm32f767xx.s" attr="config" version="1.1.0"/>
-        <file category="source" condition="STM32F768_IAR"   name="Drivers/CMSIS/Device/ST/STM32F7xx/Source/Templates/iar/startup_stm32f767xx.s" attr="config" version="1.1.0"/>
-        <file category="source" condition="STM32F769_IAR"   name="Drivers/CMSIS/Device/ST/STM32F7xx/Source/Templates/iar/startup_stm32f769xx.s" attr="config" version="1.1.0"/>
-        <file category="source" condition="STM32F777_IAR"   name="Drivers/CMSIS/Device/ST/STM32F7xx/Source/Templates/iar/startup_stm32f777xx.s" attr="config" version="1.1.0"/>
-        <file category="source" condition="STM32F778_IAR"   name="Drivers/CMSIS/Device/ST/STM32F7xx/Source/Templates/iar/startup_stm32f777xx.s" attr="config" version="1.1.0"/>
-        <file category="source" condition="STM32F779_IAR"   name="Drivers/CMSIS/Device/ST/STM32F7xx/Source/Templates/iar/startup_stm32f779xx.s" attr="config" version="1.1.0"/>
+        <file category="source" condition="STM32F745_IAR"   name="Drivers/CMSIS/Device/ST/STM32F7xx/Source/Templates/iar/startup_stm32f745xx.s" attr="config" version="1.1.2"/>
+        <file category="source" condition="STM32F746_IAR"   name="Drivers/CMSIS/Device/ST/STM32F7xx/Source/Templates/iar/startup_stm32f746xx.s" attr="config" version="1.1.2"/>
+        <file category="source" condition="STM32F756_IAR"   name="Drivers/CMSIS/Device/ST/STM32F7xx/Source/Templates/iar/startup_stm32f756xx.s" attr="config" version="1.1.2"/>
+        <file category="source" condition="STM32F765_IAR"   name="Drivers/CMSIS/Device/ST/STM32F7xx/Source/Templates/iar/startup_stm32f765xx.s" attr="config" version="1.1.2"/>
+        <file category="source" condition="STM32F767_IAR"   name="Drivers/CMSIS/Device/ST/STM32F7xx/Source/Templates/iar/startup_stm32f767xx.s" attr="config" version="1.1.2"/>
+        <file category="source" condition="STM32F768_IAR"   name="Drivers/CMSIS/Device/ST/STM32F7xx/Source/Templates/iar/startup_stm32f767xx.s" attr="config" version="1.1.2"/>
+        <file category="source" condition="STM32F769_IAR"   name="Drivers/CMSIS/Device/ST/STM32F7xx/Source/Templates/iar/startup_stm32f769xx.s" attr="config" version="1.1.2"/>
+        <file category="source" condition="STM32F777_IAR"   name="Drivers/CMSIS/Device/ST/STM32F7xx/Source/Templates/iar/startup_stm32f777xx.s" attr="config" version="1.1.2"/>
+        <file category="source" condition="STM32F778_IAR"   name="Drivers/CMSIS/Device/ST/STM32F7xx/Source/Templates/iar/startup_stm32f777xx.s" attr="config" version="1.1.2"/>
+        <file category="source" condition="STM32F779_IAR"   name="Drivers/CMSIS/Device/ST/STM32F7xx/Source/Templates/iar/startup_stm32f779xx.s" attr="config" version="1.1.2"/>
 
         <!-- system file -->
-        <file category="source" name="Drivers/CMSIS/Device/ST/STM32F7xx/Source/Templates/system_stm32f7xx.c" attr="config" version="1.1.0"/>
+        <file category="source" name="Drivers/CMSIS/Device/ST/STM32F7xx/Source/Templates/system_stm32f7xx.c" attr="config" version="1.1.2"/>
       </files>
     </component>
 
-    <component Cclass="Device" Cgroup="STM32Cube Framework" Csub="Classic" Cversion="1.1.0" Capiversion="1.0.0" condition="STM32F7 Framework Classic">
+    <component Cclass="Device" Cgroup="STM32Cube Framework" Csub="Classic" Cversion="1.1.2" Capiversion="1.0.0" condition="STM32F7 Framework Classic">
       <description>Configuration via RTE_Device.h</description>
       <RTE_Components_h>
         #define RTE_DEVICE_FRAMEWORK_CLASSIC
       </RTE_Components_h>
       <files>
         <file category="doc"     name="MDK/CubeMX/Documentation/classic.html"/>
-        <file category="header"  name="CMSIS/Driver/Config/RTE_Device.h" attr="config" version="1.3.0"/>
-        <file category="header"  name="MDK/Templates/Inc/stm32f7xx_hal_conf.h" attr="config" version="1.1.0"/>
+        <file category="header"  name="CMSIS/Driver/Config/RTE_Device.h" attr="config" version="1.4.0"/>
+        <file category="header"  name="MDK/Templates/Inc/stm32f7xx_hal_conf.h" attr="config" version="1.1.2"/>
         <file category="source"  name="MDK/Templates/Src/stm32f7xx_hal_msp.c"  attr="template" select="MCU Specific HAL Initialization / De-Initialization"/>
         <file category="header"  name="MDK/Templates/Inc/stm32f7xx_it.h" attr="template" select="Exception Handlers and Peripheral IRQ"/>
         <file category="source"  name="MDK/Templates/Src/stm32f7xx_it.c" attr="template" select="Exception Handlers and Peripheral IRQ"/>
@@ -1882,7 +2123,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
     </component>
 
     <!-- START: STMicroelectronics STM32CubeF7 HAL -->
-    <component Cclass="Device" Cgroup="STM32Cube HAL" Csub="Common" Cversion="1.1.0" condition="STM32F7 HAL Common">
+    <component Cclass="Device" Cgroup="STM32Cube HAL" Csub="Common" Cversion="1.1.2" condition="STM32F7 HAL Common">
       <description>Common HAL driver</description>
       <RTE_Components_h>
         #define RTE_DEVICE_HAL_COMMON
@@ -1894,7 +2135,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </files>
     </component>
 
-    <component Cclass="Device" Cgroup="STM32Cube HAL" Csub="ADC" Cversion="1.1.0" condition="STM32F7 HAL DMA">
+    <component Cclass="Device" Cgroup="STM32Cube HAL" Csub="ADC" Cversion="1.1.2" condition="STM32F7 HAL DMA">
       <description>Analog-to-digital converter (ADC) HAL driver</description>
       <RTE_Components_h>
         #define RTE_DEVICE_HAL_ADC
@@ -1905,7 +2146,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </files>
     </component>
 
-    <component Cclass="Device" Cgroup="STM32Cube HAL" Csub="CAN" Cversion="1.1.0" condition="STM32F7 HAL">
+    <component Cclass="Device" Cgroup="STM32Cube HAL" Csub="CAN" Cversion="1.1.2" condition="STM32F7 HAL">
       <description>Controller area network (CAN) HAL driver</description>
       <RTE_Components_h>
         #define RTE_DEVICE_HAL_CAN
@@ -1915,7 +2156,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </files>
     </component>
 
-    <component Cclass="Device" Cgroup="STM32Cube HAL" Csub="CEC" Cversion="1.1.0" condition="STM32F7 HAL">
+    <component Cclass="Device" Cgroup="STM32Cube HAL" Csub="CEC" Cversion="1.1.2" condition="STM32F7 HAL">
       <description>Consumer Electronics Control (CEC) HAL driver</description>
       <RTE_Components_h>
         #define RTE_DEVICE_HAL_CEC
@@ -1925,7 +2166,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </files>
     </component>
 
-    <component Cclass="Device" Cgroup="STM32Cube HAL" Csub="Cortex" Cversion="1.1.0" condition="STM32F7 HAL">
+    <component Cclass="Device" Cgroup="STM32Cube HAL" Csub="Cortex" Cversion="1.1.2" condition="STM32F7 HAL">
       <description>Cortex HAL driver</description>
       <RTE_Components_h>
         #define RTE_DEVICE_HAL_CORTEX
@@ -1935,7 +2176,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </files>
     </component>
 
-    <component Cclass="Device" Cgroup="STM32Cube HAL" Csub="CRC" Cversion="1.1.0" condition="STM32F7 HAL">
+    <component Cclass="Device" Cgroup="STM32Cube HAL" Csub="CRC" Cversion="1.1.2" condition="STM32F7 HAL">
       <description>CRC calculation unit (CRC) HAL driver</description>
       <RTE_Components_h>
         #define RTE_DEVICE_HAL_CRC
@@ -1946,7 +2187,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </files>
     </component>
 
-    <component Cclass="Device" Cgroup="STM32Cube HAL" Csub="CRYP" Cversion="1.1.0" condition="STM32F756 HAL DMA">
+    <component Cclass="Device" Cgroup="STM32Cube HAL" Csub="CRYP" Cversion="1.1.2" condition="STM32F756_777_779 HAL DMA">
       <description>Cryptographic processor (CRYP) HAL driver</description>
       <RTE_Components_h>
         #define RTE_DEVICE_HAL_CRYP
@@ -1957,7 +2198,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </files>
     </component>
 
-    <component Cclass="Device" Cgroup="STM32Cube HAL" Csub="DAC" Cversion="1.1.0" condition="STM32F7 HAL DMA">
+    <component Cclass="Device" Cgroup="STM32Cube HAL" Csub="DAC" Cversion="1.1.2" condition="STM32F7 HAL DMA">
       <description>Digital-to-analog converter (DAC) HAL driver</description>
       <RTE_Components_h>
         #define RTE_DEVICE_HAL_DAC
@@ -1968,7 +2209,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </files>
     </component>
 
-    <component Cclass="Device" Cgroup="STM32Cube HAL" Csub="DCMI" Cversion="1.1.0" condition="STM32F7 HAL DMA">
+    <component Cclass="Device" Cgroup="STM32Cube HAL" Csub="DCMI" Cversion="1.1.2" condition="STM32F7 HAL DMA">
       <description>Digital camera interface (DCMI) HAL driver</description>
       <RTE_Components_h>
         #define RTE_DEVICE_HAL_DCMI
@@ -1979,7 +2220,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </files>
     </component>
 
-    <component Cclass="Device" Cgroup="STM32Cube HAL" Csub="DMA" Cversion="1.1.0" condition="STM32F7 HAL">
+    <component Cclass="Device" Cgroup="STM32Cube HAL" Csub="DMA" Cversion="1.1.2" condition="STM32F7 HAL">
       <description>DMA controller (DMA) HAL driver</description>
       <RTE_Components_h>
         #define RTE_DEVICE_HAL_DMA
@@ -1990,7 +2231,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </files>
     </component>
 
-    <component Cclass="Device" Cgroup="STM32Cube HAL" Csub="DMA2D" Cversion="1.1.0" condition="STM32F7 HAL">
+    <component Cclass="Device" Cgroup="STM32Cube HAL" Csub="DMA2D" Cversion="1.1.2" condition="STM32F7 HAL">
       <description>Chrom-Art Accelerator (DMA2D) HAL driver</description>
       <RTE_Components_h>
         #define RTE_DEVICE_HAL_DMA2D
@@ -2000,7 +2241,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </files>
     </component>
 
-    <component Cclass="Device" Cgroup="STM32Cube HAL" Csub="ETH" Cversion="1.1.0" condition="STM32F7 HAL">
+    <component Cclass="Device" Cgroup="STM32Cube HAL" Csub="ETH" Cversion="1.1.2" condition="STM32F7 HAL">
       <description>Ethernet MAC (ETH) HAL driver</description>
       <RTE_Components_h>
         #define RTE_DEVICE_HAL_ETH
@@ -2010,7 +2251,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </files>
     </component>
 
-    <component Cclass="Device" Cgroup="STM32Cube HAL" Csub="Flash" Cversion="1.1.0" condition="STM32F7 HAL">
+    <component Cclass="Device" Cgroup="STM32Cube HAL" Csub="Flash" Cversion="1.1.2" condition="STM32F7 HAL">
       <description>Embedded Flash memory HAL driver</description>
       <RTE_Components_h>
         #define RTE_DEVICE_HAL_FLASH
@@ -2021,7 +2262,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </files>
     </component>
 
-    <component Cclass="Device" Cgroup="STM32Cube HAL" Csub="GPIO" Cversion="1.1.0" condition="STM32F7 HAL">
+    <component Cclass="Device" Cgroup="STM32Cube HAL" Csub="GPIO" Cversion="1.1.2" condition="STM32F7 HAL">
       <description>General-purpose I/O (GPIO) HAL driver</description>
       <RTE_Components_h>
         #define RTE_DEVICE_HAL_GPIO
@@ -2031,7 +2272,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </files>
     </component>
 
-    <component Cclass="Device" Cgroup="STM32Cube HAL" Csub="HASH" Cversion="1.1.0" condition="STM32F756 HAL DMA">
+    <component Cclass="Device" Cgroup="STM32Cube HAL" Csub="HASH" Cversion="1.1.2" condition="STM32F756_777_779 HAL DMA">
       <description>Hash processor (HASH) HAL driver</description>
       <RTE_Components_h>
         #define RTE_DEVICE_HAL_HASH
@@ -2042,7 +2283,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </files>
     </component>
 
-    <component Cclass="Device" Cgroup="STM32Cube HAL" Csub="HCD" Cversion="1.1.0" condition="STM32F7 HAL">
+    <component Cclass="Device" Cgroup="STM32Cube HAL" Csub="HCD" Cversion="1.1.2" condition="STM32F7 HAL">
       <description>USB Host controller (HCD) HAL driver</description>
       <RTE_Components_h>
         #define RTE_DEVICE_HAL_HCD
@@ -2053,7 +2294,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </files>
     </component>
 
-    <component Cclass="Device" Cgroup="STM32Cube HAL" Csub="I2C" Cversion="1.1.0" condition="STM32F7 HAL DMA">
+    <component Cclass="Device" Cgroup="STM32Cube HAL" Csub="I2C" Cversion="1.1.2" condition="STM32F7 HAL DMA">
       <description>Inter-integrated circuit (I2C) interface HAL driver</description>
       <RTE_Components_h>
         #define RTE_DEVICE_HAL_I2C
@@ -2064,7 +2305,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </files>
     </component>
 
-    <component Cclass="Device" Cgroup="STM32Cube HAL" Csub="I2S" Cversion="1.1.0" condition="STM32F7 HAL DMA">
+    <component Cclass="Device" Cgroup="STM32Cube HAL" Csub="I2S" Cversion="1.1.2" condition="STM32F7 HAL DMA">
       <description>I2S HAL driver</description>
       <RTE_Components_h>
         #define RTE_DEVICE_HAL_I2S
@@ -2074,7 +2315,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </files>
     </component>
 
-    <component Cclass="Device" Cgroup="STM32Cube HAL" Csub="IRDA" Cversion="1.1.0" condition="STM32F7 HAL DMA">
+    <component Cclass="Device" Cgroup="STM32Cube HAL" Csub="IRDA" Cversion="1.1.2" condition="STM32F7 HAL DMA">
       <description>IrDA HAL driver</description>
       <RTE_Components_h>
         #define RTE_DEVICE_HAL_IRDA
@@ -2084,7 +2325,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </files>
     </component>
 
-    <component Cclass="Device" Cgroup="STM32Cube HAL" Csub="IWDG" Cversion="1.1.0" condition="STM32F7 HAL">
+    <component Cclass="Device" Cgroup="STM32Cube HAL" Csub="IWDG" Cversion="1.1.2" condition="STM32F7 HAL">
       <description>Independent watchdog (IWDG) HAL driver</description>
       <RTE_Components_h>
         #define RTE_DEVICE_HAL_IWDG
@@ -2094,7 +2335,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </files>
     </component>
 
-    <component Cclass="Device" Cgroup="STM32Cube HAL" Csub="LPTIM" Cversion="1.1.0" condition="STM32F7 HAL">
+    <component Cclass="Device" Cgroup="STM32Cube HAL" Csub="LPTIM" Cversion="1.1.2" condition="STM32F7 HAL">
       <description>Low-power timer (LPTIM) HAL driver</description>
       <RTE_Components_h>
         #define RTE_DEVICE_HAL_LPTIM
@@ -2104,7 +2345,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </files>
     </component>
 
-    <component Cclass="Device" Cgroup="STM32Cube HAL" Csub="LTDC" Cversion="1.1.0" condition="STM32F7x6_7x7_7x8_7x9 HAL">
+    <component Cclass="Device" Cgroup="STM32Cube HAL" Csub="LTDC" Cversion="1.1.2" condition="STM32F7x6_7x7_7x8_7x9 HAL">
       <description>LCD-TFT Controller (LTDC) HAL driver</description>
       <RTE_Components_h>
         #define RTE_DEVICE_HAL_LTDC
@@ -2115,7 +2356,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </files>
     </component>
 
-    <component Cclass="Device" Cgroup="STM32Cube HAL" Csub="NAND" Cversion="1.1.0" condition="STM32F7 HAL">
+    <component Cclass="Device" Cgroup="STM32Cube HAL" Csub="NAND" Cversion="1.1.2" condition="STM32F7 HAL">
       <description>NAND Flash controller HAL driver</description>
       <RTE_Components_h>
         #define RTE_DEVICE_HAL_NAND
@@ -2126,7 +2367,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </files>
     </component>
 
-    <component Cclass="Device" Cgroup="STM32Cube HAL" Csub="NOR" Cversion="1.1.0" condition="STM32F7 HAL">
+    <component Cclass="Device" Cgroup="STM32Cube HAL" Csub="NOR" Cversion="1.1.2" condition="STM32F7 HAL">
       <description>NOR Flash controller HAL driver</description>
       <RTE_Components_h>
         #define RTE_DEVICE_HAL_NOR
@@ -2137,7 +2378,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </files>
     </component>
 
-    <component Cclass="Device" Cgroup="STM32Cube HAL" Csub="PCD" Cversion="1.1.0" condition="STM32F7 HAL">
+    <component Cclass="Device" Cgroup="STM32Cube HAL" Csub="PCD" Cversion="1.1.2" condition="STM32F7 HAL">
       <description>USB Peripheral controller (PCD) HAL driver</description>
       <RTE_Components_h>
         #define RTE_DEVICE_HAL_PCD
@@ -2149,7 +2390,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </files>
     </component>
 
-    <component Cclass="Device" Cgroup="STM32Cube HAL" Csub="PWR" Cversion="1.1.0" condition="STM32F7 HAL">
+    <component Cclass="Device" Cgroup="STM32Cube HAL" Csub="PWR" Cversion="1.1.2" condition="STM32F7 HAL">
       <description>Power controller (PWR) HAL driver</description>
       <RTE_Components_h>
         #define RTE_DEVICE_HAL_PWR
@@ -2160,7 +2401,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </files>
     </component>
 
-    <component Cclass="Device" Cgroup="STM32Cube HAL" Csub="QSPI" Cversion="1.1.0" condition="STM32F7 HAL DMA">
+    <component Cclass="Device" Cgroup="STM32Cube HAL" Csub="QSPI" Cversion="1.1.2" condition="STM32F7 HAL DMA">
       <description>Quad Serial peripheral interface (QSPI) HAL driver</description>
       <RTE_Components_h>
         #define RTE_DEVICE_HAL_QSPI
@@ -2170,7 +2411,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </files>
     </component>
 
-    <component Cclass="Device" Cgroup="STM32Cube HAL" Csub="RCC" Cversion="1.1.0" condition="STM32F7 HAL GPIO">
+    <component Cclass="Device" Cgroup="STM32Cube HAL" Csub="RCC" Cversion="1.1.2" condition="STM32F7 HAL GPIO">
       <description>Reset and clock control (RCC) HAL driver</description>
       <RTE_Components_h>
         #define RTE_DEVICE_HAL_RCC
@@ -2181,7 +2422,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </files>
     </component>
 
-    <component Cclass="Device" Cgroup="STM32Cube HAL" Csub="RNG" Cversion="1.1.0" condition="STM32F7 HAL">
+    <component Cclass="Device" Cgroup="STM32Cube HAL" Csub="RNG" Cversion="1.1.2" condition="STM32F7 HAL">
       <description>Random number generator (RNG) HAL driver</description>
       <RTE_Components_h>
         #define RTE_DEVICE_HAL_RNG
@@ -2191,7 +2432,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </files>
     </component>
 
-    <component Cclass="Device" Cgroup="STM32Cube HAL" Csub="RTC" Cversion="1.1.0" condition="STM32F7 HAL">
+    <component Cclass="Device" Cgroup="STM32Cube HAL" Csub="RTC" Cversion="1.1.2" condition="STM32F7 HAL">
       <description>Real-time clock (RTC) HAL driver</description>
       <RTE_Components_h>
         #define RTE_DEVICE_HAL_RTC
@@ -2202,7 +2443,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </files>
     </component>
 
-    <component Cclass="Device" Cgroup="STM32Cube HAL" Csub="SAI" Cversion="1.1.0" condition="STM32F7 HAL DMA">
+    <component Cclass="Device" Cgroup="STM32Cube HAL" Csub="SAI" Cversion="1.1.2" condition="STM32F7 HAL DMA">
       <description>Serial audio interface (SAI) HAL driver</description>
       <RTE_Components_h>
         #define RTE_DEVICE_HAL_SAI
@@ -2213,7 +2454,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </files>
     </component>
 
-    <component Cclass="Device" Cgroup="STM32Cube HAL" Csub="SD" Cversion="1.1.0" condition="STM32F7 HAL DMA">
+    <component Cclass="Device" Cgroup="STM32Cube HAL" Csub="SD" Cversion="1.1.2" condition="STM32F7 HAL DMA">
       <description>Secure digital (SD) interface HAL driver</description>
       <RTE_Components_h>
         #define RTE_DEVICE_HAL_SD
@@ -2224,7 +2465,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </files>
     </component>
 
-    <component Cclass="Device" Cgroup="STM32Cube HAL" Csub="SDRAM" Cversion="1.1.0" condition="STM32F7 HAL DMA">
+    <component Cclass="Device" Cgroup="STM32Cube HAL" Csub="SDRAM" Cversion="1.1.2" condition="STM32F7 HAL DMA">
       <description>SDRAM controller (SDRAM) HAL driver</description>
       <RTE_Components_h>
         #define RTE_DEVICE_HAL_SDRAM
@@ -2235,7 +2476,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </files>
     </component>
 
-    <component Cclass="Device" Cgroup="STM32Cube HAL" Csub="Smartcard" Cversion="1.1.0" condition="STM32F7 HAL DMA">
+    <component Cclass="Device" Cgroup="STM32Cube HAL" Csub="Smartcard" Cversion="1.1.2" condition="STM32F7 HAL DMA">
       <description>Smartcard HAL driver</description>
       <RTE_Components_h>
         #define RTE_DEVICE_HAL_SMARTCARD
@@ -2246,7 +2487,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </files>
     </component>
 
-    <component Cclass="Device" Cgroup="STM32Cube HAL" Csub="SPDIFRX" Cversion="1.1.0" condition="STM32F7 HAL DMA">
+    <component Cclass="Device" Cgroup="STM32Cube HAL" Csub="SPDIFRX" Cversion="1.1.2" condition="STM32F7 HAL DMA">
       <description>SPDIF Receiver interface (SPDIFRX) HAL driver</description>
       <RTE_Components_h>
         #define RTE_DEVICE_HAL_SPDIFRX
@@ -2256,7 +2497,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </files>
     </component>
 
-    <component Cclass="Device" Cgroup="STM32Cube HAL" Csub="SPI" Cversion="1.1.0" condition="STM32F7 HAL DMA">
+    <component Cclass="Device" Cgroup="STM32Cube HAL" Csub="SPI" Cversion="1.1.2" condition="STM32F7 HAL DMA">
       <description>Serial peripheral interface (SPI) HAL driver</description>
       <RTE_Components_h>
         #define RTE_DEVICE_HAL_SPI
@@ -2266,7 +2507,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </files>
     </component>
 
-    <component Cclass="Device" Cgroup="STM32Cube HAL" Csub="SRAM" Cversion="1.1.0" condition="STM32F7 HAL DMA">
+    <component Cclass="Device" Cgroup="STM32Cube HAL" Csub="SRAM" Cversion="1.1.2" condition="STM32F7 HAL DMA">
       <description>SRAM controller (SRAM) HAL driver</description>
       <RTE_Components_h>
         #define RTE_DEVICE_HAL_SRAM
@@ -2277,7 +2518,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </files>
     </component>
 
-    <component Cclass="Device" Cgroup="STM32Cube HAL" Csub="TIM" Cversion="1.1.0" condition="STM32F7 HAL DMA">
+    <component Cclass="Device" Cgroup="STM32Cube HAL" Csub="TIM" Cversion="1.1.2" condition="STM32F7 HAL DMA">
       <description>Timers (TIM) HAL driver</description>
       <RTE_Components_h>
         #define RTE_DEVICE_HAL_TIM
@@ -2288,7 +2529,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </files>
     </component>
 
-    <component Cclass="Device" Cgroup="STM32Cube HAL" Csub="UART" Cversion="1.1.0" condition="STM32F7 HAL DMA">
+    <component Cclass="Device" Cgroup="STM32Cube HAL" Csub="UART" Cversion="1.1.2" condition="STM32F7 HAL DMA">
       <description>Universal asynchronous receiver transmitter (UART) HAL driver</description>
       <RTE_Components_h>
         #define RTE_DEVICE_HAL_UART
@@ -2298,7 +2539,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </files>
     </component>
 
-    <component Cclass="Device" Cgroup="STM32Cube HAL" Csub="USART" Cversion="1.1.0" condition="STM32F7 HAL DMA">
+    <component Cclass="Device" Cgroup="STM32Cube HAL" Csub="USART" Cversion="1.1.2" condition="STM32F7 HAL DMA">
       <description>Universal synchronous asynchronous receiver transmitter (USART) HAL driver</description>
       <RTE_Components_h>
         #define RTE_DEVICE_HAL_USART
@@ -2308,7 +2549,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </files>
     </component>
 
-    <component Cclass="Device" Cgroup="STM32Cube HAL" Csub="WWDG" Cversion="1.1.0" condition="STM32F7 HAL">
+    <component Cclass="Device" Cgroup="STM32Cube HAL" Csub="WWDG" Cversion="1.1.2" condition="STM32F7 HAL">
       <description>Window watchdog (WWDG) HAL driver</description>
       <RTE_Components_h>
         #define RTE_DEVICE_HAL_WWDG
@@ -2318,7 +2559,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </files>
     </component>
 
-    <component Cclass="Device" Cgroup="STM32Cube HAL" Csub="DFSDM" Cversion="1.1.0" condition="STM32F76x_77x HAL">
+    <component Cclass="Device" Cgroup="STM32Cube HAL" Csub="DFSDM" Cversion="1.1.2" condition="STM32F76x_77x HAL">
       <description>Digital Filter for Sigma-Delta Modulators (DFSDM) HAL driver</description>
       <RTE_Components_h>
         #define RTE_DEVICE_HAL_DFSDM
@@ -2328,7 +2569,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </files>
     </component>
 
-    <component Cclass="Device" Cgroup="STM32Cube HAL" Csub="DSI" Cversion="1.1.0" condition="STM32F7x9 HAL">
+    <component Cclass="Device" Cgroup="STM32Cube HAL" Csub="DSI" Cversion="1.1.2" condition="STM32F7x8_7x9 HAL">
       <description>Display Serial Interface (DSI) HAL driver</description>
       <RTE_Components_h>
         #define RTE_DEVICE_HAL_DSI
@@ -2338,7 +2579,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </files>
     </component>
 
-    <component Cclass="Device" Cgroup="STM32Cube HAL" Csub="JPEG" Cversion="1.1.0" condition="STM32F7x7_7x8_7x9 HAL">
+    <component Cclass="Device" Cgroup="STM32Cube HAL" Csub="JPEG" Cversion="1.1.2" condition="STM32F7x7_7x8_7x9 HAL">
       <description>JPEG encoder/decoder (JPEG) HAL driver</description>
       <RTE_Components_h>
         #define RTE_DEVICE_HAL_JPEG
@@ -2348,7 +2589,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </files>
     </component>
 
-    <component Cclass="Device" Cgroup="STM32Cube HAL" Csub="MDIOS" Cversion="1.1.0" condition="STM32F7 HAL">
+    <component Cclass="Device" Cgroup="STM32Cube HAL" Csub="MDIOS" Cversion="1.1.2" condition="STM32F7 HAL">
       <description>Management Data IO (MDIOS) HAL driver</description>
       <RTE_Components_h>
         #define RTE_DEVICE_HAL_JPEG
@@ -2360,18 +2601,19 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
 
     <!-- END: STMicroelectronics STM32CubeF7 HAL -->
 
-    <component Cclass="CMSIS Driver" Cgroup="CAN" Capiversion="1.0" Cversion="1.4" condition="STM32F7 CMSIS_Driver CAN">
+    <component Cclass="CMSIS Driver" Cgroup="CAN" Capiversion="1.0" Cversion="1.6" condition="STM32F7 CMSIS_Driver CAN">
       <description>CAN Driver for STM32F7 Series</description>
       <RTE_Components_h>  <!-- the following content goes into file 'RTE_Components.h' -->
         #define RTE_Drivers_CAN1                /* Driver CAN1 */
         #define RTE_Drivers_CAN2                /* Driver CAN2 */
+        #define RTE_Drivers_CAN3                /* Driver CAN3 */
       </RTE_Components_h>
       <files>
         <file category="source" name="CMSIS/Driver/CAN_STM32F7xx.c"/>
       </files>
     </component>
 
-    <component Cclass="CMSIS Driver" Cgroup="SPI" Capiversion="2.1"  Cversion="1.2" condition="STM32F7 CMSIS_Driver SPI">
+    <component Cclass="CMSIS Driver" Cgroup="SPI" Capiversion="2.1"  Cversion="1.3" condition="STM32F7 CMSIS_Driver SPI">
       <description>SPI Driver for STM32F7 Series</description>
       <RTE_Components_h>
         #define RTE_Drivers_SPI1                /* Driver SPI1 */
@@ -2386,7 +2628,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </files>
     </component>
 
-    <component Cclass="CMSIS Driver" Cgroup="USART" Capiversion="2.1" Cversion="1.7" condition="STM32F7 CMSIS_Driver USART">
+    <component Cclass="CMSIS Driver" Cgroup="USART" Capiversion="2.1" Cversion="1.8" condition="STM32F7 CMSIS_Driver USART">
       <description>USART Driver for STM32F7 Series</description>
       <RTE_Components_h>
         #define RTE_Drivers_USART1              /* Driver USART1 */
@@ -2416,10 +2658,11 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </files>
     </component>
 
-    <component Cclass="CMSIS Driver" Cgroup="MCI" Capiversion="2.2" Cversion="1.3" condition="STM32F7 CMSIS_Driver MCI">
+    <component Cclass="CMSIS Driver" Cgroup="MCI" Capiversion="2.2" Cversion="1.4" condition="STM32F7 CMSIS_Driver MCI">
       <description>MCI Driver for STM32F7 Series</description>
       <RTE_Components_h>
         #define RTE_Drivers_MCI0                /* Driver MCI0 */
+        #define RTE_Drivers_MCI1                /* Driver MCI1 */
       </RTE_Components_h>
       <files>
         <file category="source" name="CMSIS/Driver/MCI_STM32F7xx.c"/>
@@ -2447,7 +2690,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </files>
     </component>
 
-    <component Cclass="CMSIS Driver" Cgroup="USB Device" Csub="Full-speed" Capiversion="2.1" Cversion="1.5" condition="STM32F7 CMSIS_Driver USB">
+    <component Cclass="CMSIS Driver" Cgroup="USB Device" Csub="Full-speed" Capiversion="2.1" Cversion="1.6" condition="STM32F7 CMSIS_Driver USB">
       <description>USB Device Full-Speed Driver for STM32F7 Series</description>
       <RTE_Components_h>
         #define RTE_Drivers_USBD0               /* Driver USBD0 */
@@ -2458,7 +2701,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </files>
     </component>
 
-    <component Cclass="CMSIS Driver" Cgroup="USB Device" Csub="High-speed" Capiversion="2.1" Cversion="1.5" condition="STM32F7 CMSIS_Driver USB">
+    <component Cclass="CMSIS Driver" Cgroup="USB Device" Csub="High-speed" Capiversion="2.1" Cversion="1.6" condition="STM32F7 CMSIS_Driver USB">
       <description>USB Device High-Speed Driver for STM32F7 Series</description>
       <RTE_Components_h>
         #define RTE_Drivers_USBD1               /* Driver USBD1 */
@@ -2491,8 +2734,272 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </files>
     </component>
 
+    <!-- STM32F769I-Discovery Board -->
+    <bundle Cbundle="STM32F769I-Discovery" Cclass="Board Support" Cversion="1.1.0">
+      <description>STMicroelectronics STM32F769I-Discovery Kit</description>
+      <doc>MDK/Boards/ST/STM32F769I_Discovery/Documentation/DM00276557.pdf</doc>
+      <component Cgroup="Drivers" Csub="Basic I/O" condition="STM32F769I-Discovery BSP">
+        <description>LEDs, push-buttons and COM ports for STMicroelectronics STM32F769I-Discovery Kit</description>
+        <files>
+          <file category="header" name="Drivers/BSP/STM32F769I-Discovery/stm32f769i_discovery.h"/>
+          <file category="source" name="Drivers/BSP/STM32F769I-Discovery/stm32f769i_discovery.c"/>
+        </files>
+      </component>
+      <component Cgroup="Drivers" Csub="Audio" condition="STM32F769I-Discovery BSP Audio">
+        <description>Audio for STMicroelectronics STM32F769I-Discovery Kit</description>
+        <files>
+          <file category="header" name="Drivers/BSP/STM32F769I-Discovery/stm32f769i_discovery_audio.h"/>
+          <file category="source" name="Drivers/BSP/STM32F769I-Discovery/stm32f769i_discovery_audio.c"/>
+          <file category="source" name="Drivers/BSP/Components/wm8994/wm8994.c"/>
+        </files>
+      </component>
+      <component Cgroup="Drivers" Csub="EEPROM" condition="STM32F769I-Discovery BSP EEPROM">
+        <description>EERPOM for STMicroelectronics STM32F769I-Discovery Kit</description>
+        <files>
+          <file category="header" name="Drivers/BSP/STM32F769I-Discovery/stm32f769i_discovery_eeprom.h"/>
+          <file category="source" name="Drivers/BSP/STM32F769I-Discovery/stm32f769i_discovery_eeprom.c"/>
+        </files>
+      </component>
+      <component Cgroup="Drivers" Csub="LCD" condition="STM32F769I-Discovery BSP LCD">
+        <description>LCD for STMicroelectronics STM32F769I-Discovery Kit</description>
+        <files>
+          <file category="header" name="Drivers/BSP/STM32F769I-Discovery/stm32f769i_discovery_lcd.h"/>
+          <file category="source" name="Drivers/BSP/STM32F769I-Discovery/stm32f769i_discovery_lcd.c"/>
+          <file category="source" name="Drivers/BSP/Components/otm8009a/otm8009a.c"/>
+        </files>
+      </component>
+      <component Cgroup="Drivers" Csub="QSPI" condition="STM32F769I-Discovery BSP QSPI">
+        <description>QSPI Flash for STMicroelectronics STM32F769I-Discovery Kit</description>
+        <files>
+          <file category="header" name="Drivers/BSP/STM32F769I-Discovery/stm32f769i_discovery_qspi.h"/>
+          <file category="source" name="Drivers/BSP/STM32F769I-Discovery/stm32f769i_discovery_qspi.c"/>
+        </files>
+      </component>
+      <component Cgroup="Drivers" Csub="SD" condition="STM32F769I-Discovery BSP SD">
+        <description>uSD for STMicroelectronics STM32F769I-Discovery Kit</description>
+        <files>
+          <file category="header" name="Drivers/BSP/STM32F769I-Discovery/stm32f769i_discovery_sd.h"/>
+          <file category="source" name="Drivers/BSP/STM32F769I-Discovery/stm32f769i_discovery_sd.c"/>
+        </files>
+      </component>
+      <component Cgroup="Drivers" Csub="SDRAM" condition="STM32F769I-Discovery BSP SDRAM">
+        <description>SDRAM for STMicroelectronics STM32F769I-Discovery Kit</description>
+        <files>
+          <file category="header" name="Drivers/BSP/STM32F769I-Discovery/stm32f769i_discovery_sdram.h"/>
+          <file category="source" name="Drivers/BSP/STM32F769I-Discovery/stm32f769i_discovery_sdram.c"/>
+        </files>
+      </component>
+      <component Cgroup="Drivers" Csub="Touch Screen" condition="STM32F769I-Discovery BSP TS">
+        <description>Touch Screen for STMicroelectronics STM32F769I-Discovery Kit</description>
+        <files>
+          <file category="header" name="Drivers/BSP/STM32F769I-Discovery/stm32f769i_discovery_ts.h"/>
+          <file category="source" name="Drivers/BSP/STM32F769I-Discovery/stm32f769i_discovery_ts.c"/>
+          <file category="source" name="Drivers/BSP/Components/ft6x06/ft6x06.c"/>
+        </files>
+      </component>
+      <component Cgroup="LED" Capiversion="1.00" condition="STM32F7 HAL GPIO">
+        <description>LED Interface for STMicroelectronics STM32F769I-Discovery Kit</description>
+        <files>
+          <file category="source" name="MDK/Boards/ST/STM32F769I_Discovery/Common/LED_769I_Discovery.c"/>
+        </files>
+      </component>
+      <component Cgroup="Buttons" Capiversion="1.00" condition="STM32F7 HAL GPIO">
+        <description>Buttons Interface for STMicroelectronics STM32F769I-Discovery Kit</description>
+        <files>
+          <file category="source" name="MDK/Boards/ST/STM32F769I_Discovery/Common/Buttons_769I_Discovery.c"/>
+        </files>
+      </component>
+      <component Cgroup="Touchscreen" Capiversion="1.00" condition="STM32F769I-Discovery TS">
+        <description>Touchscreen Interface for STMicroelectronics STM32F769I-Discovery Kit</description>
+        <files>
+          <file category="source" name="MDK/Boards/ST/STM32F769I_Discovery/Common/Touch_769I_Discovery.c"/>
+        </files>
+      </component>
+      <component Cgroup="Graphic LCD" Capiversion="1.00" condition="STM32F769I-Discovery GLCD">
+        <description>Graphic LCD interface for STMicroelectronics STM32F769I-Discovery Kit</description>
+        <files>
+          <file category="header" name="MDK/Boards/ST/STM32F769I_Discovery/Common/GLCD_Config.h"/>
+          <file category="source" name="MDK/Boards/ST/STM32F769I_Discovery/Common/GLCD_Fonts.c"/>
+          <file category="source" name="MDK/Boards/ST/STM32F769I_Discovery/Common/GLCD_769I_Discovery.c"/>
+        </files>
+      </component>
+<!-- 
+      <component Cgroup="emWin LCD" Capiversion="1.1" Cvariant="RGB IF" condition="STM32F769I-Discovery LCD_RGB">
+        <description>emWin LCD RGB Interface for STMicroelectronics STM32F769I-Discovery Kit</description>
+        <files>
+          <file category="source" name="MDK/Boards/ST/STM32F769I_Discovery/Common/LCD_X.c"/>
+        </files>
+      </component>
+-->
+<!-- 
+      <component Cgroup="Audio" Capiversion="1.1" condition="STM32F7 CMSIS SAI and I2C Driver">
+        <description>Audio interface for WM8994</description>
+        <files>
+          <file category="source" name="MDK/Boards/ST/STM32F769I_Discovery/Common/Audio_746G_Discovery.c"/>
+        </files>
+      </component>
+-->
+    </bundle>
+
+    <!-- STM32F769I-EVAL Board -->
+    <bundle Cbundle="STM32F769I-EVAL" Cclass="Board Support" Cversion="1.1.0">
+      <description>STMicroelectronics STM32F769-EVAL Board</description>
+      <doc>MDK/Boards/ST/STM32F769I_EVAL/Documentation/DM00276567.pdf</doc>
+<!--
+      <component Cgroup="Documentation" condition="STM32F7">
+      <description>STM32F769I-EVAL BSP User Manual</description>
+      <files>
+        <file category="doc" name="Drivers/BSP/STM32F769I_EVAL/STM32F769I_EVAL_BSP_User_Manual.chm" />
+      </files>
+      </component>
+-->
+      <component Cgroup="Drivers" Csub="Basic I/O" condition="STM32F769I-EVAL BSP">
+        <description>LEDs, push-buttons and COM ports for STMicroelectronics STM32F769I-EVAL Board</description>
+        <files>
+          <file category="header" name="Drivers/BSP/STM32F769I_EVAL/stm32f769i_eval.h"/>
+          <file category="source" name="Drivers/BSP/STM32F769I_EVAL/stm32f769i_eval.c"/>
+        </files>
+      </component>
+      <component Cgroup="Drivers" Csub="Audio" condition="STM32F769I-EVAL BSP Audio">
+        <description>Audio for STMicroelectronics STM32F769I-EVAL Board</description>
+        <files>
+          <file category="header" name="Drivers/BSP/STM32F769I_EVAL/stm32f769i_eval_audio.h"/>
+          <file category="source" name="Drivers/BSP/STM32F769I_EVAL/stm32f769i_eval_audio.c"/>
+          <file category="source" name="Drivers/BSP/Components/wm8994/wm8994.c"/>
+        </files>
+      </component>
+      <component Cgroup="Drivers" Csub="Camera" condition="STM32F769I-EVAL BSP Camera">
+        <description>Camera for STMicroelectronics STM32F769I-EVAL Board</description>
+        <files>
+          <file category="header" name="Drivers/BSP/STM32F769I_EVAL/stm32f769i_eval_camera.h"/>
+          <file category="source" name="Drivers/BSP/STM32F769I_EVAL/stm32f769i_eval_camera.c"/>
+          <file category="source" name="Drivers/BSP/Components/s5k5cag/s5k5cag.c"/>
+        </files>
+      </component>
+      <component Cgroup="Drivers" Csub="EEPROM" condition="STM32F769I-EVAL BSP EEPROM">
+        <description>EERPOM for STMicroelectronics STM32F769I-EVAL Board</description>
+        <files>
+          <file category="header" name="Drivers/BSP/STM32F769I_EVAL/stm32f769i_eval_eeprom.h"/>
+          <file category="source" name="Drivers/BSP/STM32F769I_EVAL/stm32f769i_eval_eeprom.c"/>
+        </files>
+      </component>
+      <component Cgroup="Drivers" Csub="I/O" condition="STM32F769I-EVAL BSP IO">
+        <description>I/O for STMicroelectronics STM32F769I-EVAL Board</description>
+        <files>
+          <file category="header" name="Drivers/BSP/STM32F769I_EVAL/stm32f769i_eval_io.h"/>
+          <file category="source" name="Drivers/BSP/STM32F769I_EVAL/stm32f769i_eval_io.c"/>
+          <file category="source" name="Drivers/BSP/Components/mfxstm32l152/mfxstm32l152.c"/>
+        </files>
+      </component>
+      <component Cgroup="Drivers" Csub="LCD" condition="STM32F769I-EVAL BSP LCD">
+        <description>LCD for STMicroelectronics STM32F769I-EVAL Board</description>
+        <files>
+          <file category="header" name="Drivers/BSP/STM32F769I_EVAL/stm32f769i_eval_lcd.h"/>
+          <file category="source" name="Drivers/BSP/STM32F769I_EVAL/stm32f769i_eval_lcd.c"/>
+          <file category="source" name="Drivers/BSP/Components/otm8009a/otm8009a.c"/>
+        </files>
+      </component>
+      <component Cgroup="Drivers" Csub="NOR" condition="STM32F769I-EVAL BSP NOR">
+        <description>NOR Flash for STMicroelectronics STM32F769I-EVAL Board</description>
+        <files>
+          <file category="header" name="Drivers/BSP/STM32F769I_EVAL/stm32f769i_eval_nor.h"/>
+          <file category="source" name="Drivers/BSP/STM32F769I_EVAL/stm32f769i_eval_nor.c"/>
+        </files>
+      </component>
+      <component Cgroup="Drivers" Csub="QSPI" condition="STM32F769I-EVAL BSP QSPI">
+        <description>QSPI Flash for STMicroelectronics STM32F769I-EVAL Board</description>
+        <files>
+          <file category="header" name="Drivers/BSP/STM32F769I_EVAL/stm32f769i_eval_qspi.h"/>
+          <file category="source" name="Drivers/BSP/STM32F769I_EVAL/stm32f769i_eval_qspi.c"/>
+        </files>
+      </component>
+      <component Cgroup="Drivers" Csub="SD" condition="STM32F769I-EVAL BSP SD">
+        <description>uSD for STMicroelectronics STM32F769I-EVAL Board</description>
+        <files>
+          <file category="header" name="Drivers/BSP/STM32F769I_EVAL/stm32f769i_eval_sd.h"/>
+          <file category="source" name="Drivers/BSP/STM32F769I_EVAL/stm32f769i_eval_sd.c"/>
+        </files>
+      </component>
+      <component Cgroup="Drivers" Csub="SDRAM" condition="STM32F769I-EVAL BSP SDRAM">
+        <description>SDRAM for STMicroelectronics STM32F769I-EVAL Board</description>
+        <files>
+          <file category="header" name="Drivers/BSP/STM32F769I_EVAL/stm32f769i_eval_sdram.h"/>
+          <file category="source" name="Drivers/BSP/STM32F769I_EVAL/stm32f769i_eval_sdram.c"/>
+        </files>
+      </component>
+      <component Cgroup="Drivers" Csub="SRAM" condition="STM32F769I-EVAL BSP SRAM">
+        <description>SRAM for STMicroelectronics STM32F769I-EVAL Board</description>
+        <files>
+          <file category="header" name="Drivers/BSP/STM32F769I_EVAL/stm32f769i_eval_sram.h"/>
+          <file category="source" name="Drivers/BSP/STM32F769I_EVAL/stm32f769i_eval_sram.c"/>
+        </files>
+      </component>
+      <component Cgroup="Drivers" Csub="Touch Screen" condition="STM32F769I-EVAL BSP TS">
+        <description>Touch Screen for STMicroelectronics STM32F769I-EVAL Board</description>
+        <files>
+          <file category="header" name="Drivers/BSP/STM32F769I_EVAL/stm32f769i_eval_ts.h"/>
+          <file category="source" name="Drivers/BSP/STM32F769I_EVAL/stm32f769i_eval_ts.c"/>
+          <file category="source" name="Drivers/BSP/Components/ft6x06/ft6x06.c"/>
+        </files>
+      </component>
+      <component Cgroup="LED" Capiversion="1.00" condition="STM32F7 HAL GPIO">
+        <description>LED Interface for STMicroelectronics STM32F769I-EVAL Board</description>
+        <files>
+          <file category="source" name="MDK/Boards/ST/STM32F769I_EVAL/Common/LED_769I_EVAL.c"/>
+        </files>
+      </component>
+      <component Cgroup="Buttons" Capiversion="1.00" condition="STM32F7 HAL GPIO">
+        <description>Buttons Interface for STMicroelectronics STM32F769I-EVAL Board</description>
+        <files>
+          <file category="source" name="MDK/Boards/ST/STM32F769I_EVAL/Common/Buttons_769I_EVAL.c"/>
+        </files>
+      </component>
+      <component Cgroup="A/D Converter" Capiversion="1.00" condition="STM32F7 HAL GPIO ADC">
+        <description>A/D Converter Interface for STMicroelectronics STM32F769I-EVAL Board</description>
+        <files>
+          <file category="source" name="MDK/Boards/ST/STM32F769I_EVAL/Common/ADC_769I_EVAL.c"/>
+        </files>
+      </component>
+      <component Cgroup="Joystick" Capiversion="1.00" condition="STM32F769I-EVAL Joystick">
+        <description>Joystick Interface for STMicroelectronics STM32F769I-EVAL Board</description>
+        <files>
+          <file category="source" name="MDK/Boards/ST/STM32F769I_EVAL/Common/Joystick_769I_EVAL.c"/>
+        </files>
+      </component>
+      <component Cgroup="Touchscreen" Capiversion="1.00" condition="STM32F769I-EVAL TS">
+        <description>Touchscreen Interface for STMicroelectronics STM32F769I-EVAL Board</description>
+        <files>
+          <file category="source" name="MDK/Boards/ST/STM32F769I_EVAL/Common/Touch_769I_EVAL.c"/>
+        </files>
+      </component>
+      <component Cgroup="Graphic LCD" Capiversion="1.00" condition="STM32F769I-EVAL GLCD">
+        <description>Graphic LCD interface for STMicroelectronics STM32F769I-EVAL Board</description>
+        <files>
+          <file category="header" name="MDK/Boards/ST/STM32F769I_EVAL/Common/GLCD_Config.h"/>
+          <file category="source" name="MDK/Boards/ST/STM32F769I_EVAL/Common/GLCD_Fonts.c"/>
+          <file category="source" name="MDK/Boards/ST/STM32F769I_EVAL/Common/GLCD_769I_EVAL.c"/>
+        </files>
+      </component>
+<!--
+      <component Cgroup="emWin LCD" Capiversion="1.1" Cvariant="RGB IF" condition="STM32F769I-EVAL LCD_RGB">
+        <description>emWin LCD RGB Interface for STMicroelectronics STM32F769I-EVAL Board</description>
+        <files>
+          <file category="source" name="MDK/Boards/ST/STM32F769I_EVAL/Common/LCD_X.c"/>
+        </files>
+      </component>
+-->
+<!--
+      <component Cgroup="Audio" Capiversion="1.1" condition="STM32F7 CMSIS SAI and I2C Driver">
+        <description>Audio interface for WM8994</description>
+        <files>
+          <file category="source" name="MDK/Boards/ST/STM32F769I_EVAL/Common/Audio_769I_EVAL.c"/>
+        </files>
+      </component>
+-->
+    </bundle>
+
     <!-- STM32F746G-Discovery Board -->
-    <bundle Cbundle="STM32F746G-Discovery" Cclass="Board Support" Cversion="1.0.0">
+    <bundle Cbundle="STM32F746G-Discovery" Cclass="Board Support" Cversion="1.1.1">
       <description>STMicroelectronics STM32F746G-Discovery Kit</description>
       <doc>MDK/Boards/ST/STM32F746G_Discovery/Documentation/DM00190424.pdf</doc>
 <!--
@@ -2610,7 +3117,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
     </bundle>
 
     <!-- STM32756G-EVAL Board -->
-    <bundle Cbundle="STM32756G-EVAL" Cclass="Board Support" Cversion="1.0.0">
+    <bundle Cbundle="STM32756G-EVAL" Cclass="Board Support" Cversion="1.1.0">
       <description>STMicroelectronics STM32756G-EVAL Board</description>
       <doc>MDK/Boards/ST/STM32756G_EVAL/Documentation/DM00188617.pdf</doc>
 <!--
@@ -2770,6 +3277,22 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </component>
     </bundle>
 
+<!--
+    <component Cclass="Graphics Display" Cgroup="STM32F769I-Discovery" Cvariant="RGB IF" Cversion="1.0.0" condition="STM32F7 HAL LTDC DMA2D Graphics LCD_RGB">
+      <description>LCD Configuration for STM32F769I-Discovery LCD</description>
+      <files>
+          <file category="source" name="MDK/Boards/ST/STM32F769I_Discovery/Common/LCDConf.c" attr="config" version="1.0.0"/>
+      </files>
+    </component>
+ -->
+<!--
+    <component Cclass="Graphics Display" Cgroup="STM32F769I-EVAL" Cvariant="RGB IF" Cversion="1.0.0" condition="STM32F7 HAL LTDC DMA2D Graphics LCD_RGB">
+      <description>LCD Configuration for STM32F769I-EVAL LCD</description>
+      <files>
+          <file category="source" name="MDK/Boards/ST/STM32F769I_EVAL/Common/LCDConf.c" attr="config" version="1.0.0"/>
+      </files>
+    </component>
+ -->
     <component Cclass="Graphics Display" Cgroup="STM32F746G-Discovery" Cvariant="RGB IF" Cversion="1.0.0" condition="STM32F7 HAL LTDC DMA2D Graphics LCD_RGB">
       <description>LCD Configuration for STM32F746G-Discovery LCD</description>
       <files>
@@ -2785,17 +3308,106 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
   </components>
 
   <boards>
-    <board vendor="STMicroelectronics" name="STM32F746G-Discovery" revision="Rev.1" salesContact="http://www.st.com/stonline/contactus/contacts/index.php" orderForm="https://my.st.com/esample/app?page=basket&amp;pn=STM32F746G_Discovery">
+    <!-- STM32F769I-Discovery -->
+    <board vendor="STMicroelectronics" name="STM32F769I-Discovery" revision="Rev.1" salesContact="http://www.st.com/stonline/contactus/contacts/index.php">
+      <description>STMicroelectronics STM32F769I-Discovery Board Support and Examples</description>
+      <image small="MDK/Boards/ST/STM32F769I_Discovery/Documentation/stm32f769i-disco_small.jpg"
+             large="MDK/Boards/ST/STM32F769I_Discovery/Documentation/stm32f769i-disco_large.jpg"/>
+      <book category="overview"  name="http://www.st.com/en/evaluation-tools/32f769idiscovery.html" title="STM32F769I_Discovery Web Page"/>
+      <!--book category="setup"     name="Documentation/32F746GDISCOVERY_QSG.pdf" title="STM32F746G-Discovery Quick Start Guide"/-->
+      <!--book category="manual"     name="Drivers/BSP/STM32F769I-Discovery/STM32F769I-Discovery_BSP_User_Manual.chm" title="BSP User Manual"/-->
+      <!--book category="setup"      name="MDK/Boards/ST/STM32F746G_Discovery/Documentation/DM00092826.pdf" title="Getting Started"/> -->
+      <book category="schematic" name="MDK/Boards/ST/STM32F769I_Discovery/Documentation/stm32f769i-disco_sch.zip" title="Schematics"/>
+      <book category="manual"    name="MDK/Boards/ST/STM32F769I_Discovery/Documentation/DM00276557.pdf" title="User Manual"/>
+      <book category="other"     name="MDK/Boards/ST/STM32F769I_Discovery/Documentation/stm32f769i-disco_gerber.zip" title="Gerber Files"/>
+      <book category="other"     name="MDK/Boards/ST/STM32F769I_Discovery/Documentation/stm32f769i-disco_bom.zip" title="Bill of Materials"/>
+      <mountedDevice    deviceIndex="0" Dvendor="STMicroelectronics:13" Dname="STM32F769NIHx"/>
+      <compatibleDevice deviceIndex="0" Dvendor="STMicroelectronics:13" DsubFamily="STM32F769"/>
+      <feature type="ODbg"      n="1"                name="On-board ST-LINK/V2"/>
+      <feature type="XTAL"      n="25000000"/>
+      <feature type="RAM"       n="1"                name="128-Mbit SDRAM (64 Mbits accessible)"/>
+      <feature type="ROM"       n="1"                name="512-Mbit Quad-SPI Flash memory"/>
+      <feature type="MemCard"   n="1"                name="microSD card holder"/>
+      <feature type="PWR"       n="5"                name="USB Powered"/>
+      <feature type="PWR"       n="3"  m="5"         name="External Supply"/>
+      <feature type="USB"       n="1"                name="USB OTG HS with micro-AB Connector"/>
+      <feature type="ETH"       n="1"  m="100000000" name="RJ54 Jack"/>
+      <feature type="I2C"       n="1"                name="I2C extension connector"/>
+      <feature type="Button"    n="2"                name="Push-buttons: User and Reset"/>
+      <feature type="LineIn"    n="1"/>
+      <feature type="LineOut"   n="1"/>
+      <feature type="MIC"       n="4"                name="ST MEMS microphones"/>
+      <feature type="ConnOther" n="1"                name="SPDIF RCA input connector"/>
+      <feature type="ConnOther" n="1"                name="SPDIF RCA output connector"/>
+      <feature type="Speaker"   n="1"                name="Stereo speaker outputs"/>
+      <feature type="GLCD"      n="1" m="800.480"    name="Color TFT LCD with capacitive touch screen"/>
+      <feature type="CustomFF"  n="80" m="130"       name="Discovery Board Formfactor"/>
+      <feature type="ArduinoFF" n="1"                name="Arduino Uno 3V connectors"/>
+      <debugInterface adapter="ST-Link" connector="Mini-USB"/>
+    </board>
+
+    <!-- STM32F769I-EVAL -->
+    <board vendor="STMicroelectronics" name="STM32F769I-EVAL" revision="Rev.A" salesContact="http://www.st.com/stonline/contactus/contacts/index.php">
+      <description>STMicroelectronics STM32F769I-EVAL Evaluation Board Support and Examples</description>
+      <image small="MDK/Boards/ST/STM32F769I_EVAL/Documentation/stm32f769i-eval_small.jpg"
+             large="MDK/Boards/ST/STM32F769I_EVAL/Documentation/stm32f769i-eval_large.jpg"/>
+      <book category="overview"  name="http://www.st.com/en/evaluation-tools/stm32f769i-eval.html" title="STM32F769I_EVAL Evaluation Board Web Page"/>
+      <!--book category="manual"  name="Drivers/BSP/STM32F769I_EVAL/STM32F769I_EVAL_BSP_User_Manual.chm" title="BSP User Manual"/-->
+      <book category="manual"    name="MDK/Boards/ST/STM32F769I_EVAL/Documentation/DM00276567.pdf" title="User Manual"/>
+      <book category="schematic" name="MDK/Boards/ST/STM32F769I_EVAL/Documentation/stm32f7x9i-eval_sch.zip" title="Schematics"/>
+      <book category="other"     name="MDK/Boards/ST/STM32F769I_EVAL/Documentation/stm32f7x9i-eval_gerber.zip" title="Gerber Files"/>
+      <book category="other"     name="MDK/Boards/ST/STM32F769I_EVAL/Documentation/stm32f7x9i-eval_bom.zip" title="Bill of Materials"/>
+      <mountedDevice    deviceIndex="0" Dvendor="STMicroelectronics:13" Dname="STM32F769NIHx"/>
+      <compatibleDevice deviceIndex="0" Dvendor="STMicroelectronics:13" DsubFamily="STM32F769"/>
+      <compatibleDevice deviceIndex="0" Dvendor="STMicroelectronics:13" DsubFamily="STM32F779"/>
+      <feature type="ODbg"      n="1"              name="On-board ST-LINK/V2"/>
+      <feature type="RAM"       n="1"              name="8M x 32-bit SDRAM"/>
+      <feature type="RAM"       n="1"              name="1M x 16-bit SRAM"/>
+      <feature type="ROM"       n="1"              name="8M x 16-bit Nor Flash"/>
+      <feature type="ROM"       n="1"              name="512-Mbit Quad-SPI NOR Flash"/>
+      <feature type="USB"       n="1"              name="High-Speed USB with micro-AB Connector"/>
+      <feature type="USB"       n="2"              name="Full-Speed USB with micro-AB Connector"/>
+      <feature type="Joystick"  n="1"              name="5-position Joystick"/>
+      <feature type="Camera"    n="1"/>
+      <feature type="Button"    n="2"              name="Push-Buttons for Reset, Wakeup/Tamper or Key"/>
+      <feature type="LED"       n="4"              name="4 color user LEDs"/>
+      <feature type="GLCD"      n="1"  m="800.480" name="4-inch 800x480 TFT color LCD with capacitive touch panel"/>
+      <feature type="Poti"      n="1"              name="Analog Voltage Control for ADC Input (potentiometer)"/>
+      <feature type="LineIn"    n="1"              name="Audio CODEC with Stereo Line-In/Out and Speaker/Microphone"/>
+      <feature type="LineOut"   n="1"              name="Audio CODEC with Stereo Line-In/Out and Speaker/Microphone"/>
+      <feature type="MIC"       n="2"              name="ST MEMS microphones"/>
+      <feature type="Speaker"   n="2"/>
+      <feature type="Other"     n="1"              name="Digital Stereo Microphone"/>
+      <feature type="CAN"       n="1"/>
+      <feature type="RS232"     n="1"/>
+      <feature type="I2C"       n="4"/>
+      <feature type="ETH"       n="1"              name="10/100 Ethernet Port"/>
+      <feature type="XTAL"      n="25000000"/>
+      <feature type="PWR"       n="5"              name="USB Powered"/>
+      <feature type="PWR"       n="3"  m="5"       name="External Supply"/>
+      <feature type="MemCard"   n="1"              name="SDIO interface microSD card"/>
+      <feature type="DIO"       n="34"             name="Motor Control Connector"/>
+      <feature type="DIO"       n="60"             name="Daughterboard Extension header 1"/>
+      <feature type="DIO"       n="60"             name="Daughterboard Extension header 2"/>
+      <feature type="ConnOther" n="1"              name="Motor control connector"/>
+      <debugInterface adapter="ST-Link" connector="Mini-USB"/>
+      <debugInterface adapter="JTAG/SW" connector="20 pin JTAG (0.1 inch connector)"/>
+      <debugInterface adapter="JTAG/SW" connector="20-pin Cortex debug + ETM Trace (0.05 inch connector)"/>
+    </board>
+
+    <!-- STM32F746G-Discovery -->
+    <board vendor="STMicroelectronics" name="STM32F746G-Discovery" revision="Rev.1" salesContact="http://www.st.com/stonline/contactus/contacts/index.php">
       <description>STMicroelectronics STM32F746G-Discovery Board Support and Examples</description>
-      <image small="MDK/Boards/ST/STM32F746G_Discovery/Documentation/stm32f746g-disco_small.jpg" large="MDK/Boards/ST/STM32F746G_Discovery/Documentation/stm32f746g-disco_large.jpg"/>
-      <book category="setup"     name="Documentation/32F746GDISCOVERY_QSG.pdf" title="STM32F746G-Discovery Quick Start Guide"/>
-      <book category="overview"  name="http://www.st.com/web/catalog/tools/FM116/SC959/SS1532/LN1848/PF261641" title="STM32F746G_Discovery Web Page"/>
-      <book category="manual"     name="Drivers/BSP/STM32746G-Discovery/STM32746G-Discovery_BSP_User_Manual.chm" title="BSP User Manual"/>
-      <!-- <book category="setup"     name="MDK/Boards/ST/STM32F746G_Discovery/Documentation/DM00092826.pdf" title="Getting Started"/> -->
-      <book category="schematic" name="MDK/Boards/ST/STM32F746G_Discovery/Documentation/stm32f746g-disco_sch.zip" title="Schematics"/>
-      <book category="manual"    name="MDK/Boards/ST/STM32F746G_Discovery/Documentation/DM00190424.pdf" title="User Manual"/>
+      <image small="MDK/Boards/ST/STM32F746G_Discovery/Documentation/stm32f746g-disco_small.jpg"
+             large="MDK/Boards/ST/STM32F746G_Discovery/Documentation/stm32f746g-disco_large.jpg"/>
+      <book category="overview"  name="http://www.st.com/en/evaluation-tools/32f746gdiscovery.html" title="STM32F746G_Discovery Web Page"/>
+      <book category="manual"    name="Drivers/BSP/STM32746G-Discovery/STM32746G-Discovery_BSP_User_Manual.chm" title="BSP User Manual"/>
+      <!--book category="setup"     name="MDK/Boards/ST/STM32F746G_Discovery/Documentation/DM00092826.pdf" title="Getting Started"/-->
+      <book category="setup"     name="MDK/Boards/ST/STM32F746G_Discovery/Documentation/32F746GDISCOVERY_QSG.pdf"    title="STM32F746G-Discovery Quick Start Guide"/>
+      <book category="schematic" name="MDK/Boards/ST/STM32F746G_Discovery/Documentation/stm32f746g-disco_sch.zip"    title="Schematics"/>
+      <book category="manual"    name="MDK/Boards/ST/STM32F746G_Discovery/Documentation/DM00190424.pdf"              title="User Manual"/>
       <book category="other"     name="MDK/Boards/ST/STM32F746G_Discovery/Documentation/stm32f746g-disco_gerber.zip" title="Gerber Files"/>
-      <book category="other"     name="MDK/Boards/ST/STM32F746G_Discovery/Documentation/stm32f746g-disco_bom.zip" title="Bill of Materials"/>
+      <book category="other"     name="MDK/Boards/ST/STM32F746G_Discovery/Documentation/stm32f746g-disco_bom.zip"    title="Bill of Materials"/>
       <mountedDevice    deviceIndex="0" Dvendor="STMicroelectronics:13" Dname="STM32F746NGHx"/>
       <compatibleDevice deviceIndex="0" Dvendor="STMicroelectronics:13" DsubFamily="STM32F746"/>
       <feature type="ODbg"      n="1"                name="On-board ST-LINK/V2"/>
@@ -2820,18 +3432,19 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       <feature type="Camera"    n="1"/>
       <debugInterface adapter="ST-Link" connector="Mini-USB"/>
     </board>
+
     <!-- STM32756G-EVAL -->
-    <board vendor="STMicroelectronics" name="STM32756G-EVAL" revision="Rev.B" salesContact="http://www.st.com/stonline/contactus/contacts/index.php" orderForm="https://my.st.com/esample/app?page=basket&amp;pn=STM32756G-EVAL2">
+    <board vendor="STMicroelectronics" name="STM32756G-EVAL" revision="Rev.B" salesContact="http://www.st.com/stonline/contactus/contacts/index.php">
       <description>STMicroelectronics STM32756G-EVAL Evaluation Board Support and Examples</description>
       <image small="MDK/Boards/ST/STM32756G_EVAL/Documentation/stm327x6g-eval_small.jpg" large="MDK/Boards/ST/STM32756G_EVAL/Documentation/stm327x6g-eval_large.jpg"/>
       <book category="overview"  name="http://www.st.com/web/catalog/tools/FM116/SC959/SS1532/LN1199/PF261640" title="STM32756G_EVAL Evaluation Board Web Page"/>
-      <book category="setup"     name="Documentation/STM32F756G-EVAL_QSG.pdf" title="STM32F756G-Eval Quick Start Guide"/>
-      <book category="manual"     name="Drivers/BSP/STM32756G_EVAL/STM32756G_EVAL_BSP_User_Manual.chm" title="BSP User Manual"/>
-      <!-- <book category="setup"     name="MDK/Boards/ST/STM32756G_EVAL/Documentation/DM00092826.pdf" title="Getting Started"/> -->
-      <book category="schematic" name="MDK/Boards/ST/STM32756G_EVAL/Documentation/stm327x6g-eval_sch.zip" title="Schematics"/>
-      <book category="manual"    name="MDK/Boards/ST/STM32756G_EVAL/Documentation/DM00188617.pdf" title="User Manual"/>
+      <book category="manual"    name="Drivers/BSP/STM32756G_EVAL/STM32756G_EVAL_BSP_User_Manual.chm" title="BSP User Manual"/>
+      <!--book category="setup"     name="MDK/Boards/ST/STM32756G_EVAL/Documentation/DM00092826.pdf" title="Getting Started"/-->
+      <book category="setup"     name="MDK/Boards/ST/STM32756G_EVAL/Documentation/STM32F756G-EVAL_QSG.pdf"   title="STM32F756G-Eval Quick Start Guide"/>
+      <book category="schematic" name="MDK/Boards/ST/STM32756G_EVAL/Documentation/stm327x6g-eval_sch.zip"    title="Schematics"/>
+      <book category="manual"    name="MDK/Boards/ST/STM32756G_EVAL/Documentation/DM00188617.pdf"            title="User Manual"/>
       <book category="other"     name="MDK/Boards/ST/STM32756G_EVAL/Documentation/stm327x6g-eval_gerber.zip" title="Gerber Files"/>
-      <book category="other"     name="MDK/Boards/ST/STM32756G_EVAL/Documentation/stm327x6g-eval_bom.zip" title="Bill of Materials"/>
+      <book category="other"     name="MDK/Boards/ST/STM32756G_EVAL/Documentation/stm327x6g-eval_bom.zip"    title="Bill of Materials"/>
       <mountedDevice    deviceIndex="0" Dvendor="STMicroelectronics:13" Dname="STM32F756NGHx"/>
       <compatibleDevice deviceIndex="0" Dvendor="STMicroelectronics:13" DsubFamily="STM32F756"/>
       <compatibleDevice deviceIndex="0" Dvendor="STMicroelectronics:13" DsubFamily="STM32F746"/>
@@ -2869,6 +3482,530 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
   </boards>
 
   <examples>
+    <!-- STM32F769I-Discovery Board -->
+    <example name="CMSIS-RTOS Blinky" doc="Abstract.txt" folder="MDK/Boards/ST/STM32F769I_Discovery/Blinky">
+      <description>CMSIS-RTOS based Blinky example</description>
+      <board name="STM32F769I-Discovery" vendor="STMicroelectronics"/>
+      <project>
+        <environment name="uv" load="Blinky.uvprojx"/>
+      </project>
+      <attributes>
+        <component Cclass="CMSIS" Cgroup="CORE"/>
+        <component Cclass="Device" Cgroup="Startup"/>
+        <component Cclass="CMSIS" Cgroup="RTOS"/>
+        <category>Getting Started</category>
+        <category>CMSIS-RTX</category>
+      </attributes>
+    </example>
+
+
+    <example name="CMSIS-RTOS Blinky with STM32CubeMX" doc="Abstract.txt" folder="MDK/Boards/ST/STM32F769I_Discovery/CubeMX/Blinky">
+      <description>CMSIS-RTOS based Blinky example configured with STM32CubeMX</description>
+      <board name="STM32F769I-Discovery" vendor="STMicroelectronics"/>
+      <project>
+        <environment name="uv" load="Blinky.uvprojx"/>
+      </project>
+      <attributes>
+        <component Cclass="CMSIS" Cgroup="CORE"/>
+        <component Cclass="Device" Cgroup="Startup"/>
+        <component Cclass="CMSIS" Cgroup="RTOS"/>
+        <category>Getting Started</category>
+        <category>CMSIS-RTX</category>
+      </attributes>
+    </example>
+<!--
+    <example name="emWin Example" doc="Abstract.txt" folder="MDK/Boards/ST/STM32F769I_Discovery/emWin/Example">
+      <description>emWin Graphics simple example</description>
+      <board name="STM32F769I-Discovery" vendor="STMicroelectronics"/>
+      <project>
+        <environment name="uv" load="Example.uvprojx"/>
+      </project>
+      <attributes>
+        <component Cclass="Graphics" Cgroup="CORE"/>
+        <category>Middleware</category>
+        <category>Graphics</category>
+        <keyword>emWin</keyword>
+      </attributes>
+    </example>
+ -->
+<!--
+    <example name="emWin GUI Demo" doc="Abstract.txt" folder="MDK/Boards/ST/STM32F769I_Discovery/emWin/GUIDemo">
+      <description>emWin Graphics Demo example</description>
+      <board name="STM32F769I-Discovery" vendor="STMicroelectronics"/>
+      <project>
+        <environment name="uv" load="GUIDemo.uvprojx"/>
+      </project>
+      <attributes>
+        <component Cclass="Graphics" Cgroup="CORE"/>
+        <category>Middleware</category>
+        <category>Graphics</category>
+        <keyword>emWin</keyword>
+      </attributes>
+    </example>
+ -->
+<!--
+    <example name="emWin VNC Server with STM32CubeMX" doc="Abstract.txt" folder="MDK/Boards/ST/STM32F769I_Discovery/CubeMX/emWin/GUI_VNC">
+      <description>emWin VNC Server example configured with STM32CubeMX</description>
+      <board name="STM32F769I-Discovery" vendor="STMicroelectronics"/>
+      <project>
+        <environment name="uv" load="GUI_VNC.uvprojx"/>
+      </project>
+      <attributes>
+        <component Cclass="Graphics" Cgroup="CORE"/>
+        <category>Middleware</category>
+        <category>Graphics</category>
+        <keyword>emWin</keyword>
+      </attributes>
+    </example>
+ -->
+<!--
+    <example name="USB Device Audio" doc="Abstract.txt" folder="MDK/Boards/ST/STM32F769I_Discovery/Middleware/USB/Device/Audio">
+      <description>USB Audio Device demonstrating USB Headphone</description>
+      <board name="STM32F769I-Discovery" vendor="STMicroelectronics"/>
+      <project>
+        <environment name="uv" load="Audio.uvprojx"/>
+      </project>
+      <attributes>
+        <component Cclass="USB" Cgroup="Device" Csub="Audio"/>
+        <category>Middleware</category>
+        <category>USB Device</category>
+        <keyword>Audio</keyword>
+      </attributes>
+    </example>
+ -->
+    <example name="USB Device HID" doc="Abstract.txt" folder="MDK/Boards/ST/STM32F769I_Discovery/Middleware/USB/Device/HID">
+      <description>USB Human Interface Device providing access from PC to board LEDs and push buttons</description>
+      <board name="STM32F769I-Discovery" vendor="STMicroelectronics"/>
+      <project>
+        <environment name="uv" load="HID.uvprojx"/>
+      </project>
+      <attributes>
+        <component Cclass="USB" Cgroup="Device" Csub="HID"/>
+        <category>Middleware</category>
+        <category>USB Device</category>
+        <keyword>HID</keyword>
+      </attributes>
+    </example>
+    <example name="USB Device Mass Storage" doc="Abstract.txt" folder="MDK/Boards/ST/STM32F769I_Discovery/Middleware/USB/Device/MassStorage">
+      <description>USB Mass Storage Device using RAM as storage media</description>
+      <board name="STM32F769I-Discovery" vendor="STMicroelectronics"/>
+      <project>
+        <environment name="uv" load="MassStorage.uvprojx"/>
+      </project>
+      <attributes>
+        <component Cclass="USB" Cgroup="Device" Csub="MSC"/>
+        <category>Middleware</category>
+        <category>USB Device</category>
+        <keyword>Memory Disk</keyword>
+      </attributes>
+    </example>
+    <example name="USB Device Virtual COM" doc="Abstract.txt" folder="MDK/Boards/ST/STM32F769I_Discovery/Middleware/USB/Device/VirtualCOM">
+      <description>Bridge between PC USB Virtual COM Port and UART port</description>
+      <board name="STM32F769I-Discovery" vendor="STMicroelectronics"/>
+      <project>
+        <environment name="uv" load="VirtualCOM.uvprojx"/>
+      </project>
+      <attributes>
+        <component Cclass="USB" Cgroup="Device" Csub="CDC"/>
+        <category>Middleware</category>
+        <category>USB Device</category>
+        <keyword>Virtual COM</keyword>
+      </attributes>
+    </example>
+    <example name="USB Host Mass Storage" doc="Abstract.txt" folder="MDK/Boards/ST/STM32F769I_Discovery/Middleware/USB/Host/MassStorage">
+      <description>USB Host file manipulation example: create, read, copy, delete files from USB Mass Storage Device and format the storage device</description>
+      <board name="STM32F769I-Discovery" vendor="STMicroelectronics"/>
+      <project>
+        <environment name="uv" load="MassStorage.uvprojx"/>
+      </project>
+      <attributes>
+        <component Cclass="USB" Cgroup="Host" Csub="MSC"/>
+        <category>Middleware</category>
+        <category>USB Host</category>
+        <keyword>Mass Storage</keyword>
+      </attributes>
+    </example>
+    <example name="USB Host Keyboard" doc="Abstract.txt" folder="MDK/Boards/ST/STM32F769I_Discovery/Middleware/USB/Host/Keyboard">
+      <description>Measure example using USB HID Keyboard as input device</description>
+      <board name="STM32F769I-Discovery" vendor="STMicroelectronics"/>
+      <project>
+        <environment name="uv" load="Keyboard.uvprojx"/>
+      </project>
+      <attributes>
+        <component Cclass="USB" Cgroup="Host" Csub="HID"/>
+        <category>Middleware</category>
+        <category>USB Host</category>
+        <keyword>Keyboard</keyword>
+      </attributes>
+    </example>
+    <example name="File System Demo" doc="Abstract.txt" folder="MDK/Boards/ST/STM32F769I_Discovery/Middleware/FileSystem/File_Demo">
+      <description>File manipulation example: create, read, copy, delete files on any enabled drive (SD/MMC Card, NOR/NAND Flash, RAM) and format each drive</description>
+      <board name="STM32F769I-Discovery" vendor="STMicroelectronics"/>
+      <project>
+        <environment name="uv" load="File_Demo.uvprojx"/>
+      </project>
+      <attributes>
+        <component Cclass="File System" Cgroup="Drive"/>
+        <category>Middleware</category>
+        <category>File System</category>
+        <keyword>SD/MMC Card</keyword>
+      </attributes>
+    </example>
+    <example name="BSD Client IPv4/IPv6" doc="Abstract.txt" folder="MDK/Boards/ST/STM32F769I_Discovery/Middleware/Network/BSD_Client">
+      <description>Example using BSD sockets to send commands to remote server</description>
+      <board name="STM32F769I-Discovery" vendor="STMicroelectronics"/>
+      <project>
+        <environment name="uv" load="BSD_Client.uvprojx"/>
+      </project>
+      <attributes>
+        <component Cclass="Network" Cgroup="Socket" Csub="BSD"/>
+        <category>Middleware</category>
+        <category>Network</category>
+        <keyword>BSD</keyword>
+      </attributes>
+    </example>
+    <example name="BSD Server IPv4/IPv6" doc="Abstract.txt" folder="MDK/Boards/ST/STM32F769I_Discovery/Middleware/Network/BSD_Server">
+      <description>Example using BSD sockets to accept commands from remote clients</description>
+      <board name="STM32F769I-Discovery" vendor="STMicroelectronics"/>
+      <project>
+        <environment name="uv" load="BSD_Server.uvprojx"/>
+      </project>
+      <attributes>
+        <component Cclass="Network" Cgroup="Socket" Csub="BSD"/>
+        <category>Middleware</category>
+        <category>Network</category>
+        <keyword>BSD</keyword>
+      </attributes>
+    </example>
+    <example name="FTP Server IPv4/IPv6" doc="Abstract.txt" folder="MDK/Boards/ST/STM32F769I_Discovery/Middleware/Network/FTP_Server">
+      <description>File Server using FTP protocol with SD/MMC Memory Card as storage media</description>
+      <board name="STM32F769I-Discovery" vendor="STMicroelectronics"/>
+      <project>
+        <environment name="uv" load="FTP_Server.uvprojx"/>
+      </project>
+      <attributes>
+        <component Cclass="Network" Cgroup="Service" Csub="FTP Server"/>
+        <category>Middleware</category>
+        <category>Network</category>
+        <keyword>FTP</keyword>
+      </attributes>
+    </example>
+    <example name="HTTP Server IPv4/IPv6" doc="Abstract.txt" folder="MDK/Boards/ST/STM32F769I_Discovery/Middleware/Network/HTTP_Server">
+      <description>Compact Web Server with CGI interface</description>
+      <board name="STM32F769I-Discovery" vendor="STMicroelectronics"/>
+      <project>
+        <environment name="uv" load="HTTP_Server.uvprojx"/>
+      </project>
+      <attributes>
+        <component Cclass="Network" Cgroup="Service" Csub="Web Server Compact"/>
+        <category>Middleware</category>
+        <category>Network</category>
+        <keyword>Web Server</keyword>
+        <keyword>HTTP</keyword>
+      </attributes>
+    </example>
+    <example name="HTTP Upload IPv4/IPv6" doc="Abstract.txt" folder="MDK/Boards/ST/STM32F769I_Discovery/Middleware/Network/HTTP_Upload">
+      <description>Web Server with CGI interface and SD/MMC Memory Card as storage media</description>
+      <board name="STM32F769I-Discovery" vendor="STMicroelectronics"/>
+      <project>
+        <environment name="uv" load="HTTP_Upload.uvprojx"/>
+      </project>
+      <attributes>
+        <component Cclass="Network" Cgroup="Service" Csub="Web Server"/>
+        <category>Middleware</category>
+        <category>Network</category>
+        <keyword>Web Server</keyword>
+        <keyword>HTTP</keyword>
+      </attributes>
+    </example>
+    <example name="SMTP Client IPv4/IPv6" doc="Abstract.txt" folder="MDK/Boards/ST/STM32F769I_Discovery/Middleware/Network/SMTP_Client">
+      <description>Example showing how to compose and send emails</description>
+      <board name="STM32F769I-Discovery" vendor="STMicroelectronics"/>
+      <project>
+        <environment name="uv" load="SMTP_Client.uvprojx"/>
+      </project>
+      <attributes>
+        <component Cclass="Network" Cgroup="Service" Csub="SMTP Client"/>
+        <category>Middleware</category>
+        <category>Network</category>
+        <keyword>SMTP</keyword>
+      </attributes>
+    </example>
+    <example name="Telnet Server IPv4/IPv6" doc="Abstract.txt" folder="MDK/Boards/ST/STM32F769I_Discovery/Middleware/Network/Telnet_Server">
+      <description>Command-line Host service example using Telnet protocol</description>
+      <board name="STM32F769I-Discovery" vendor="STMicroelectronics"/>
+      <project>
+        <environment name="uv" load="Telnet_Server.uvprojx"/>
+      </project>
+      <attributes>
+        <component Cclass="Network" Cgroup="Service" Csub="Telnet Server"/>
+        <category>Middleware</category>
+        <category>Network</category>
+        <keyword>Telnet</keyword>
+      </attributes>
+    </example>
+
+    <!-- STM32F769I-EVAL Board --> 
+    <example name="CMSIS-RTOS Blinky" doc="Abstract.txt" folder="MDK/Boards/ST/STM32F769I_EVAL/Blinky">
+      <description>CMSIS-RTOS based Blinky example</description>
+      <board name="STM32F769I-EVAL" vendor="STMicroelectronics"/>
+      <project>
+        <environment name="uv" load="Blinky.uvprojx"/>
+      </project>
+      <attributes>
+        <component Cclass="CMSIS" Cgroup="CORE"/>
+        <component Cclass="Device" Cgroup="Startup"/>
+        <component Cclass="CMSIS" Cgroup="RTOS"/>
+        <category>Getting Started</category>
+        <category>CMSIS-RTX</category>
+      </attributes>
+    </example>
+<!-- 
+    <example name="emWin Example" doc="Abstract.txt" folder="MDK/Boards/ST/STM32F769I_EVAL/emWin/Example">
+      <description>emWin Graphics simple example</description>
+      <board name="STM32F769I-EVAL" vendor="STMicroelectronics"/>
+      <project>
+        <environment name="uv" load="Example.uvprojx"/>
+      </project>
+      <attributes>
+        <component Cclass="Graphics" Cgroup="CORE"/>
+        <category>Middleware</category>
+        <category>Graphics</category>
+        <keyword>emWin</keyword>
+      </attributes>
+    </example>
+-->
+<!-- 
+    <example name="emWin GUI Demo" doc="Abstract.txt" folder="MDK/Boards/ST/STM32F769I_EVAL/emWin/GUIDemo">
+      <description>emWin Graphics Demo example</description>
+      <board name="STM32F769I-EVAL" vendor="STMicroelectronics"/>
+      <project>
+        <environment name="uv" load="GUIDemo.uvprojx"/>
+      </project>
+      <attributes>
+        <component Cclass="Graphics" Cgroup="CORE"/>
+        <category>Middleware</category>
+        <category>Graphics</category>
+        <keyword>emWin</keyword>
+      </attributes>
+    </example>
+-->
+<!-- 
+    <example name="CAN" doc="Abstract.txt" folder="MDK/Boards/ST/STM32F769I_EVAL/Middleware/CAN/CAN">
+      <description>CAN example that sends and receives data messages</description>
+      <board name="STM32F769I-EVAL" vendor="STMicroelectronics"/>
+      <project>
+        <environment name="uv" load="CAN.uvprojx"/>
+      </project>
+      <attributes>
+        <category>Middleware</category>
+        <category>CAN</category>
+      </attributes>
+    </example>
+-->
+<!-- 
+    <example name="CAN RTR" doc="Abstract.txt" folder="MDK/Boards/ST/STM32F769I_EVAL/Middleware/CAN/CAN_RTR">
+      <description>CAN example that demonstrates Remote Transmission Request (RTR) usage</description>
+      <board name="STM32F769I-EVAL" vendor="STMicroelectronics"/>
+      <project>
+        <environment name="uv" load="CAN_RTR.uvprojx"/>
+      </project>
+      <attributes>
+        <category>Middleware</category>
+        <category>CAN</category>
+      </attributes>
+    </example>
+-->
+<!-- 
+    <example name="USB Device Audio" doc="Abstract.txt" folder="MDK/Boards/ST/STM32F769I_EVAL/Middleware/USB/Device/Audio">
+      <description>USB Audio Device demonstrating USB Headphone</description>
+      <board name="STM32F769I-EVAL" vendor="STMicroelectronics"/>
+      <project>
+        <environment name="uv" load="Audio.uvprojx"/>
+      </project>
+      <attributes>
+        <component Cclass="USB" Cgroup="Device" Csub="Audio"/>
+        <category>Middleware</category>
+        <category>USB Device</category>
+        <keyword>Audio</keyword>
+      </attributes>
+    </example>
+-->
+    <example name="USB Device HID" doc="Abstract.txt" folder="MDK/Boards/ST/STM32F769I_EVAL/Middleware/USB/Device/HID">
+      <description>USB Human Interface Device providing access from PC to board LEDs and push buttons</description>
+      <board name="STM32F769I-EVAL" vendor="STMicroelectronics"/>
+      <project>
+        <environment name="uv" load="HID.uvprojx"/>
+      </project>
+      <attributes>
+        <component Cclass="USB" Cgroup="Device" Csub="HID"/>
+        <category>Middleware</category>
+        <category>USB Device</category>
+        <keyword>HID</keyword>
+      </attributes>
+    </example>
+    <example name="USB Device Mass Storage" doc="Abstract.txt" folder="MDK/Boards/ST/STM32F769I_EVAL/Middleware/USB/Device/MassStorage">
+      <description>USB Mass Storage Device using RAM as storage media</description>
+      <board name="STM32F769I-EVAL" vendor="STMicroelectronics"/>
+      <project>
+        <environment name="uv" load="MassStorage.uvprojx"/>
+      </project>
+      <attributes>
+        <component Cclass="USB" Cgroup="Device" Csub="MSC"/>
+        <category>Middleware</category>
+        <category>USB Device</category>
+        <keyword>Memory Disk</keyword>
+      </attributes>
+    </example>
+<!-- 
+    <example name="USB Device Virtual COM" doc="Abstract.txt" folder="MDK/Boards/ST/STM32F769I_EVAL/Middleware/USB/Device/VirtualCOM">
+      <description>Bridge between PC USB Virtual COM Port and UART port</description>
+      <board name="STM32F769I-EVAL" vendor="STMicroelectronics"/>
+      <project>
+        <environment name="uv" load="VirtualCOM.uvprojx"/>
+      </project>
+      <attributes>
+        <component Cclass="USB" Cgroup="Device" Csub="CDC"/>
+        <category>Middleware</category>
+        <category>USB Device</category>
+        <keyword>Virtual COM</keyword>
+      </attributes>
+    </example>
+-->
+    <example name="USB Host Mass Storage" doc="Abstract.txt" folder="MDK/Boards/ST/STM32F769I_EVAL/Middleware/USB/Host/MassStorage">
+      <description>USB Host file manipulation example: create, read, copy, delete files from USB Mass Storage Device and format the storage device</description>
+      <board name="STM32F769I-EVAL" vendor="STMicroelectronics"/>
+      <project>
+        <environment name="uv" load="MassStorage.uvprojx"/>
+      </project>
+      <attributes>
+        <component Cclass="USB" Cgroup="Host" Csub="MSC"/>
+        <category>Middleware</category>
+        <category>USB Host</category>
+        <keyword>Mass Storage</keyword>
+      </attributes>
+    </example>
+    <example name="USB Host Keyboard" doc="Abstract.txt" folder="MDK/Boards/ST/STM32F769I_EVAL/Middleware/USB/Host/Keyboard">
+      <description>Measure example using USB HID Keyboard as input device</description>
+      <board name="STM32F769I-EVAL" vendor="STMicroelectronics"/>
+      <project>
+        <environment name="uv" load="Keyboard.uvprojx"/>
+      </project>
+      <attributes>
+        <component Cclass="USB" Cgroup="Host" Csub="HID"/>
+        <category>Middleware</category>
+        <category>USB Host</category>
+        <keyword>Keyboard</keyword>
+      </attributes>
+    </example>
+    <example name="File System Demo" doc="Abstract.txt" folder="MDK/Boards/ST/STM32F769I_EVAL/Middleware/FileSystem/File_Demo">
+      <description>File manipulation example: create, read, copy, delete files on any enabled drive (SD/MMC Card, NOR/NAND Flash, RAM) and format each drive</description>
+      <board name="STM32F769I-EVAL" vendor="STMicroelectronics"/>
+      <project>
+        <environment name="uv" load="File_Demo.uvprojx"/>
+      </project>
+      <attributes>
+        <component Cclass="File System" Cgroup="Drive"/>
+        <category>Middleware</category>
+        <category>File System</category>
+        <keyword>SD/MMC Card</keyword>
+      </attributes>
+    </example>
+    <example name="BSD Client IPv4/IPv6" doc="Abstract.txt" folder="MDK/Boards/ST/STM32F769I_EVAL/Middleware/Network/BSD_Client">
+      <description>Example using BSD sockets to send commands to remote server</description>
+      <board name="STM32F769I-EVAL" vendor="STMicroelectronics"/>
+      <project>
+        <environment name="uv" load="BSD_Client.uvprojx"/>
+      </project>
+      <attributes>
+        <component Cclass="Network" Cgroup="Socket" Csub="BSD"/>
+        <category>Middleware</category>
+        <category>Network</category>
+        <keyword>BSD</keyword>
+      </attributes>
+    </example>
+    <example name="BSD Server IPv4/IPv6" doc="Abstract.txt" folder="MDK/Boards/ST/STM32F769I_EVAL/Middleware/Network/BSD_Server">
+      <description>Example using BSD sockets to accept commands from remote clients</description>
+      <board name="STM32F769I-EVAL" vendor="STMicroelectronics"/>
+      <project>
+        <environment name="uv" load="BSD_Server.uvprojx"/>
+      </project>
+      <attributes>
+        <component Cclass="Network" Cgroup="Socket" Csub="BSD"/>
+        <category>Middleware</category>
+        <category>Network</category>
+        <keyword>BSD</keyword>
+      </attributes>
+    </example>
+    <example name="FTP Server IPv4/IPv6" doc="Abstract.txt" folder="MDK/Boards/ST/STM32F769I_EVAL/Middleware/Network/FTP_Server">
+      <description>File Server using FTP protocol with SD/MMC Memory Card as storage media</description>
+      <board name="STM32F769I-EVAL" vendor="STMicroelectronics"/>
+      <project>
+        <environment name="uv" load="FTP_Server.uvprojx"/>
+      </project>
+      <attributes>
+        <component Cclass="Network" Cgroup="Service" Csub="FTP Server"/>
+        <category>Middleware</category>
+        <category>Network</category>
+        <keyword>FTP</keyword>
+      </attributes>
+    </example>
+    <example name="HTTP Server IPv4/IPv6" doc="Abstract.txt" folder="MDK/Boards/ST/STM32F769I_EVAL/Middleware/Network/HTTP_Server">
+      <description>Compact Web Server with CGI interface</description>
+      <board name="STM32F769I-EVAL" vendor="STMicroelectronics"/>
+      <project>
+        <environment name="uv" load="HTTP_Server.uvprojx"/>
+      </project>
+      <attributes>
+        <component Cclass="Network" Cgroup="Service" Csub="Web Server Compact"/>
+        <category>Middleware</category>
+        <category>Network</category>
+        <keyword>Web Server</keyword>
+        <keyword>HTTP</keyword>
+      </attributes>
+    </example>
+    <example name="HTTP Upload IPv4/IPv6" doc="Abstract.txt" folder="MDK/Boards/ST/STM32F769I_EVAL/Middleware/Network/HTTP_Upload">
+      <description>Web Server with CGI interface and SD/MMC Memory Card as storage media</description>
+      <board name="STM32F769I-EVAL" vendor="STMicroelectronics"/>
+      <project>
+        <environment name="uv" load="HTTP_Upload.uvprojx"/>
+      </project>
+      <attributes>
+        <component Cclass="Network" Cgroup="Service" Csub="Web Server"/>
+        <category>Middleware</category>
+        <category>Network</category>
+        <keyword>Web Server</keyword>
+        <keyword>HTTP</keyword>
+      </attributes>
+    </example>
+    <example name="SMTP Client IPv4/IPv6" doc="Abstract.txt" folder="MDK/Boards/ST/STM32F769I_EVAL/Middleware/Network/SMTP_Client">
+      <description>Example showing how to compose and send emails</description>
+      <board name="STM32F769I-EVAL" vendor="STMicroelectronics"/>
+      <project>
+        <environment name="uv" load="SMTP_Client.uvprojx"/>
+      </project>
+      <attributes>
+        <component Cclass="Network" Cgroup="Service" Csub="SMTP Client"/>
+        <category>Middleware</category>
+        <category>Network</category>
+        <keyword>SMTP</keyword>
+      </attributes>
+    </example>
+    <example name="Telnet Server IPv4/IPv6" doc="Abstract.txt" folder="MDK/Boards/ST/STM32F769I_EVAL/Middleware/Network/Telnet_Server">
+      <description>Command-line Host service example using Telnet protocol</description>
+      <board name="STM32F769I-EVAL" vendor="STMicroelectronics"/>
+      <project>
+        <environment name="uv" load="Telnet_Server.uvprojx"/>
+      </project>
+      <attributes>
+        <component Cclass="Network" Cgroup="Service" Csub="Telnet Server"/>
+        <category>Middleware</category>
+        <category>Network</category>
+        <keyword>Telnet</keyword>
+      </attributes>
+    </example>
+
+
     <!-- STM32F746G-Discovery Board -->
     <example name="CMSIS-RTOS Blinky" doc="Abstract.txt" folder="MDK/Boards/ST/STM32F746G_Discovery/Blinky">
       <description>CMSIS-RTOS based Blinky example</description>
@@ -3040,7 +4177,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </attributes>
     </example>
 
-    <example name="BSD Client" doc="Abstract.txt" folder="MDK/Boards/ST/STM32F746G_Discovery/Middleware/Network/BSD_Client">
+    <example name="BSD Client" doc="Abstract.txt" folder="MDK/Boards/ST/STM32F746G_Discovery/Middleware/Network_v6/BSD_Client">
       <description>Example using BSD sockets to send commands to remote server</description>
       <board name="STM32F746G-Discovery" vendor="STMicroelectronics"/>
       <project>
@@ -3054,7 +4191,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </attributes>
     </example>
 
-    <example name="BSD Client IPv4/IPv6" doc="Abstract.txt" folder="MDK/Boards/ST/STM32F746G_Discovery/Middleware/NetworkDS/BSD_Client">
+    <example name="BSD Client IPv4/IPv6" doc="Abstract.txt" folder="MDK/Boards/ST/STM32F746G_Discovery/Middleware/Network/BSD_Client">
       <description>Example using BSD sockets to send commands to remote server</description>
       <board name="STM32F746G-Discovery" vendor="STMicroelectronics"/>
       <project>
@@ -3068,7 +4205,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </attributes>
     </example>
 
-    <example name="BSD Server" doc="Abstract.txt" folder="MDK/Boards/ST/STM32F746G_Discovery/Middleware/Network/BSD_Server">
+    <example name="BSD Server" doc="Abstract.txt" folder="MDK/Boards/ST/STM32F746G_Discovery/Middleware/Network_v6/BSD_Server">
       <description>Example using BSD sockets to accept commands from remote clients</description>
       <board name="STM32F746G-Discovery" vendor="STMicroelectronics"/>
       <project>
@@ -3082,7 +4219,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </attributes>
     </example>
 
-    <example name="BSD Server IPv4/IPv6" doc="Abstract.txt" folder="MDK/Boards/ST/STM32F746G_Discovery/Middleware/NetworkDS/BSD_Server">
+    <example name="BSD Server IPv4/IPv6" doc="Abstract.txt" folder="MDK/Boards/ST/STM32F746G_Discovery/Middleware/Network/BSD_Server">
       <description>Example using BSD sockets to accept commands from remote clients</description>
       <board name="STM32F746G-Discovery" vendor="STMicroelectronics"/>
       <project>
@@ -3096,7 +4233,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </attributes>
     </example>
 
-    <example name="FTP Server" doc="Abstract.txt" folder="MDK/Boards/ST/STM32F746G_Discovery/Middleware/Network/FTP_Server">
+    <example name="FTP Server" doc="Abstract.txt" folder="MDK/Boards/ST/STM32F746G_Discovery/Middleware/Network_v6/FTP_Server">
       <description>File Server using FTP protocol with SD/MMC Memory Card as storage media</description>
       <board name="STM32F746G-Discovery" vendor="STMicroelectronics"/>
       <project>
@@ -3110,7 +4247,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </attributes>
     </example>
 
-    <example name="FTP Server IPv4/IPv6" doc="Abstract.txt" folder="MDK/Boards/ST/STM32F746G_Discovery/Middleware/NetworkDS/FTP_Server">
+    <example name="FTP Server IPv4/IPv6" doc="Abstract.txt" folder="MDK/Boards/ST/STM32F746G_Discovery/Middleware/Network/FTP_Server">
       <description>File Server using FTP protocol with SD/MMC Memory Card as storage media</description>
       <board name="STM32F746G-Discovery" vendor="STMicroelectronics"/>
       <project>
@@ -3124,7 +4261,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </attributes>
     </example>
 
-    <example name="HTTP Server" doc="Abstract.txt" folder="MDK/Boards/ST/STM32F746G_Discovery/Middleware/Network/HTTP_Server">
+    <example name="HTTP Server" doc="Abstract.txt" folder="MDK/Boards/ST/STM32F746G_Discovery/Middleware/Network_v6/HTTP_Server">
       <description>Compact Web Server with CGI interface</description>
       <board name="STM32F746G-Discovery" vendor="STMicroelectronics"/>
       <project>
@@ -3139,7 +4276,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </attributes>
     </example>
 
-    <example name="HTTP Server IPv4/IPv6" doc="Abstract.txt" folder="MDK/Boards/ST/STM32F746G_Discovery/Middleware/NetworkDS/HTTP_Server">
+    <example name="HTTP Server IPv4/IPv6" doc="Abstract.txt" folder="MDK/Boards/ST/STM32F746G_Discovery/Middleware/Network/HTTP_Server">
       <description>Compact Web Server with CGI interface</description>
       <board name="STM32F746G-Discovery" vendor="STMicroelectronics"/>
       <project>
@@ -3154,7 +4291,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </attributes>
     </example>
 
-    <example name="HTTP Upload" doc="Abstract.txt" folder="MDK/Boards/ST/STM32F746G_Discovery/Middleware/Network/HTTP_Upload">
+    <example name="HTTP Upload" doc="Abstract.txt" folder="MDK/Boards/ST/STM32F746G_Discovery/Middleware/Network_v6/HTTP_Upload">
       <description>Web Server with CGI interface and SD/MMC Memory Card as storage media</description>
       <board name="STM32F746G-Discovery" vendor="STMicroelectronics"/>
       <project>
@@ -3169,7 +4306,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </attributes>
     </example>
 
-    <example name="HTTP Upload IPv4/IPv6" doc="Abstract.txt" folder="MDK/Boards/ST/STM32F746G_Discovery/Middleware/NetworkDS/HTTP_Upload">
+    <example name="HTTP Upload IPv4/IPv6" doc="Abstract.txt" folder="MDK/Boards/ST/STM32F746G_Discovery/Middleware/Network/HTTP_Upload">
       <description>Web Server with CGI interface and SD/MMC Memory Card as storage media</description>
       <board name="STM32F746G-Discovery" vendor="STMicroelectronics"/>
       <project>
@@ -3184,7 +4321,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </attributes>
     </example>
 
-    <example name="SMTP Client" doc="Abstract.txt" folder="MDK/Boards/ST/STM32F746G_Discovery/Middleware/Network/SMTP_Client">
+    <example name="SMTP Client" doc="Abstract.txt" folder="MDK/Boards/ST/STM32F746G_Discovery/Middleware/Network_v6/SMTP_Client">
       <description>Example showing how to compose and send emails</description>
       <board name="STM32F746G-Discovery" vendor="STMicroelectronics"/>
       <project>
@@ -3198,7 +4335,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </attributes>
     </example>
 
-    <example name="SMTP Client IPv4/IPv6" doc="Abstract.txt" folder="MDK/Boards/ST/STM32F746G_Discovery/Middleware/NetworkDS/SMTP_Client">
+    <example name="SMTP Client IPv4/IPv6" doc="Abstract.txt" folder="MDK/Boards/ST/STM32F746G_Discovery/Middleware/Network/SMTP_Client">
       <description>Example showing how to compose and send emails</description>
       <board name="STM32F746G-Discovery" vendor="STMicroelectronics"/>
       <project>
@@ -3212,7 +4349,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </attributes>
     </example>
 
-    <example name="SNMP Agent" doc="Abstract.txt" folder="MDK/Boards/ST/STM32F746G_Discovery/Middleware/Network/SNMP_Agent">
+    <example name="SNMP Agent" doc="Abstract.txt" folder="MDK/Boards/ST/STM32F746G_Discovery/Middleware/Network_v6/SNMP_Agent">
       <description>Example showing how to use a Simple Network Management Protocol (SNMP)</description>
       <board name="STM32F746G-Discovery" vendor="STMicroelectronics"/>
       <project>
@@ -3226,7 +4363,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </attributes>
     </example>
 
-    <example name="Telnet Server" doc="Abstract.txt" folder="MDK/Boards/ST/STM32F746G_Discovery/Middleware/Network/Telnet_Server">
+    <example name="Telnet Server" doc="Abstract.txt" folder="MDK/Boards/ST/STM32F746G_Discovery/Middleware/Network_v6/Telnet_Server">
       <description>Command-line Host service example using Telnet protocol</description>
       <board name="STM32F746G-Discovery" vendor="STMicroelectronics"/>
       <project>
@@ -3240,7 +4377,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </attributes>
     </example>
 
-    <example name="Telnet Server IPv4/IPv6" doc="Abstract.txt" folder="MDK/Boards/ST/STM32F746G_Discovery/Middleware/NetworkDS/Telnet_Server">
+    <example name="Telnet Server IPv4/IPv6" doc="Abstract.txt" folder="MDK/Boards/ST/STM32F746G_Discovery/Middleware/Network/Telnet_Server">
       <description>Command-line Host service example using Telnet protocol</description>
       <board name="STM32F746G-Discovery" vendor="STMicroelectronics"/>
       <project>
@@ -3420,7 +4557,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </attributes>
     </example>
 
-    <example name="BSD Client" doc="Abstract.txt" folder="MDK/Boards/ST/STM32756G_EVAL/Middleware/Network/BSD_Client">
+    <example name="BSD Client" doc="Abstract.txt" folder="MDK/Boards/ST/STM32756G_EVAL/Middleware/Network_v6/BSD_Client">
       <description>Example using BSD sockets to send commands to remote server</description>
       <board name="STM32756G-EVAL" vendor="STMicroelectronics"/>
       <project>
@@ -3434,7 +4571,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </attributes>
     </example>
 
-    <example name="BSD Client IPv4/IPv6" doc="Abstract.txt" folder="MDK/Boards/ST/STM32756G_EVAL/Middleware/NetworkDS/BSD_Client">
+    <example name="BSD Client IPv4/IPv6" doc="Abstract.txt" folder="MDK/Boards/ST/STM32756G_EVAL/Middleware/Network/BSD_Client">
       <description>Example using BSD sockets to send commands to remote server</description>
       <board name="STM32756G-EVAL" vendor="STMicroelectronics"/>
       <project>
@@ -3448,7 +4585,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </attributes>
     </example>
 
-    <example name="BSD Server" doc="Abstract.txt" folder="MDK/Boards/ST/STM32756G_EVAL/Middleware/Network/BSD_Server">
+    <example name="BSD Server" doc="Abstract.txt" folder="MDK/Boards/ST/STM32756G_EVAL/Middleware/Network_v6/BSD_Server">
       <description>Example using BSD sockets to accept commands from remote clients</description>
       <board name="STM32756G-EVAL" vendor="STMicroelectronics"/>
       <project>
@@ -3462,7 +4599,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </attributes>
     </example>
 
-    <example name="BSD Server IPv4/IPv6" doc="Abstract.txt" folder="MDK/Boards/ST/STM32756G_EVAL/Middleware/NetworkDS/BSD_Server">
+    <example name="BSD Server IPv4/IPv6" doc="Abstract.txt" folder="MDK/Boards/ST/STM32756G_EVAL/Middleware/Network/BSD_Server">
       <description>Example using BSD sockets to accept commands from remote clients</description>
       <board name="STM32756G-EVAL" vendor="STMicroelectronics"/>
       <project>
@@ -3476,7 +4613,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </attributes>
     </example>
 
-    <example name="FTP Server" doc="Abstract.txt" folder="MDK/Boards/ST/STM32756G_EVAL/Middleware/Network/FTP_Server">
+    <example name="FTP Server" doc="Abstract.txt" folder="MDK/Boards/ST/STM32756G_EVAL/Middleware/Network_v6/FTP_Server">
       <description>File Server using FTP protocol with SD/MMC Memory Card as storage media</description>
       <board name="STM32756G-EVAL" vendor="STMicroelectronics"/>
       <project>
@@ -3490,7 +4627,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </attributes>
     </example>
 
-    <example name="FTP Server IPv4/IPv6" doc="Abstract.txt" folder="MDK/Boards/ST/STM32756G_EVAL/Middleware/NetworkDS/FTP_Server">
+    <example name="FTP Server IPv4/IPv6" doc="Abstract.txt" folder="MDK/Boards/ST/STM32756G_EVAL/Middleware/Network/FTP_Server">
       <description>File Server using FTP protocol with SD/MMC Memory Card as storage media</description>
       <board name="STM32756G-EVAL" vendor="STMicroelectronics"/>
       <project>
@@ -3504,7 +4641,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </attributes>
     </example>
 
-    <example name="HTTP Server" doc="Abstract.txt" folder="MDK/Boards/ST/STM32756G_EVAL/Middleware/Network/HTTP_Server">
+    <example name="HTTP Server" doc="Abstract.txt" folder="MDK/Boards/ST/STM32756G_EVAL/Middleware/Network_v6/HTTP_Server">
       <description>Compact Web Server with CGI interface</description>
       <board name="STM32756G-EVAL" vendor="STMicroelectronics"/>
       <project>
@@ -3519,7 +4656,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </attributes>
     </example>
 
-    <example name="HTTP Server IPv4/IPv6" doc="Abstract.txt" folder="MDK/Boards/ST/STM32756G_EVAL/Middleware/NetworkDS/HTTP_Server">
+    <example name="HTTP Server IPv4/IPv6" doc="Abstract.txt" folder="MDK/Boards/ST/STM32756G_EVAL/Middleware/Network/HTTP_Server">
       <description>Compact Web Server with CGI interface</description>
       <board name="STM32756G-EVAL" vendor="STMicroelectronics"/>
       <project>
@@ -3534,7 +4671,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </attributes>
     </example>
 
-    <example name="HTTP Upload" doc="Abstract.txt" folder="MDK/Boards/ST/STM32756G_EVAL/Middleware/Network/HTTP_Upload">
+    <example name="HTTP Upload" doc="Abstract.txt" folder="MDK/Boards/ST/STM32756G_EVAL/Middleware/Network_v6/HTTP_Upload">
       <description>Web Server with CGI interface and SD/MMC Memory Card as storage media</description>
       <board name="STM32756G-EVAL" vendor="STMicroelectronics"/>
       <project>
@@ -3549,7 +4686,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </attributes>
     </example>
 
-    <example name="HTTP Upload IPv4/IPv6" doc="Abstract.txt" folder="MDK/Boards/ST/STM32756G_EVAL/Middleware/NetworkDS/HTTP_Upload">
+    <example name="HTTP Upload IPv4/IPv6" doc="Abstract.txt" folder="MDK/Boards/ST/STM32756G_EVAL/Middleware/Network/HTTP_Upload">
       <description>Web Server with CGI interface and SD/MMC Memory Card as storage media</description>
       <board name="STM32756G-EVAL" vendor="STMicroelectronics"/>
       <project>
@@ -3564,7 +4701,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </attributes>
     </example>
 
-    <example name="SMTP Client" doc="Abstract.txt" folder="MDK/Boards/ST/STM32756G_EVAL/Middleware/Network/SMTP_Client">
+    <example name="SMTP Client" doc="Abstract.txt" folder="MDK/Boards/ST/STM32756G_EVAL/Middleware/Network_v6/SMTP_Client">
       <description>Example showing how to compose and send emails</description>
       <board name="STM32756G-EVAL" vendor="STMicroelectronics"/>
       <project>
@@ -3578,7 +4715,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </attributes>
     </example>
 
-    <example name="SMTP Client IPv4/IPv6" doc="Abstract.txt" folder="MDK/Boards/ST/STM32756G_EVAL/Middleware/NetworkDS/SMTP_Client">
+    <example name="SMTP Client IPv4/IPv6" doc="Abstract.txt" folder="MDK/Boards/ST/STM32756G_EVAL/Middleware/Network/SMTP_Client">
       <description>Example showing how to compose and send emails</description>
       <board name="STM32756G-EVAL" vendor="STMicroelectronics"/>
       <project>
@@ -3592,7 +4729,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </attributes>
     </example>
 
-    <example name="SNMP Agent" doc="Abstract.txt" folder="MDK/Boards/ST/STM32756G_EVAL/Middleware/Network/SNMP_Agent">
+    <example name="SNMP Agent" doc="Abstract.txt" folder="MDK/Boards/ST/STM32756G_EVAL/Middleware/Network_v6/SNMP_Agent">
       <description>Example showing how to use a Simple Network Management Protocol (SNMP)</description>
       <board name="STM32756G-EVAL" vendor="STMicroelectronics"/>
       <project>
@@ -3606,7 +4743,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </attributes>
     </example>
 
-    <example name="Telnet Server" doc="Abstract.txt" folder="MDK/Boards/ST/STM32756G_EVAL/Middleware/Network/Telnet_Server">
+    <example name="Telnet Server" doc="Abstract.txt" folder="MDK/Boards/ST/STM32756G_EVAL/Middleware/Network_v6/Telnet_Server">
       <description>Command-line Host service example using Telnet protocol</description>
       <board name="STM32756G-EVAL" vendor="STMicroelectronics"/>
       <project>
@@ -3620,7 +4757,7 @@ The STM32F7 family incorporates high-speed embedded memories and an extensive ra
       </attributes>
     </example>
 
-    <example name="Telnet Server IPv4/IPv6" doc="Abstract.txt" folder="MDK/Boards/ST/STM32756G_EVAL/Middleware/NetworkDS/Telnet_Server">
+    <example name="Telnet Server IPv4/IPv6" doc="Abstract.txt" folder="MDK/Boards/ST/STM32756G_EVAL/Middleware/Network/Telnet_Server">
       <description>Command-line Host service example using Telnet protocol</description>
       <board name="STM32756G-EVAL" vendor="STMicroelectronics"/>
       <project>
