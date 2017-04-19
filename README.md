@@ -56,9 +56,18 @@ The `vectors_*.c` files were created using the ARM assembly files.
 
 ```
 $ bash scripts/generate-vectors.sh
+startup_stm32f722xx.s -> vectors_stm32f722xx.c
+startup_stm32f723xx.s -> vectors_stm32f723xx.c
+startup_stm32f732xx.s -> vectors_stm32f732xx.c
+startup_stm32f733xx.s -> vectors_stm32f733xx.c
 startup_stm32f745xx.s -> vectors_stm32f745xx.c
 startup_stm32f746xx.s -> vectors_stm32f746xx.c
 startup_stm32f756xx.s -> vectors_stm32f756xx.c
+startup_stm32f765xx.s -> vectors_stm32f765xx.c
+startup_stm32f767xx.s -> vectors_stm32f767xx.c
+startup_stm32f769xx.s -> vectors_stm32f769xx.c
+startup_stm32f777xx.s -> vectors_stm32f777xx.c
+startup_stm32f779xx.s -> vectors_stm32f779xx.c
 ```
 
 ## Tests
