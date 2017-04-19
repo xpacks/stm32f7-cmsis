@@ -7,8 +7,8 @@
 	"vendorName": "Keil",
 	"name": "STM32F7xx_DFP",
 	"description": "STMicroelectronics STM32F7 Series Device Support, Drivers and Examples",
-	"version": "2.8.0",
-	"date": "2016-11-18",
+	"version": "2.9.0",
+	"date": "2017-02-07",
 	"devices": [
 		{
 			"name": "STM32F7 Series",
@@ -83,7 +83,7 @@
 					],
 					"debugOptions": [
 						{
-							"svd": "CMSIS/SVD/STM32F7x5.svd"
+							"svd": "CMSIS/SVD/STM32F7x5_v1r1.svd"
 						}
 					],
 					"children": [
@@ -345,7 +345,7 @@
 					],
 					"debugOptions": [
 						{
-							"svd": "CMSIS/SVD/STM32F7x6.svd"
+							"svd": "CMSIS/SVD/STM32F7x6_v1r1.svd"
 						}
 					],
 					"children": [
@@ -765,7 +765,7 @@
 					],
 					"debugOptions": [
 						{
-							"svd": "CMSIS/SVD/STM32F7x6.svd"
+							"svd": "CMSIS/SVD/STM32F7x6_v1r1.svd"
 						}
 					],
 					"children": [
@@ -915,7 +915,7 @@
 					],
 					"debugOptions": [
 						{
-							"svd": "CMSIS/SVD/STM32F7x5.svd"
+							"svd": "CMSIS/SVD/STM32F7x5_v1r1.svd"
 						}
 					],
 					"children": [
@@ -1279,7 +1279,7 @@
 					],
 					"debugOptions": [
 						{
-							"svd": "CMSIS/SVD/STM32F7x7.svd"
+							"svd": "CMSIS/SVD/STM32F7x7_v1r2.svd"
 						}
 					],
 					"children": [
@@ -1629,7 +1629,7 @@
 					},
 					"debugOptions": [
 						{
-							"svd": "CMSIS/SVD/STM32F7x7.svd"
+							"svd": "CMSIS/SVD/STM32F7x9_v1r2.svd"
 						}
 					],
 					"children": [
@@ -1692,7 +1692,7 @@
 					],
 					"debugOptions": [
 						{
-							"svd": "CMSIS/SVD/STM32F7x9.svd"
+							"svd": "CMSIS/SVD/STM32F7x9_v1r2.svd"
 						}
 					],
 					"children": [
@@ -1972,7 +1972,7 @@
 					],
 					"debugOptions": [
 						{
-							"svd": "CMSIS/SVD/STM32F7x7.svd"
+							"svd": "CMSIS/SVD/STM32F7x7_v1r2.svd"
 						}
 					],
 					"children": [
@@ -2156,7 +2156,7 @@
 					},
 					"debugOptions": [
 						{
-							"svd": "CMSIS/SVD/STM32F7x7.svd"
+							"svd": "CMSIS/SVD/STM32F7x9_v1r2.svd"
 						}
 					],
 					"children": [
@@ -2219,7 +2219,7 @@
 					],
 					"debugOptions": [
 						{
-							"svd": "CMSIS/SVD/STM32F7x9.svd"
+							"svd": "CMSIS/SVD/STM32F7x9_v1r2.svd"
 						}
 					],
 					"children": [
@@ -2342,6 +2342,840 @@
 											"name": "CSP",
 											"type": "package",
 											"n": 180
+										}
+									]
+								}
+							]
+						}
+					]
+				},
+				{
+					"name": "STM32F732",
+					"type": "subfamily",
+					"compile": {
+						"header": "Drivers/CMSIS/Device/ST/STM32F7xx/Include/stm32f7xx.h",
+						"define": "STM32F732xx"
+					},
+					"processor": {
+						"fpu": "SP_FPU"
+					},
+					"memorySections": [
+						{
+							"id": "IRAM1",
+							"start": "0x20000000",
+							"size": "0x40000",
+							"default": true
+						}
+					],
+					"debugOptions": [
+						{
+							"svd": "CMSIS/SVD/STM32F7x2_v1r0.svd"
+						}
+					],
+					"children": [
+						{
+							"name": "STM32F732VE",
+							"type": "device",
+							"memorySections": [
+								{
+									"id": "IROM1",
+									"start": "0x08000000",
+									"size": "0x80000",
+									"startup": true,
+									"default": true
+								},
+								{
+									"id": "IROM2",
+									"start": "0x00200000",
+									"size": "0x80000"
+								}
+							],
+							"children": [
+								{
+									"name": "STM32F732VETx",
+									"type": "variant",
+									"features": [
+										{
+											"name": "QFP",
+											"type": "package",
+											"n": 100
+										}
+									]
+								}
+							]
+						},
+						{
+							"name": "STM32F732RE",
+							"type": "device",
+							"memorySections": [
+								{
+									"id": "IROM1",
+									"start": "0x08000000",
+									"size": "0x80000",
+									"startup": true,
+									"default": true
+								},
+								{
+									"id": "IROM2",
+									"start": "0x00200000",
+									"size": "0x80000"
+								}
+							],
+							"children": [
+								{
+									"name": "STM32F732RETx",
+									"type": "variant",
+									"features": [
+										{
+											"name": "QFP",
+											"type": "package",
+											"n": 64
+										}
+									]
+								}
+							]
+						},
+						{
+							"name": "STM32F732ZE",
+							"type": "device",
+							"memorySections": [
+								{
+									"id": "IROM1",
+									"start": "0x08000000",
+									"size": "0x80000",
+									"startup": true,
+									"default": true
+								},
+								{
+									"id": "IROM2",
+									"start": "0x00200000",
+									"size": "0x80000"
+								}
+							],
+							"children": [
+								{
+									"name": "STM32F732ZETx",
+									"type": "variant",
+									"features": [
+										{
+											"name": "QFP",
+											"type": "package",
+											"n": 144
+										}
+									]
+								}
+							]
+						},
+						{
+							"name": "STM32F732IE",
+							"type": "device",
+							"memorySections": [
+								{
+									"id": "IROM1",
+									"start": "0x08000000",
+									"size": "0x80000",
+									"startup": true,
+									"default": true
+								},
+								{
+									"id": "IROM2",
+									"start": "0x00200000",
+									"size": "0x80000"
+								}
+							],
+							"children": [
+								{
+									"name": "STM32F732IETx",
+									"type": "variant",
+									"features": [
+										{
+											"name": "QFP",
+											"type": "package",
+											"n": 176
+										}
+									]
+								},
+								{
+									"name": "STM32F732IEKx",
+									"type": "variant",
+									"features": [
+										{
+											"name": "BGA",
+											"type": "package",
+											"n": 176
+										}
+									]
+								}
+							]
+						}
+					]
+				},
+				{
+					"name": "STM32F722",
+					"type": "subfamily",
+					"compile": {
+						"header": "Drivers/CMSIS/Device/ST/STM32F7xx/Include/stm32f7xx.h",
+						"define": "STM32F722xx"
+					},
+					"processor": {
+						"fpu": "SP_FPU"
+					},
+					"memorySections": [
+						{
+							"id": "IRAM1",
+							"start": "0x20000000",
+							"size": "0x40000",
+							"default": true
+						}
+					],
+					"debugOptions": [
+						{
+							"svd": "CMSIS/SVD/STM32F7x2_v1r0.svd"
+						}
+					],
+					"children": [
+						{
+							"name": "STM32F722VE",
+							"type": "device",
+							"memorySections": [
+								{
+									"id": "IROM1",
+									"start": "0x08000000",
+									"size": "0x80000",
+									"startup": true,
+									"default": true
+								},
+								{
+									"id": "IROM2",
+									"start": "0x00200000",
+									"size": "0x80000"
+								}
+							],
+							"children": [
+								{
+									"name": "STM32F722VETx",
+									"type": "variant",
+									"features": [
+										{
+											"name": "QFP",
+											"type": "package",
+											"n": 100
+										}
+									]
+								}
+							]
+						},
+						{
+							"name": "STM32F722RE",
+							"type": "device",
+							"memorySections": [
+								{
+									"id": "IROM1",
+									"start": "0x08000000",
+									"size": "0x80000",
+									"startup": true,
+									"default": true
+								},
+								{
+									"id": "IROM2",
+									"start": "0x00200000",
+									"size": "0x80000"
+								}
+							],
+							"children": [
+								{
+									"name": "STM32F722RETx",
+									"type": "variant",
+									"features": [
+										{
+											"name": "QFP",
+											"type": "package",
+											"n": 64
+										}
+									]
+								}
+							]
+						},
+						{
+							"name": "STM32F722ZE",
+							"type": "device",
+							"memorySections": [
+								{
+									"id": "IROM1",
+									"start": "0x08000000",
+									"size": "0x80000",
+									"startup": true,
+									"default": true
+								},
+								{
+									"id": "IROM2",
+									"start": "0x00200000",
+									"size": "0x80000"
+								}
+							],
+							"children": [
+								{
+									"name": "STM32F722ZETx",
+									"type": "variant",
+									"features": [
+										{
+											"name": "QFP",
+											"type": "package",
+											"n": 144
+										}
+									]
+								}
+							]
+						},
+						{
+							"name": "STM32F722IE",
+							"type": "device",
+							"memorySections": [
+								{
+									"id": "IROM1",
+									"start": "0x08000000",
+									"size": "0x80000",
+									"startup": true,
+									"default": true
+								},
+								{
+									"id": "IROM2",
+									"start": "0x00200000",
+									"size": "0x80000"
+								}
+							],
+							"children": [
+								{
+									"name": "STM32F722IETx",
+									"type": "variant",
+									"features": [
+										{
+											"name": "QFP",
+											"type": "package",
+											"n": 176
+										}
+									]
+								},
+								{
+									"name": "STM32F722IEKx",
+									"type": "variant",
+									"features": [
+										{
+											"name": "BGA",
+											"type": "package",
+											"n": 176
+										}
+									]
+								}
+							]
+						},
+						{
+							"name": "STM32F722RC",
+							"type": "device",
+							"memorySections": [
+								{
+									"id": "IROM1",
+									"start": "0x08000000",
+									"size": "0x40000",
+									"startup": true,
+									"default": true
+								},
+								{
+									"id": "IROM2",
+									"start": "0x00200000",
+									"size": "0x40000"
+								}
+							],
+							"children": [
+								{
+									"name": "STM32F722RCTx",
+									"type": "variant",
+									"features": [
+										{
+											"name": "QFP",
+											"type": "package",
+											"n": 64
+										}
+									]
+								}
+							]
+						},
+						{
+							"name": "STM32F722VC",
+							"type": "device",
+							"memorySections": [
+								{
+									"id": "IROM1",
+									"start": "0x08000000",
+									"size": "0x40000",
+									"startup": true,
+									"default": true
+								},
+								{
+									"id": "IROM2",
+									"start": "0x00200000",
+									"size": "0x40000"
+								}
+							],
+							"children": [
+								{
+									"name": "STM32F722VCTx",
+									"type": "variant",
+									"features": [
+										{
+											"name": "QFP",
+											"type": "package",
+											"n": 100
+										}
+									]
+								}
+							]
+						},
+						{
+							"name": "STM32F722ZC",
+							"type": "device",
+							"memorySections": [
+								{
+									"id": "IROM1",
+									"start": "0x08000000",
+									"size": "0x40000",
+									"startup": true,
+									"default": true
+								},
+								{
+									"id": "IROM2",
+									"start": "0x00200000",
+									"size": "0x40000"
+								}
+							],
+							"children": [
+								{
+									"name": "STM32F722ZCTx",
+									"type": "variant",
+									"features": [
+										{
+											"name": "QFP",
+											"type": "package",
+											"n": 144
+										}
+									]
+								}
+							]
+						},
+						{
+							"name": "STM32F722IC",
+							"type": "device",
+							"memorySections": [
+								{
+									"id": "IROM1",
+									"start": "0x08000000",
+									"size": "0x40000",
+									"startup": true,
+									"default": true
+								},
+								{
+									"id": "IROM2",
+									"start": "0x00200000",
+									"size": "0x40000"
+								}
+							],
+							"children": [
+								{
+									"name": "STM32F722ICTx",
+									"type": "variant",
+									"features": [
+										{
+											"name": "QFP",
+											"type": "package",
+											"n": 176
+										}
+									]
+								},
+								{
+									"name": "STM32F722ICKx",
+									"type": "variant",
+									"features": [
+										{
+											"name": "BGA",
+											"type": "package",
+											"n": 176
+										}
+									]
+								}
+							]
+						}
+					]
+				},
+				{
+					"name": "STM32F733",
+					"type": "subfamily",
+					"compile": {
+						"header": "Drivers/CMSIS/Device/ST/STM32F7xx/Include/stm32f7xx.h",
+						"define": "STM32F733xx"
+					},
+					"processor": {
+						"fpu": "SP_FPU"
+					},
+					"memorySections": [
+						{
+							"id": "IRAM1",
+							"start": "0x20000000",
+							"size": "0x40000",
+							"default": true
+						}
+					],
+					"debugOptions": [
+						{
+							"svd": "CMSIS/SVD/STM32F7x3_v1r0.svd"
+						}
+					],
+					"children": [
+						{
+							"name": "STM32F733VE",
+							"type": "device",
+							"memorySections": [
+								{
+									"id": "IROM1",
+									"start": "0x08000000",
+									"size": "0x80000",
+									"startup": true,
+									"default": true
+								},
+								{
+									"id": "IROM2",
+									"start": "0x00200000",
+									"size": "0x80000"
+								}
+							],
+							"children": [
+								{
+									"name": "STM32F733VETx",
+									"type": "variant",
+									"features": [
+										{
+											"name": "QFP",
+											"type": "package",
+											"n": 100
+										}
+									]
+								},
+								{
+									"name": "STM32F733VEYx",
+									"type": "variant",
+									"features": [
+										{
+											"name": "CSP",
+											"type": "package",
+											"n": 100
+										}
+									]
+								}
+							]
+						},
+						{
+							"name": "STM32F733ZE",
+							"type": "device",
+							"memorySections": [
+								{
+									"id": "IROM1",
+									"start": "0x08000000",
+									"size": "0x80000",
+									"startup": true,
+									"default": true
+								},
+								{
+									"id": "IROM2",
+									"start": "0x00200000",
+									"size": "0x80000"
+								}
+							],
+							"children": [
+								{
+									"name": "STM32F733ZETx",
+									"type": "variant",
+									"features": [
+										{
+											"name": "QFP",
+											"type": "package",
+											"n": 144
+										}
+									]
+								},
+								{
+									"name": "STM32F733ZEKx",
+									"type": "variant",
+									"features": [
+										{
+											"name": "BGA",
+											"type": "package",
+											"n": 144
+										}
+									]
+								}
+							]
+						},
+						{
+							"name": "STM32F733IE",
+							"type": "device",
+							"memorySections": [
+								{
+									"id": "IROM1",
+									"start": "0x08000000",
+									"size": "0x80000",
+									"startup": true,
+									"default": true
+								},
+								{
+									"id": "IROM2",
+									"start": "0x00200000",
+									"size": "0x80000"
+								}
+							],
+							"children": [
+								{
+									"name": "STM32F733IETx",
+									"type": "variant",
+									"features": [
+										{
+											"name": "QFP",
+											"type": "package",
+											"n": 176
+										}
+									]
+								},
+								{
+									"name": "STM32F733IEKx",
+									"type": "variant",
+									"features": [
+										{
+											"name": "BGA",
+											"type": "package",
+											"n": 176
+										}
+									]
+								}
+							]
+						}
+					]
+				},
+				{
+					"name": "STM32F723",
+					"type": "subfamily",
+					"compile": {
+						"header": "Drivers/CMSIS/Device/ST/STM32F7xx/Include/stm32f7xx.h",
+						"define": "STM32F723xx"
+					},
+					"processor": {
+						"fpu": "SP_FPU"
+					},
+					"memorySections": [
+						{
+							"id": "IRAM1",
+							"start": "0x20000000",
+							"size": "0x40000",
+							"default": true
+						}
+					],
+					"debugOptions": [
+						{
+							"svd": "CMSIS/SVD/STM32F7x3_v1r0.svd"
+						}
+					],
+					"children": [
+						{
+							"name": "STM32F723VE",
+							"type": "device",
+							"memorySections": [
+								{
+									"id": "IROM1",
+									"start": "0x08000000",
+									"size": "0x80000",
+									"startup": true,
+									"default": true
+								},
+								{
+									"id": "IROM2",
+									"start": "0x00200000",
+									"size": "0x80000"
+								}
+							],
+							"children": [
+								{
+									"name": "STM32F723VEYx",
+									"type": "variant",
+									"features": [
+										{
+											"name": "CSP",
+											"type": "package",
+											"n": 100
+										}
+									]
+								}
+							]
+						},
+						{
+							"name": "STM32F723ZE",
+							"type": "device",
+							"memorySections": [
+								{
+									"id": "IROM1",
+									"start": "0x08000000",
+									"size": "0x80000",
+									"startup": true,
+									"default": true
+								},
+								{
+									"id": "IROM2",
+									"start": "0x00200000",
+									"size": "0x80000"
+								}
+							],
+							"children": [
+								{
+									"name": "STM32F723ZETx",
+									"type": "variant",
+									"features": [
+										{
+											"name": "QFP",
+											"type": "package",
+											"n": 144
+										}
+									]
+								},
+								{
+									"name": "STM32F723ZEKx",
+									"type": "variant",
+									"features": [
+										{
+											"name": "BGA",
+											"type": "package",
+											"n": 144
+										}
+									]
+								}
+							]
+						},
+						{
+							"name": "STM32F723IE",
+							"type": "device",
+							"memorySections": [
+								{
+									"id": "IROM1",
+									"start": "0x08000000",
+									"size": "0x80000",
+									"startup": true,
+									"default": true
+								},
+								{
+									"id": "IROM2",
+									"start": "0x00200000",
+									"size": "0x80000"
+								}
+							],
+							"children": [
+								{
+									"name": "STM32F723IETx",
+									"type": "variant",
+									"features": [
+										{
+											"name": "QFP",
+											"type": "package",
+											"n": 176
+										}
+									]
+								},
+								{
+									"name": "STM32F723IEKx",
+									"type": "variant",
+									"features": [
+										{
+											"name": "BGA",
+											"type": "package",
+											"n": 176
+										}
+									]
+								}
+							]
+						},
+						{
+							"name": "STM32F723ZC",
+							"type": "device",
+							"memorySections": [
+								{
+									"id": "IROM1",
+									"start": "0x08000000",
+									"size": "0x40000",
+									"startup": true,
+									"default": true
+								},
+								{
+									"id": "IROM2",
+									"start": "0x00200000",
+									"size": "0x40000"
+								}
+							],
+							"children": [
+								{
+									"name": "STM32F723ZCTx",
+									"type": "variant",
+									"features": [
+										{
+											"name": "QFP",
+											"type": "package",
+											"n": 144
+										}
+									]
+								},
+								{
+									"name": "STM32F723ZCKx",
+									"type": "variant",
+									"features": [
+										{
+											"name": "BGA",
+											"type": "package",
+											"n": 144
+										}
+									]
+								}
+							]
+						},
+						{
+							"name": "STM32F723IC",
+							"type": "device",
+							"memorySections": [
+								{
+									"id": "IROM1",
+									"start": "0x08000000",
+									"size": "0x40000",
+									"startup": true,
+									"default": true
+								},
+								{
+									"id": "IROM2",
+									"start": "0x00200000",
+									"size": "0x40000"
+								}
+							],
+							"children": [
+								{
+									"name": "STM32F723ICTx",
+									"type": "variant",
+									"features": [
+										{
+											"name": "QFP",
+											"type": "package",
+											"n": 176
+										}
+									]
+								},
+								{
+									"name": "STM32F723ICKx",
+									"type": "variant",
+									"features": [
+										{
+											"name": "BGA",
+											"type": "package",
+											"n": 176
 										}
 									]
 								}
