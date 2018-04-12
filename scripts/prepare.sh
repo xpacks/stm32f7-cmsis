@@ -20,6 +20,7 @@ RELEASE_VERSION="2.9.0"
 
 FAMILY="STM32F7"
 GITHUB_PROJECT="xpacks/stm32f7-cmsis"
+
 NAME_PREFIX="Keil.${FAMILY}xx_DFP"
 ARCHIVE_NAME="${NAME_PREFIX}.${RELEASE_VERSION}.pack"
 ARCHIVE_URL="http://www.keil.com/pack/${ARCHIVE_NAME}"
@@ -29,11 +30,14 @@ LOCAL_ARCHIVE_FILE="/tmp/xpacks/${ARCHIVE_NAME}"
 echo "Cleaning previous files..."
 for f in *
 do
-  if [ "${f}" == "scripts" ]
+  if [ -d "${f}" ]
   then
-    :
-  else
-    rm -rf "${f}"
+    if [ "${f}" == "scripts" -o "${f}" == "test" ]
+    then
+      :
+    else
+      rm -rf "${f}"
+    fi
   fi
 done
 
